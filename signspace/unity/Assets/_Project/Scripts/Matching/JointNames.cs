@@ -9,15 +9,38 @@ namespace Signspace.Matching
     ///
     /// WHY BY NAME AND NOT BY INDEX
     /// ---------------------------
-    /// The two hand layouts Meta ships disagree about the order:
+    /// The two hand layouts Meta ships disagree about almost everything:
     ///
-    ///   legacy Oculus : WristRoot(0) Palm(1) ThumbBase(2) ... PinkyTip(25)
-    ///   OpenXR        : PALM(0) WRIST(1) THUMB_METACARPAL(2) ... LITTLE_TIP(25)
+    ///   OpenXR (default since v71) : PALM(0) WRIST(1) THUMB_METACARPAL(2)
+    ///                                ... LITTLE_TIP(25)  -- 26 joints, no forearm
+    ///   legacy OVR                 : WristRoot(0) ForearmStub(1) Thumb0(2) ...
+    ///                                PinkyTip(23)  -- 24 joints, no palm
     ///
-    /// Everything from index 2 up is in the same order; only the wrist and the
-    /// palm swap, and "Pinky" is called "Little". Aligning by NAME means one
-    /// pose file works on both, and it means the pose files stay readable and
-    /// diffable, which is what POSE-FORMAT.md promised in the first place.
+    /// The wrist/palm order is not simply swapped, either: the legacy layout has
+    /// no palm at all, has no metacarpal for the index, middle or ring finger, and
+    /// numbers those fingers one joint lower. Aligning by NAME means one pose file
+    /// works on both, and it means the pose files stay readable and diffable,
+    /// which is what POSE-FORMAT.md promised in the first place.
+    ///
+    /// THREE LAYOUTS, NOT TWO (corrected 15 Nov 2026 from Meta's own table)
+    /// ------------------------------------------------------------------
+    /// Since SDK v71 the DEFAULT skeleton is the OpenXR one (26 joints, palm,
+    /// z-forward/y-up), and the legacy OVR skeleton (24 joints, no palm, forearm
+    /// stub, x-forward) is the opt-in. OVRSkeleton.BoneId carries BOTH sets, so a
+    /// device can legally report "XRHand_IndexProximal" or "Hand_Index1" for what
+    /// this table must treat as the same joint:
+    ///
+    ///   OpenXR : palm, thumb metacarpal/proximal/distal/tip, and for every other
+    ///            finger metacarpal + proximal + intermediate + distal + tip
+    ///   OVR    : NO palm, NO index/middle/ring metacarpal, a forearm stub, and a
+    ///            thumb TRAPEZIUM (Thumb0) in front of the metacarpal
+    ///
+    /// The consequence is that the same finger is numbered one joint apart in the
+    /// two layouts: OVR Hand_Index1 is the PROXIMAL phalange, while OpenXR
+    /// XRHand_IndexMetacarpal is the metacarpal. An earlier version of this file
+    /// mapped Index1 -> IndexMetacarpal, which would have rotated every finger one
+    /// joint off its real axis - a systematic distortion that looks like bad
+    /// tracking and is not.
     ///
     /// The alias table mirrors scripts/hand_model.py. Keep them in step: the
     /// Python side authors the poses, this side reads them.
@@ -50,30 +73,37 @@ namespace Signspace.Matching
 
             Add("Wrist", "WristRoot");
             Add("Palm");
+            // Thumb: OVR's Thumb0 is the trapezium (no canonical home) and Thumb1-3 are
+            // metacarpal/proximal/distal, so the numbers start one higher than the fingers.
             Add("ThumbMetacarpal", "ThumbBase", "Thumb1");
             Add("ThumbProximal", "Thumb2");
             Add("ThumbDistal", "Thumb3");
             Add("ThumbTip", "Thumb4");
-            Add("IndexMetacarpal", "IndexBase", "Index1");
-            Add("IndexProximal", "Index2");
-            Add("IndexIntermediate", "Index3");
-            Add("IndexDistal", "Index4");
-            Add("IndexTip", "Index5");
-            Add("MiddleMetacarpal", "MiddleBase", "Middle1");
-            Add("MiddleProximal", "Middle2");
-            Add("MiddleIntermediate", "Middle3");
-            Add("MiddleDistal", "Middle4");
-            Add("MiddleTip", "Middle5");
-            Add("RingMetacarpal", "RingBase", "Ring1");
-            Add("RingProximal", "Ring2");
-            Add("RingIntermediate", "Ring3");
-            Add("RingDistal", "Ring4");
-            Add("RingTip", "Ring5");
-            Add("LittleMetacarpal", "PinkyBase", "Pinky1", "Little1");
-            Add("LittleProximal", "PinkyProximal", "Pinky2", "Little2");
-            Add("LittleIntermediate", "PinkyIntermediate", "Pinky3", "Little3");
-            Add("LittleDistal", "PinkyDistal", "Pinky4", "Little4");
-            Add("LittleTip", "PinkyTip", "Pinky5", "Little5");
+            // Index/Middle/Ring: OVR has NO metacarpal, so Hand_Index1 is the proximal
+            // phalange. Mapping it to IndexMetacarpal (as this table used to) shifts every
+            // finger by one joint.
+            Add("IndexMetacarpal", "IndexBase");
+            Add("IndexProximal", "Index1");
+            Add("IndexIntermediate", "Index2");
+            Add("IndexDistal", "Index3");
+            Add("IndexTip", "Index4", "Index5");
+            Add("MiddleMetacarpal", "MiddleBase");
+            Add("MiddleProximal", "Middle1");
+            Add("MiddleIntermediate", "Middle2");
+            Add("MiddleDistal", "Middle3");
+            Add("MiddleTip", "Middle4", "Middle5");
+            Add("RingMetacarpal", "RingBase");
+            Add("RingProximal", "Ring1");
+            Add("RingIntermediate", "Ring2");
+            Add("RingDistal", "Ring3");
+            Add("RingTip", "Ring4", "Ring5");
+            // The pinky is the one finger OVR DOES give a metacarpal (Pinky0), so its numbering
+            // matches the other fingers rather than the thumb.
+            Add("LittleMetacarpal", "PinkyBase", "Pinky0");
+            Add("LittleProximal", "PinkyProximal", "Pinky1");
+            Add("LittleIntermediate", "PinkyIntermediate", "Pinky2");
+            Add("LittleDistal", "PinkyDistal", "Pinky3");
+            Add("LittleTip", "PinkyTip", "Pinky4", "Pinky5");
 
             return map;
         }
@@ -90,7 +120,7 @@ namespace Signspace.Matching
             if (string.IsNullOrEmpty(raw)) return null;
 
             string cleaned = raw.Trim().ToLowerInvariant();
-            foreach (var prefix in new[] { "hand_", "hand ", "finger_", "joint_" })
+            foreach (var prefix in new[] { "xrhand_", "xrhand ", "hand_", "hand ", "finger_", "joint_" })
             {
                 if (cleaned.StartsWith(prefix, StringComparison.Ordinal))
                 {

@@ -45,18 +45,8 @@ namespace Signspace.Editor
         const string CompanyName = "SIGNSPACE";
         const int MinimumApi = 32;      // Android 12
         const int TargetApi = 34;       // Android 14
+        const int BundleVersionCode = 1;
         const string Version = "0.9.0";
-
-        /// <summary>
-        /// The bundle version code lives in a file so that every upload to a release
-        /// channel automatically gets a HIGHER one.
-        ///
-        /// This is not paranoia. Meta rejects an upload when a build with the same
-        /// bundle version code already exists on one of your release channels, and
-        /// the error does not name the channel or the conflicting build. Losing an
-        /// hour to that on Day 4 is the whole point of automating the build.
-        /// </summary>
-        const string VersionCodeFile = "Assets/_Project/version-code.txt";
 
         [MenuItem("SIGNSPACE/Apply Player Settings")]
         public static void ApplySettingsOnly()
@@ -68,9 +58,7 @@ namespace Signspace.Editor
         [MenuItem("SIGNSPACE/Build Android APK")]
         public static void BuildAndroid()
         {
-            int versionCode = TakeVersionCode();
             ApplySettings();
-            PlayerSettings.bundleVersionCode = versionCode;
 
             string outDir = Path.Combine(Directory.GetCurrentDirectory(), OutputFolder);
             Directory.CreateDirectory(outDir);
@@ -88,10 +76,9 @@ namespace Signspace.Editor
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
 
-            Debug.Log("[BuildScript] result   : " + summary.result);
+            Debug.Log($"[BuildScript] result   : {summary.result}");
             Debug.Log($"[BuildScript] size     : {summary.totalSize / (1024 * 1024)} MB");
             Debug.Log($"[BuildScript] duration : {summary.totalTime}");
-            Debug.Log($"[BuildScript] version  : {Version} (bundle version code {versionCode})");
 
             if (summary.result != BuildResult.Succeeded)
             {
@@ -106,41 +93,6 @@ namespace Signspace.Editor
         }
 
         /// <summary>
-        /// Reads the bundle version code, then increments the stored value.
-        /// The build uses the value it read; the file is left holding the next one.
-        /// </summary>
-        static int TakeVersionCode()
-        {
-            string path = Path.Combine(Directory.GetCurrentDirectory(), VersionCodeFile);
-            int code = 1;
-            try
-            {
-                if (File.Exists(path))
-                {
-                    string text = File.ReadAllText(path).Trim();
-                    int parsed;
-                    if (int.TryParse(text, out parsed) && parsed > 0) code = parsed;
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[BuildScript] could not read the version code file: " + e.Message);
-            }
-
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.WriteAllText(path, (code + 1).ToString());
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[BuildScript] could not bump the version code file: " + e.Message);
-            }
-
-            return code;
-        }
-
-        /// <summary>
         /// Applies the Android Player settings. Idempotent.
         /// </summary>
         public static void ApplySettings()
@@ -150,6 +102,7 @@ namespace Signspace.Editor
             PlayerSettings.companyName = CompanyName;
             PlayerSettings.productName = ProductName;
             PlayerSettings.bundleVersion = Version;
+            PlayerSettings.bundleVersionCode = BundleVersionCode;
             PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, packageName);
 
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel32;

@@ -91,6 +91,19 @@ namespace Signspace.Matching
         public float[] FingerAngles => _fingerAngles;
         public float LastConfidence => _lastConfidence;
 
+        /// <summary>
+        /// Which non-target shape is currently closest, and how close. Null until the first tick.
+        ///
+        /// P1.5 needs this: "does it track as a different shape" is the worst failure in
+        /// TRACKABILITY.md, and the near-miss event cannot answer it because it is rate-limited to
+        /// one per 20 seconds. Exposing the live nearest neighbour makes the probe able to say
+        /// "confused with U for 4.2 of 10 seconds" instead of "a near-miss fired once".
+        /// </summary>
+        public string BestOtherId { get; private set; }
+
+        /// <summary>Distance in degrees to <see cref="BestOtherId"/>.</summary>
+        public float BestOtherDegrees { get; private set; } = float.PositiveInfinity;
+
         void Awake()
         {
             // nothing to allocate: every buffer is fixed size and reused
@@ -145,6 +158,8 @@ namespace Signspace.Matching
                     secondBestOther = od;
                 }
             }
+            BestOtherId = bestOtherId;
+            BestOtherDegrees = bestOther;
             OnDistanceUpdated?.Invoke(d, bestOther);
             OnFingerAnglesUpdated?.Invoke(_fingerAngles);
 

@@ -81,6 +81,49 @@ namespace Signspace.Matching
         }
 
         /// <summary>
+        /// Binds an array that is ALREADY in canonical order.
+        ///
+        /// Needed by the tracked hand: the SDK's bone transforms are named for the SDK
+        /// ("b_l_index1", or an OVRBone id), not for us, so name matching would map nothing.
+        /// MetaHandSource does the id-to-canonical mapping once, then hands the ordered array
+        /// here. Name matching stays available for rigs that do use canonical names.
+        ///
+        /// A null entry is a joint the device did not report. It is recorded as missing and the
+        /// pose is zeroed for that joint rather than guessed, because a guessed joint is a shape
+        /// that matches by accident.
+        /// </summary>
+        public void BindCanonical(Transform[] alreadyCanonical, string sourceName)
+        {
+            joints = alreadyCanonical;
+            _mapped = true;
+
+            int matched = 0;
+            var report = new System.Text.StringBuilder();
+            for (int c = 0; c < _deviceIndexForCanonical.Length; c++)
+            {
+                bool present = alreadyCanonical != null && c < alreadyCanonical.Length && alreadyCanonical[c] != null;
+                _deviceIndexForCanonical[c] = present ? c : -1;
+                if (present) matched++;
+                else
+                {
+                    _buffer[c] = Quaternion.identity;
+                    report.AppendLine("  MISSING: " + JointNames.Canonical[c]);
+                }
+            }
+
+            JointsFullyMapped = matched == JointNames.Canonical.Length;
+            JointReport = "bound in canonical order from " + (sourceName ?? "unknown") +
+                          ": joints " + matched + "/" + JointNames.Canonical.Length + " mapped\n" + report;
+            Debug.Log("[SkeletonPoseSource] " + JointReport);
+            if (!JointsFullyMapped)
+            {
+                Debug.LogError("[SkeletonPoseSource] " + (JointNames.Canonical.Length - matched) +
+                               " canonical joints were not reported by the device. See the missing list " +
+                               "above; the shapes that depend on them will never match until it is fixed.");
+            }
+        }
+
+        /// <summary>
         /// Works out which device joint is which canonical joint, by name.
         ///
         /// This replaces the old "paste the joint indices into the Matcher by hand"
@@ -157,7 +200,7 @@ namespace Signspace.Matching
                 if (d < 0) { _buffer[c] = Quaternion.identity; continue; }
 
                 var t = joints[d];
-                if (t == null) return;              // skeleton not ready yet
+                if (t == null) { _buffer[c] = Quaternion.identity; continue; }
                 _buffer[c] = t.localRotation;       // LOCAL, relative to parent
             }
 
