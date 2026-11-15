@@ -38,39 +38,73 @@ Import **Meta XR All-in-One v207**. Record the resolved versions in `docs/02-tec
 | 7 | **DebugOverlay** | A world-space canvas inside the 55° cone showing: current distance in degrees, best-other distance, band, hold progress. **Build this before anything visual** — you cannot tune what you cannot see |
 | 8 | **ShelfAnchor** | Empty GameObject with the MRUK anchor logic (P4.1). For P1, just a test cube |
 
-## 4. Joint index arrays — fill these in once
+## 4. Joint index arrays — **no longer a manual step**
 
-After step 2, the skeleton prints its joint order. Paste the indices into the Matcher:
+**You do not paste joint indices into the Matcher any more.** `SkeletonPoseSource` reads the joint
+transforms' **names**, matches them to the canonical joint set in `JointNames.cs`, and builds the
+mapping itself. The legacy Oculus hand layout and the OpenXR one differ (the wrist and the palm are
+swapped, and "Pinky" is called "Little"), and the name matching handles both.
 
-| Array | Contains |
-|---|---|
-| `proximalJoints` | wrist-adjacent bones of each finger |
-| `midJoints` | first phalanx of each finger |
-| `distalJoints` | the outermost bone of each finger |
-| `thumbJoints` | all four thumb bones |
-| `palmJointIndex` | the wrist |
+What to do instead:
 
-Whatever is left over keeps the `midWeight` default — that is a safe place to be wrong.
+1. Assign the tracked hand's joint transforms to `SkeletonPoseSource.joints`. **Order does not
+   matter** — only the names do.
+2. Read the log. It prints how many joints were mapped and lists any it did not recognise.
+   A clean log means the mapping is right.
+3. The debug overlay shows `joints OK` or `joints PARTIAL`.
+
+**If a joint is reported MISSING or UNRECOGNISED**, add the spelling to the alias table in
+`JointNames.cs` and to `scripts/hand_model.py`. That is a two-line fix, and it is the only reason a
+shape would ever silently fail to match.
+
+The per-joint weight arrays are gone from the Matcher. They were the mechanism by which the finger
+spread signal was diluted — see [`../phases/p2-core-loop/matcher-tuning.md`](../phases/p2-core-loop/matcher-tuning.md).
 
 ## 5. The P1 smoke test — do this before any product work
 
 | # | Test | Pass |
 |---|---|---|
 | 1 | Build to the **3S**. Hands visible, passthrough visible | ⬜ |
-| 2 | `SignSetLoader` logs `1 shapes loaded` (the EXAMPLE file is skipped) | ⬜ |
+| 2 | `SignSetLoader` logs `6 shapes loaded, 0 failed` | ⬜ |
 | 3 | Move a hand into a B shape while the target is `B` → the debug overlay's distance **rises and falls** | ⬜ |
 | 4 | Grab and rotate a free-floating object **with the wrist** — write the verdict to `phases/p1-derisk/rotation-verdict.md` | ⬜ |
 | 5 | OVR Metrics overlay: note fps in the empty scene | ⬜ |
+| 6 | The debug overlay says `joints OK` — if it says `PARTIAL`, fix `JointNames.cs` before anything else | ⬜ |
+| 7 | Hold a **V** while the target is **U** → the near-miss fires and names `V` | ⬜ |
 
-**If step 3 fails**, the cause is one of: joint order mismatch between the skeleton and the pose file, rotations read in world instead of local, or the pose file's `jointCount` not matching the skeleton. Fix in that order — the validator catches the third.
+**If step 3 fails**, the cause is one of: joint names not matching (step 6 will say so), rotations
+read in world instead of local, or the rig's rest pose not being identity (dump it with
+`RestPoseDump` and regenerate the poses with `make_pose.py --neutral`). Fix in that order.
+
+**If step 7 fails** and step 3 passes, the metric is fine and the near-miss rule is mis-tuned —
+check `nearMissMaxDeg` (26) against the distance shown for the wrong shape.
 
 ## 6. What exists in code already
 
 | File | State | Notes |
 |---|---|---|
 | `Scripts/Matching/HandPose.cs` | ✅ | JSON model + `SetMeta` |
-| `Scripts/Matching/PoseMath.cs` | ✅ | Joint angle, weighted distance, bands |
+| `Scripts/Matching/PoseMath.cs` | ✅ | **v2 metric** — per-finger chain angle, max across fingers |
 | `Scripts/Matching/Matcher.cs` | ✅ | Bands, hysteresis, hold, confidence pause, near-miss |
-| `Scripts/Matching/SignSetLoader.cs` | ✅ | StreamingAssets → Matcher |
-| `Scripts/Hands/SkeletonPoseSource.cs` | ✅ | Reads local rotations; **one TODO**: `ReadConfidence()` |
-| `Scripts/Gaze/*`, `Spatial/*`, `UI/*` | ⬜ | P4 and P6 |
+| `Scripts/Matching/JointNames.cs` | ✅ | **new** — name-based joint alignment for both SDK layouts |
+| `Scripts/Matching/SignSetLoader.cs` | ✅ | **rewritten** — `UnityWebRequest`, works inside the apk on Android |
+| `Scripts/Hands/SkeletonPoseSource.cs` | ✅ | Reads local rotations, maps joints by name. **One TODO**: `ReadConfidence()` |
+| `Scripts/Core/AppState.cs` | ✅ | The 16-state machine |
+| `Scripts/Core/SaveSystem.cs` | ✅ | Anchor-keyed persistence |
+| `Scripts/UI/DebugOverlay.cs` | ✅ | The live numbers, in the cone |
+| `Scripts/Gaze/*`, `Spatial/*` | ⬜ | P4 and P6 |
+| `Editor/SceneBuilder.cs` | ✅ | **new** — builds the scene from a script |
+| `Editor/BuildScript.cs` | ✅ | **new** — every Player setting as code, plus the APK hash |
+| `Editor/RestPoseDump.cs` | ✅ | **new** — dumps the rig rest pose |
+
+### Building it
+
+```powershell
+# once the Unity licence is active
+pwsh -File scripts/setup_unity_project.ps1          # create the project, merge packages, compile
+"E:\unity\Editors\6000.3.28f1\Editor\Unity.exe" -batchmode -quit -projectPath unity `
+  -executeMethod Signspace.Editor.BuildScript.BuildAndroid
+```
+
+The scene and the build are both commands, so the submission APK on Day 4 is produced by exactly
+the same process as the test APK on Day 1.

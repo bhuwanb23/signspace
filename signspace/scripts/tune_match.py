@@ -87,12 +87,12 @@ def metric_v1_joints(target, current, weights=None):
 
 # ---------------------------------------------------------- the v2 metric
 
-def finger_chain_angles(target, current):
+def finger_chain_angles(target, current, include_tip=True):
     """Per-finger accumulated-rotation angle between two hand poses."""
     out = {}
     for finger in hm.FINGER_ORDER:
-        rt = hm.chain_rotation(target, finger)
-        rc = hm.chain_rotation(current, finger)
+        rt = hm.chain_rotation(target, finger, include_tip)
+        rc = hm.chain_rotation(current, finger, include_tip)
         out[finger] = hm.q_angle_between(rt, rc)
     return out
 
@@ -115,9 +115,9 @@ def combine(values, mode):
     raise ValueError(mode)
 
 
-def metric_v2_chain(target, current, combine_mode="max"):
+def metric_v2_chain(target, current, combine_mode="max", include_tip=True):
     """Per-finger chain distance combined across fingers, plus a wrist term."""
-    angles = finger_chain_angles(target, current)
+    angles = finger_chain_angles(target, current, include_tip)
     finger_score = combine(angles.values(), combine_mode)
     # the wrist term carries palm orientation; it is kept separate and weighted
     wrist = hm.q_angle_between(target["Wrist"], current["Wrist"])
@@ -130,6 +130,24 @@ def build_poses():
     return {sid: hm.shape_local_rotations(sid) for sid in SHAPE_IDS}
 
 
+def check_chain_identity(poses):
+    """The runtime reads a finger's chain rotation from the chain's LAST joint.
+
+    Prove that this equals the composed-delta chain rotation the tuner uses,
+    so the numbers printed here are the numbers the shipped C# will produce.
+    """
+    chain_end = {"thumb": 4, "index": 9, "middle": 14, "ring": 19, "little": 24}
+    worst = 0.0
+    for sid, rotations in poses.items():
+        for finger, end in chain_end.items():
+            composed = hm.chain_rotation(rotations, finger)
+            from_last = rotations[hm.JOINT_NAMES[end]]
+            worst = max(worst, hm.q_angle_between(composed, from_last))
+    print(f"  chain identity check: worst disagreement {worst:.6f} deg "
+          f"({'PASS' if worst < 1e-3 else 'FAIL -- the tuner and the C# would disagree'})")
+    return worst < 1e-3
+
+
 def pairwise_v1(poses):
     m = {}
     for a in SHAPE_IDS:
@@ -138,11 +156,11 @@ def pairwise_v1(poses):
     return m
 
 
-def pairwise_v2(poses, mode):
+def pairwise_v2(poses, mode, include_tip=True):
     m = {}
     for a in SHAPE_IDS:
         for b in SHAPE_IDS:
-            m[(a, b)] = metric_v2_chain(poses[a], poses[b], mode)[0]
+            m[(a, b)] = metric_v2_chain(poses[a], poses[b], mode, include_tip)[0]
     return m
 
 
@@ -184,7 +202,7 @@ def summarise(matrix, label):
     return intended, accidental
 
 
-def noise_floor(poses, mode, sigma_deg=2.0, trials=4000, seed=7):
+def noise_floor(poses, mode, sigma_deg=2.0, trials=4000, seed=7, include_tip=True):
     """How far does a CORRECT shape drift when the tracker is noisy?
 
     Perturbs every joint by a random rotation of the given magnitude and reports
@@ -207,7 +225,7 @@ def noise_floor(poses, mode, sigma_deg=2.0, trials=4000, seed=7):
             angle = rng.gauss(0.0, sigma_deg)
             noisy[name] = hm.q_mul(q, hm.q_from_axis_angle(axis, angle))
         current = hm.local_rotations_from_deltas(noisy)
-        d = metric_v2_chain(poses[sid], current, mode)[0]
+        d = metric_v2_chain(poses[sid], current, mode, include_tip)[0]
         samples.append(d)
     samples.sort()
     p50 = samples[int(0.50 * len(samples))]
@@ -229,6 +247,7 @@ def main():
     print("=" * 78)
     print(f"shapes: {', '.join(SHAPE_IDS)}")
     print(f"canonical joints: {len(hm.JOINT_NAMES)}")
+    check_chain_identity(poses)
 
     v1 = pairwise_v1(poses)
     print_matrix(v1, "v1 metric -- weighted mean over every joint (what ships today)")
@@ -236,16 +255,21 @@ def main():
     print("\n  ^ if the intended pairs sit near 0-2 degrees, the near-miss can never fire.")
 
     results = {}
-    for mode in ("mean", "pnorm3", "pnorm6", "softmax", "max"):
-        m = pairwise_v2(poses, mode)
-        results[mode] = m
+    variants = []
+    for include_tip in (True, False):
+        for mode in ("mean", "pnorm3", "pnorm6", "pnorm8", "softmax", "max"):
+            label = f"{mode}{'' if include_tip else ' (no tip)'}"
+            m = pairwise_v2(poses, mode, include_tip)
+            results[label] = m
+            variants.append((label, mode, include_tip))
 
     print("\n" + "=" * 78)
     print("v2 metric -- per-finger chain rotation")
     print("=" * 78)
-    for mode in ("mean", "pnorm3", "pnorm6", "softmax", "max"):
-        print_matrix(results[mode], f"combine = {mode}")
-        summarise(results[mode], f"combine = {mode}")
+    for label, _mode, _tip in variants:
+        if label in ("max", "max (no tip)", "pnorm8", "pnorm8 (no tip)"):
+            print_matrix(results[label], f"combine = {label}")
+            summarise(results[label], f"combine = {label}")
 
     if args.matrix:
         return 0
@@ -254,36 +278,63 @@ def main():
     print("noise floor (distance from a CORRECT shape, under tracking noise)")
     print("=" * 78)
     print(f"assumed per-joint noise sigma = {args.sigma} deg  [REPLACE with the P1.5 measurement]")
-    print(f"{'combine':<10} {'p50':>8} {'p95':>8} {'p99':>8} {'max':>8}")
-    for mode in ("mean", "pnorm3", "pnorm6", "softmax", "max"):
-        p50, p95, p99, mx = noise_floor(poses, mode, args.sigma)
-        print(f"{mode:<10} {p50:>8.1f} {p95:>8.1f} {p99:>8.1f} {mx:>8.1f}")
+    print(f"{'variant':<18} {'p50':>7} {'p95':>7} {'p99':>7} {'max':>7}")
+    floors = {}
+    for label, mode, include_tip in variants:
+        p50, p95, p99, mx = noise_floor(poses, mode, args.sigma, include_tip=include_tip)
+        floors[label] = (p50, p95, p99, mx)
+        print(f"{label:<18} {p50:>7.1f} {p95:>7.1f} {p99:>7.1f} {mx:>7.1f}")
 
     print("\n" + "=" * 78)
-    print("recommendation")
+    print("recommendation -- the metric that separates the pairs from the noise")
     print("=" * 78)
-    for mode in ("pnorm3", "pnorm6", "softmax", "max"):
-        m = results[mode]
+    print("  a lock threshold must sit ABOVE the noise and BELOW the nearest pair.")
+    print("  score = (nearest pair) / (noise p95).  higher is better.\n")
+    rows = []
+    for label, mode, include_tip in variants:
+        m = results[label]
         intended = [d for (a, b), d in m.items()
                     if a != b and tuple(sorted((a, b))) in hm.NEAR_MISS_PAIRS]
         accidental = [d for (a, b), d in m.items()
                       if a != b and tuple(sorted((a, b))) not in hm.NEAR_MISS_PAIRS]
         min_intended = min(intended)
         min_accidental = min(accidental)
-        p50, p95, p99, _ = noise_floor(poses, mode, args.sigma)
-        # a lock threshold must clear the noise and stay under the nearest pair
-        suggested_lock = min(max(p95 * 1.6, p50 + 4.0), min_intended * 0.75)
-        suggested_close = suggested_lock * 2.2
-        suggested_near = min(max(min_intended * 1.25, suggested_close * 0.9), 24.0)
-        print(f"\n  combine = {mode}")
-        print(f"    nearest intended pair : {min_intended:6.1f} deg")
-        print(f"    nearest accidental    : {min_accidental:6.1f} deg")
-        print(f"    noise p95             : {p95:6.1f} deg")
-        print(f"    -> lockedDeg  ~ {suggested_lock:5.1f}")
-        print(f"    -> closeDeg   ~ {suggested_close:5.1f}")
-        print(f"    -> nearMissDeg~ {suggested_near:5.1f}")
-        ok = min_intended > suggested_lock
-        print(f"    -> lock threshold clears the nearest pair: {'YES' if ok else 'NO -- raise separation or lower lock'}")
+        p50, p95, p99, _ = floors[label]
+        rows.append((min_intended / p95, label, min_intended, min_accidental, p50, p95))
+    rows.sort(reverse=True)
+    for score, label, mi, ma, p50, p95 in rows:
+        print(f"  {label:<18} pair {mi:6.1f}  accidental {ma:6.1f}  "
+              f"noise p50 {p50:5.1f} p95 {p95:5.1f}   score {score:5.2f}")
+
+    best = rows[0]
+    _score, label, mi, _ma, p50, p95 = best
+    _mode_of = {lbl: (md, tp) for lbl, md, tp in variants}
+    _tip_of = {lbl: (md, tp) for lbl, md, tp in variants}
+    suggested_lock = max(p95 * 1.35, p50 + 3.0)
+    suggested_lock = min(suggested_lock, mi * 0.72)
+    suggested_close = suggested_lock * 2.4
+    suggested_near = min(max(mi * 1.3, suggested_close * 0.85), 26.0)
+    print(f"\n  WINNER: {label}")
+    print(f"    nearest intended pair : {mi:6.1f} deg")
+    print(f"    noise p50 / p95        : {p50:6.1f} / {p95:6.1f} deg")
+    print(f"    -> lockedDeg   ~ {suggested_lock:5.1f}")
+    print(f"    -> closeDeg    ~ {suggested_close:5.1f}")
+    print(f"    -> nearMissDeg ~ {suggested_near:5.1f}")
+    print(f"    -> lock clears the noise floor : {'YES' if suggested_lock > p95 else 'NO'}")
+    print(f"    -> lock clears the nearest pair: {'YES' if suggested_lock < mi else 'NO'}")
+
+    print("\n" + "=" * 78)
+    print("sensitivity -- what happens if real tracking is noisier than assumed")
+    print("=" * 78)
+    print("  The winning metric, re-measured at several per-joint noise levels.")
+    print("  Use this to decide whether lockedDeg must move after the P1.5 probe.\n")
+    mode, tip = _mode_of[label]
+    print(f"  {'sigma':>6} {'noise p50':>10} {'noise p95':>10} {'lock needed':>12} {'vs pair 26.0':>14}")
+    for sigma in (0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0):
+        n50, n95, _n99, _mx = noise_floor(poses, mode, sigma, include_tip=tip)
+        needed = max(n95 * 1.35, n50 + 3.0)
+        verdict = "OK" if needed < mi else "PAIRS AT RISK"
+        print(f"  {sigma:>6.1f} {n50:>10.1f} {n95:>10.1f} {needed:>12.1f} {verdict:>14}")
     return 0
 
 

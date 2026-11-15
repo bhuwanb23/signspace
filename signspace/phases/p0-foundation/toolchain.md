@@ -36,13 +36,49 @@
 
 | Item | Value | Status |
 |---|---|---|
-| SDK | **Meta XR All-in-One, v207** (*"Unity: Meta XR SDKs v81+ (v207) All-in-One XR"* — the competition page states it) | ✅ confirmed |
-| Unity | **6 LTS (6000.x)**, latest patch that the v207 package supports | ✅ confirmed family / patch `[CONFIRM ON INSTALL]` |
+| SDK | **Meta XR All-in-One, v207** (*"Unity: Meta XR SDKs v81+ (v207) All-in-One XR"* — the competition page states it). UPM package `com.meta.xr.sdk.all` | ✅ **v207.0.0** — confirmed on the public Unity registry, installs without the Asset Store EULA |
+| Unity | **6.3 LTS (6000.3.28f1)**, released 3 Nov 2026, supported to Dec 2027 | ✅ **installed** |
 | Android min API | 32 | ✅ |
 | Android target API | 34 *(if the SDK complains, move to 35 and record it)* | ⚠️ confirm on install |
 | Scripting backend | IL2CPP | ✅ |
 | Architecture | ARM64 only | ✅ |
 | Graphics API | Vulkan, then GLES3 — or GLES3 only if Vulkan is unstable. Record the choice. | ⚠️ measure |
+
+> **The version trap, avoided.** Unity 6.0 LTS (`6000.0.85f2`) reached the end of its standard
+> support on **16 Oct 2026** — a month before this build. "Unity 6 LTS" in the old docs meant a
+> stream that is now retired. Unity 6.6 (`6000.6.9f1`) is the newest release but is an *Update*
+> stream, supported only until 6.7 ships. **6.3 LTS is the only choice that is both current and
+> stable**, and it clears Meta's floor of 6000.0.66f2.
+>
+> The SDK is also the constraint: `com.meta.xr.sdk.all` v207.0.0 declares `unity: 6000.0`.
+
+### Toolchain location — everything heavy on E:
+
+```
+E:\unity\
+├── Unity Hub\        Unity Hub 3.22.2 (was already installed here)
+├── Editors\          6000.3.28f1 + Android Build Support + SDK/NDK + OpenJDK  (~18 GB)
+├── cache\            Unity download cache + UPM global cache
+└── MetaXR\           Meta XR Simulator 207.1
+```
+
+**Why E:** C: had only **27.9 GB free** and Unity Hub's editor install path defaults to
+`C:\Program Files\Unity\Hub\Editor`. An editor plus the Android modules is ~18 GB, so the path is
+moved first, before the download, by `scripts/setup_toolchain.ps1`.
+
+Already on this machine and reused:
+
+| Item | Version | Path |
+|---|---|---|
+| Unity CLI | 1.0.0-beta.12 | `C:\Users\Bhuwan\AppData\Local\Unity\bin\unity.exe` |
+| JDK | 17.0.18 (Temurin) | `C:\Program Files\Microsoft\jdk-17.0.18.8-hotspot` |
+| Android SDK | platforms 34/35/36, build-tools 35/36, NDK 27.0/27.1 | `C:\Users\Bhuwan\AppData\Local\Android\Sdk` |
+| adb | from the Android SDK | `…\platform-tools\adb.exe` |
+| Meta XR Simulator | 207.1 | `C:\Users\Bhuwan\AppData\Roaming\metavr\tools\xrsim` |
+| Meta XR Operator (MCP) | 207.0.1 | `C:\Users\Bhuwan\AppData\Roaming\metavr\tools\xroperator` |
+| OVR Metrics Tool | 2.0.1 | `C:\Users\Bhuwan\AppData\Roaming\metavr\tools\ovrmetric` |
+
+The Meta tools are installed by `metavr tools install <name>` and are scriptable — no clicking.
 
 ### Player Settings to set before the first build
 
@@ -76,14 +112,39 @@
 
 | Item | Value |
 |---|---|
-| Unity version (exact) | |
-| Meta XR SDK version (exact, all packages) | |
-| XR provider / OpenXR features enabled | |
-| Graphics API shipped | |
-| First build: result on 3S | ⬜ pass / ⬜ fail — note |
-| fps in the empty scene | |
+| Unity version (exact) | **6000.3.28f1** — `E:\unity\Editors\6000.3.28f1\Editor\Unity.exe` |
+| Meta XR SDK version (exact, all packages) | **207.0.0** — `com.meta.xr.sdk.all`, resolving core / interaction / interaction.ovr / mrutilitykit / platform / audio / voice / haptics at 207.0.0 |
+| OpenXR Plugin | **1.18.0** (Meta's floor for the XR Operator is 1.17.0; Unity's VR Glasses guidance asks for 1.18.0+) |
+| XR provider / OpenXR features enabled | ⬜ set in the editor — `XR Plug-in Management → Android`, Meta XR feature group |
+| Graphics API shipped | **Vulkan** — `BuildScript.ApplySettings()` pins it, so it cannot drift between builds |
+| Editor install path | `E:\unity\Editors` |
+| First build: result on 3S | ⬜ pass / ⬜ fail — **blocked on a Unity licence and on the headset** |
+| fps in the empty scene | ⬜ |
 
-**Done when:** hands + passthrough on the 3S, every version recorded, and `docs/02-tech/TECH-STACK.md` §1 has no `[VERIFY]` left.
+> **Two things are still needed before the first build can run, and neither is a code problem:**
+> 1. **A Unity licence.** Batch mode refuses to run without one:
+>    `[Licensing::Module] Error: 'com.unity.editor.headless' was not found.`
+>    Fix: `unity auth login`, or sign in to Unity Hub — the Personal licence activates automatically.
+> 2. **The Meta XR SDK importing.** It resolves from the public Unity registry, so it needs no
+>    Asset Store EULA. `scripts/setup_unity_project.ps1` creates the project, merges the manifest
+>    and compiles, all headless.
+
+### The two commands that do the rest
+
+```powershell
+# create the Unity project, merge the pinned packages, compile headlessly
+pwsh -File scripts/setup_unity_project.ps1
+
+# build the APK (needs the licence)
+"E:\unity\Editors\6000.3.28f1\Editor\Unity.exe" -batchmode -quit -projectPath unity `
+  -executeMethod Signspace.Editor.BuildScript.BuildAndroid
+```
+
+`BuildScript` applies every Player setting in §2 as **code**, so the submission build on Day 4 is
+produced by the same command as the test build on Day 1, with the same settings and the same
+keystore. It also prints the APK's SHA-256, which is what P9.1 needs to freeze.
+
+**Three lines to send back** — see [`OWNER-TASKS.md`](OWNER-TASKS.md) §I for the full list.
 
 ---
 

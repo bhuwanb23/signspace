@@ -24,10 +24,12 @@ One file per handshape, in `unity/Assets/StreamingAssets/Signs/`. Read by `HandP
   "version": 1,
   "id": "B",
   "handedness": "right",
-  "jointCount": 21,
-  "neutralCaptured": "2026-11-15T18:20:00Z",
+  "jointCount": 26,
+  "neutralCaptured": "2026-11-15T00:00:00Z",
   "source": "reference-authored",
-  "jointNames": ["WristRoot", "Thumb1", "Thumb2", "Thumb3", "Index1", "…"],
+  "family": "spread",
+  "description": "Flat hand, fingers extended and together, thumb folded across the palm.",
+  "jointNames": ["Wrist", "Palm", "ThumbMetacarpal", "…"],
   "q": [0,0,0,1,  0,0,0,1,  "… 4 floats per joint, in jointNames order"]
 }
 ```
@@ -38,27 +40,52 @@ One file per handshape, in `unity/Assets/StreamingAssets/Signs/`. Read by `HandP
 | `id` | string | The shape's canonical id: `B`, `U`, `V`, `W`, `C`, `O` |
 | `handedness` | string | `right` or `left` |
 | `jointCount` | int | Must equal `jointNames.Length` and `q.Length / 4` |
-| `neutralCaptured` | ISO-8601 | When that signer's neutral was recorded. **All rotations are relative to it.** |
+| `neutralCaptured` | ISO-8601 | When the neutral pose was captured. **All rotations are relative to it.** |
 | `source` | string | `reference-authored` \| `signer-verified` — mirrors `set-meta.json`, per shape |
-| `jointNames` | string[] | Unique, SDK order, wrist first |
+| `family` | string | `spread` \| `closure` — used by the honest mirror panel |
+| `description` | string | One line. Working notes, not product copy. |
+| `jointNames` | string[] | Unique, **canonical** order (see §3) |
 | `q` | float[] | **Flat**: `x,y,z,w` per joint, `jointCount * 4` values. Each must be normalised to 1% |
+
+### index.json — the file list
+
+```json
+{ "version": 1, "shapes": ["B", "U", "V", "W", "C", "O"] }
+```
+
+**Why it exists:** on Android, StreamingAssets live inside the apk, which is a zip archive. A zip
+archive cannot be listed at runtime, so the loader is told what is in the folder. It also means the
+loader does not have to guess at file names.
+
+`scripts/validate_poses.py` checks that `index.json` lists exactly the shapes that are present, so
+the two can never drift apart.
 
 ## 3. The joint set
 
-Meta's hand tracking reports the wrist plus four bones per finger. **The exact count is `[VERIFY ON DEVICE]` and the schema does not care** — `jointCount` is authoritative, and every consumer iterates rather than assuming a length.
-
-Expected names, in SDK order:
+**26 joints, in the canonical order below.** The order is the OpenXR `XR_EXT_hand_tracking`
+layout, because ISDK v207 defaults to the OpenXR hand skeleton.
 
 ```
-WristRoot
-Thumb1  Thumb2  Thumb3
-Index1  Index2  Index3
-Middle1 Middle2 Middle3
-Ring1   Ring2   Ring3
-Pinky1  Pinky2  Pinky3
+ 0  Wrist
+ 1  Palm
+ 2  ThumbMetacarpal   3  ThumbProximal   4  ThumbDistal   5  ThumbTip
+ 6  IndexMetacarpal   7  IndexProximal   8  IndexIntermediate   9  IndexDistal  10  IndexTip
+11  MiddleMetacarpal 12  MiddleProximal 13  MiddleIntermediate 14  MiddleDistal 15  MiddleTip
+16  RingMetacarpal   17  RingProximal   18  RingIntermediate   19  RingDistal  20  RingTip
+21  LittleMetacarpal 22  LittleProximal 23  LittleIntermediate 24  LittleDistal  25  LittleTip
 ```
 
-Plus whatever terminal/forearm joints the SDK adds — include them, name them, and weight them low.
+**The joint count is not an assumption.** `jointCount` is authoritative and every consumer iterates
+rather than assuming a length.
+
+**Joints are matched BY NAME at runtime, not by index.** The legacy Oculus layout differs from the
+table above in exactly two ways — the wrist and the palm are swapped, and "Pinky" is called
+"Little" — and `JointNames.cs` resolves both. One pose file works on either layout, and nobody has
+to paste joint indices into the inspector.
+
+`SkeletonPoseSource` resolves the mapping on the device and **logs loudly** about any joint it
+could not map, because a mis-mapped joint is a shape that never matches and no error appears
+anywhere.
 
 ## 4. Rotations are RELATIVE TO NEUTRAL
 
@@ -107,6 +134,31 @@ Flipping the state is a 5-minute edit and rebuild. It is never a silent change: 
 python3 scripts/validate_poses.py
 ```
 
-Checks: parseable JSON · required keys · `jointNames` length == `jointCount` · `q` length == `jointCount × 4` · no duplicate joint names · every quaternion normalised to 1%.
+Checks: parseable JSON · required keys · `jointNames` length == `jointCount` · `q` length ==
+`jointCount × 4` · no duplicate joint names · every quaternion normalised to 1% · **the joint set is
+the canonical one the matcher expects, in the canonical order** · **`index.json` lists exactly the
+shapes that are present**.
 
-**A malformed pose does not crash the app — it silently never locks.** That is the worst available failure, which is why the validator runs before the build, not after.
+**A malformed pose does not crash the app — it silently never locks.** That is the worst available
+failure, which is why the validator runs before the build, not after.
+
+### Authoring
+
+The pose files are generated, never hand-edited:
+
+```bash
+python3 scripts/make_pose.py                     # the six shapes + index.json
+python3 scripts/make_pose.py --neutral rest.json # fold in a real rig rest pose
+```
+
+`scripts/hand_model.py` holds the canonical hand model and the shape definitions;
+`scripts/tune_match.py` measures whether the metric can actually tell the shapes apart.
+
+### The one assumption
+
+The authoring tool assumes the hand rig's **rest pose has identity local rotations** — a
+straight-finger rig with aligned bones, which is how a hand rig is normally built.
+
+If the shipped rig does not, every stored value carries a constant offset and nothing matches.
+This is checked rather than assumed: `unity/Assets/_Project/Editor/RestPoseDump.cs` dumps the rig's
+rest pose and `make_pose.py --neutral` regenerates the poses against it. Ten minutes, once.

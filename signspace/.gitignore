@@ -25,6 +25,10 @@ sysinfo.txt
 *.unitypackage
 *.app
 
+# Unity build output from BuildScript.cs
+unity/Builds/
+unity/rest-pose.json
+
 # Meta XR / Android
 .utmp/
 gradle/

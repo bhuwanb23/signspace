@@ -1,7 +1,7 @@
 # P0 — Foundation & compliance
 
 **Day 1 (Sat 7 Nov) · Budget 5 h · Gate:** G0 — Does an empty build install from the `Competition` channel, and does the invite URL work for a stranger?
-**Status:** 🔄 In progress — P0.1 ✅ · P0.2 🟡 prepared (needs 20 min of your time) · next P0.3
+**Status:** 🔄 In progress — **4 of 9 gate criteria met** · P0.1 ✅ · P0.6 ✅ · P0.7 🟡 (devices.md written, no headset in hand) · P0.8 🟡 (DoD written, unsigned) · **toolchain installed on E:, SDK v207.0.0 pinned, six shapes authored, metric redesigned and measured** · blocked on **a Unity licence, the headset, and the Meta dashboard**
 
 ## Objective
 Get from "nothing" to "a stranger can install our build and open our entry form". No product work happens in this phase, and no product work may start until this phase's gate is green.
@@ -15,13 +15,16 @@ Every item here is unglamorous and every one is fatal if missing. An APK that ca
 |---|---|---|---|---|
 | [P0.1](tasks/p0.1-verify-start-badge.md) | Verify Meta Horizon Start membership and eligibility | 20 min | W5 | ✅ |
 | [P0.2](tasks/p0.2-devpost-draft.md) | Create the Devpost draft entry and save the submission ID | 20 min | W4 | 🟡 |
-| [P0.3](tasks/p0.3-app-and-channel.md) | Create the Horizon OS app and the `Competition` release channel | 45 min | W5 | ⬜ |
-| [P0.4](tasks/p0.4-toolchain.md) | Install the toolchain and get an empty scene onto the headset | 2 h | W2 | ⬜ |
-| [P0.5](tasks/p0.5-invite-url.md) | Verify the Invite URL from a clean, signed-out, non-developer account | 30 min | W5 | ⬜ |
-| [P0.6](tasks/p0.6-repo-hygiene.md) | Repo hygiene, baseline commit, and branch policy | 30 min | W5 | ⬜ |
-| [P0.7](tasks/p0.7-device-matrix.md) | Lock the device matrix and the test rig | 20 min | W5 | ⬜ |
-| [P0.8](tasks/p0.8-risks-and-dod.md) | Sign off the risk register and the Definition of Done | 30 min | W5 | ⬜ |
-| [P0.9](tasks/p0.9-signer-pipeline.md) | Open the signer pipeline today (kill-condition lead time) | 60 min | W3 | ⬜ |
+| [P0.3](tasks/p0.3-app-and-channel.md) | Create the Horizon OS app and the `Competition` release channel | 45 min | W5 | 🟡 — **owner** |
+| [P0.4](tasks/p0.4-toolchain.md) | Install the toolchain and get an empty scene onto the headset | 2 h | W2 | 🟡 — **toolchain done, build blocked on the licence + headset** |
+| [P0.5](tasks/p0.5-invite-url.md) | Verify the Invite URL from a clean, signed-out, non-developer account | 30 min | W5 | ⬜ — **owner** |
+| [P0.6](tasks/p0.6-repo-hygiene.md) | Repo hygiene, baseline commit, and branch policy | 30 min | W5 | ✅ |
+| [P0.7](tasks/p0.7-device-matrix.md) | Lock the device matrix and the test rig | 20 min | W5 | 🟡 — [`devices.md`](devices.md) written; no headset in hand |
+| [P0.8](tasks/p0.8-risks-and-dod.md) | Sign off the risk register and the Definition of Done | 30 min | W5 | 🟡 — DoD written, needs a signature |
+| [P0.9](tasks/p0.9-signer-pipeline.md) | Open the signer pipeline today (kill-condition lead time) | 60 min | W3 | 🟡 — **owner, and the only thing that can still end this project** |
+
+**The owner's list is one file:** [`OWNER-TASKS.md`](OWNER-TASKS.md) — every task that needs an
+account, a headset, or another person's calendar, with the URLs and the exact steps.
 
 **Budget:** 5 h of the 82 h total. If this overruns by more than 2 h, that time comes out of P7 polish, not out of P1.
 

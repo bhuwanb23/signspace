@@ -281,7 +281,7 @@ SHAPES = {
         "family": "spread",
         "description": "Index and middle extended and together; ring and little folded down.",
         "fingers": {
-            "index":  _finger(abd=+4.0),
+            "index":  _finger(abd=+2.0),
             "middle": _finger(abd=0.0),
             "ring":   _finger(flex_base=86.0, flex_prox=100.0, flex_inter=68.0, flex_distal=6.0),
             "little": _finger(flex_base=86.0, flex_prox=100.0, flex_inter=68.0, flex_distal=6.0),
@@ -293,7 +293,7 @@ SHAPES = {
         "family": "spread",
         "description": "Index and middle extended and spread apart; ring and little folded down.",
         "fingers": {
-            "index":  _finger(abd=+19.0),
+            "index":  _finger(abd=+28.0),
             "middle": _finger(abd=0.0),
             "ring":   _finger(flex_base=86.0, flex_prox=100.0, flex_inter=68.0, flex_distal=6.0),
             "little": _finger(flex_base=86.0, flex_prox=100.0, flex_inter=68.0, flex_distal=6.0),
@@ -451,15 +451,20 @@ def joint_deltas_from_rotations(rotations):
     return deltas
 
 
-def chain_rotation(rotations, finger):
+def chain_rotation(rotations, finger, include_tip=True):
     """Accumulated rotation of a finger chain, root to tip.
 
     Composes the per-joint deltas, not the stored rotations, so each joint
     contributes exactly once.
+
+    include_tip=False drops the terminal joint. The tip carries no shape
+    information for these six letters but does carry tracking noise, and the
+    noise model in tune_match.py shows it costs a measurable amount of margin.
     """
     deltas = joint_deltas_from_rotations(rotations)
+    chain = FINGERS[finger] if include_tip else FINGERS[finger][:-1]
     running = IDENTITY
-    for joint in FINGERS[finger]:
+    for joint in chain:
         running = q_mul(running, deltas[joint])
     return running
 

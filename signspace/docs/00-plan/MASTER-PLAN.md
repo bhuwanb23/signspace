@@ -318,16 +318,16 @@ Update this table at the end of every working day. It is the only place progress
 
 | Phase | Status | Started | Completed | Notes |
 |---|---|---|---|---|
-| P0 Foundation | ⬜ Not started | | | |
-| P1 De-risk spike | ⬜ Not started | | | |
-| P2 Core loop | ⬜ Not started | | | |
-| P3 Feedback layer | ⬜ Not started | | | |
-| P4 Spatial shelf | ⬜ Not started | | | |
-| P5 Content & capture | ⬜ Not started | | | |
-| P6 Gaze & accessibility | ⬜ Not started | | | |
+| P0 Foundation | 🔄 In progress — **4 of 9 gate criteria met** | 14 Nov | — | Toolchain installed on E: · SDK v207.0.0 pinned · 6 shapes authored · metric fixed. **Blocked on: a Unity licence, the headset, the Meta dashboard.** |
+| P1 De-risk spike | ⬜ Not started | | | P1.5 needs a headset in hand. Everything else can be rehearsed in Meta XR Simulator |
+| P2 Core loop | 🟡 Built, not yet on a device | 15 Nov | — | Matcher, pose format, loader and shapes exist and are measured offline. **The metric had to change — v1 could not see finger spread** |
+| P3 Feedback layer | 🟡 Rule implemented | 15 Nov | — | The near-miss now enforces "ambiguity is not a diagnosis" (strictly closer than the runner-up, and by a margin) — the v1 code did not |
+| P4 Spatial shelf | ⬜ Not started | | | Save system written; MRUK binding still to do |
+| P5 Content & capture | 🔄 Re-scoped | 14 Nov | — | **Poses authored from published references today, so the signer call is ONE call, not two** (ADR-007) |
+| P6 Gaze & accessibility | ⬜ Not started | | | **No eye tracking on Quest 3/3S** — gaze is evidenced through the VR Glasses simulator profile |
 | P7 Polish | ⬜ Not started | | | |
-| P8 Playtest | ⬜ Not started | | | |
-| P9 Submission | ⬜ Not started | | | |
+| P8 Playtest | ⬜ Not started | | | Needs a headset |
+| P9 Submission | ⬜ Not started | | | Build is now a command, not a checklist |
 | P10 Post | ⬜ Not started | | | |
 
 ---
@@ -385,13 +385,26 @@ Update this table at the end of every working day. It is the only place progress
 
 | File | State |
 |---|---|
-| `unity/Assets/_Project/Scripts/Matching/HandPose.cs` | ✅ |
-| `.../PoseMath.cs` | ✅ |
-| `.../Matcher.cs` | ✅ bands · hysteresis · hold · confidence pause · near-miss |
-| `.../SignSetLoader.cs` | ✅ |
-| `.../Hands/SkeletonPoseSource.cs` | ✅ one TODO: `ReadConfidence()` |
-| `unity/SETUP.md` | ✅ scene assembly + the P1 smoke test |
-| `scripts/validate_poses.py` | ✅ |
+| `unity/Assets/_Project/Scripts/Matching/HandPose.cs` | ✅ JSON model + `SetMeta`, now with `family` |
+| `.../PoseMath.cs` | ✅ **v2 metric** — per-finger chain angle, max across fingers, wrist term |
+| `.../Matcher.cs` | ✅ bands · hysteresis · hold · confidence pause · near-miss · **"ambiguity is not a diagnosis"** |
+| `.../JointNames.cs` | ✅ **new** — joints matched by name, so both SDK hand layouts work |
+| `.../SignSetLoader.cs` | ✅ **rewritten** — `UnityWebRequest`; the old file could not read StreamingAssets on Android |
+| `unity/Assets/_Project/Scripts/Hands/SkeletonPoseSource.cs` | ✅ **rewritten** — maps joints by name, reports what it could not map. One TODO left: `ReadConfidence()` |
+| `.../Core/AppState.cs` | ✅ the 16-state machine, no failure state |
+| `.../Core/SaveSystem.cs` | ✅ anchor-keyed persistence |
+| `.../UI/DebugOverlay.cs` | ✅ the live numbers, in the cone |
+| `.../Editor/SceneBuilder.cs` | ✅ the scene, built by script |
+| `.../Editor/BuildScript.cs` | ✅ every Player setting as code, plus the APK hash |
+| `.../Editor/RestPoseDump.cs` | ✅ dumps the rig rest pose for pose regeneration |
+| `unity/Assets/StreamingAssets/Signs/*.json` | ✅ **the six shapes** + `index.json` |
+| `scripts/hand_model.py` | ✅ the canonical hand model and the shape definitions |
+| `scripts/make_pose.py` | ✅ writes the shapes and the index |
+| `scripts/tune_match.py` | ✅ **the offline tuner** — measures the metric without a headset |
+| `scripts/validate_poses.py` | ✅ now also checks the joint set and the index |
+| `scripts/setup_toolchain.ps1` | ✅ installs the whole toolchain onto E:, unattended |
+| `scripts/setup_unity_project.ps1` | ✅ creates the project, merges the manifest, compiles |
+| `unity/SETUP.md` | ✅ scene assembly + the P1 smoke test — **update: joints are no longer pasted by hand** |
 
 ### The deep-dive order I propose
 

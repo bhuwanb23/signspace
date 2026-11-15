@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "com.unity.xr.openxr": "1.18.0",
+    "com.unity.xr.management": "4.6.1",
+    "com.meta.xr.sdk.all": "207.0.0"
+  },
+  "scopedRegistries": [],
+  "enableLockFile": true
+}
