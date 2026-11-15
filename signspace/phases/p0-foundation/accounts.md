@@ -88,6 +88,25 @@ Three things must be true of the *same* identity:
 | Devpost submission ID | *(from P0.2)* |
 | **Are (1) and (4) the same email?** | ⬜ yes / ⬜ no — if no, see below |
 
+### The app — created 15 Nov 2026
+
+| Field | Value | Where it comes from |
+|---|---|---|
+| App name | `SIGNSPACE` | ✅ created, platform Meta Horizon Store |
+| **App ID** | ⬜ | `Development` → `API` tab |
+| **Package name** | ⬜ **recommend `com.signspace.signspace`** | not shown until a build exists. `Distribution` → `Builds` → a build → Build Details. **Unique in the Meta Quest ecosystem. Cannot change after the first upload.** |
+| Release channel | ⬜ `Competition` | `Distribution` → `Release Channels` → **Create Release Channel**. **Names are permanent.** |
+| Invite URL | ⬜ | same page → click the channel name → **Channel Settings** → **Channel Invite** → *Grant access to users by URL* |
+| Devpost entry URL | ⬜ | after P0.2 |
+
+> 🔒 **Never in this repo:** the App Secret, the release keystore password, any 2FA or recovery code.
+> The keystore password goes in a password manager — it is the one thing that, once lost, means you can
+> never upload another build of this app.
+
+> **The package name is written in two places** — `toolchain.md` §1 and here — because it is
+> irreversible and it must match Unity's Player Settings exactly. `BuildScript` reads it from
+> `unity/Assets/_Project/package-name.txt`, so the third copy is the one the build actually uses.
+
 **If they differ:** that is allowed, but write down *why* and make sure you can still receive Devpost mail at the submitting address. Two addresses is a maintenance cost on Day 11; one address is not.
 
 ---

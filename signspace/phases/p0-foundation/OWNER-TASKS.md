@@ -69,25 +69,83 @@ no `.ulf` file at all, so nothing has ever been activated here. Until this is do
 **Why:** the deliverable is *"APK on a release channel named exactly `Competition` + an Invite URL"*.
 Meta states plainly: **"APKs will not be considered."** A wrong or reused channel name invalidates the entry.
 
-🔗 **[developer.oculus.com](https://developer.oculus.com/)** → *My Applications* → *Create App*
+🔗 **[developer.oculus.com](https://developer.oculus.com/)** → **My Apps** → **SIGNSPACE**
 
-| Step | Field | Value | Notes |
-|---|---|---|---|
-| C1 | App name | `SIGNSPACE` | |
-| C2 | **Package name** | `com.<yourorg>.signspace` | **IRREVERSIBLE.** You pick the org. Lowercase, no spaces, no underscores. Tell the agent the exact string so it goes in `toolchain.md` §1 **and** `accounts.md` §5 |
-| C3 | Platform | **Quest / Horizon OS** | |
-| C4 | Category | Productivity (or Education if forced) | |
-| C5 | Age rating | 10+ | non-violent, non-social, no UGC |
-| C6 | Release channel | create one named exactly **`Competition`** | **Case-sensitive.** Not "competition", not "Competition 2026" |
-| C7 | Release channel | create a second one named `Internal` | keeps `Competition` clean for the real build |
-| C8 | Upload | any throwaway APK to `Competition` | proves the path works before you need it |
+> ✅ **The app already exists** (created 15 Nov 2026, platform Meta Horizon Store, "Not released").
+> Steps C1–C5 are done. What is left is C6, C7 and the two numbers.
+
+### C6 — the App ID
+
+**Left nav → `Development` → `API` tab.** The App ID is in the middle of that page.
+
+The same page has the **App Secret** (admin accounts only). **Never put the App Secret in this repo** —
+it belongs in a password manager, and it is only needed if you upload through the OVR Platform Tool
+rather than the dashboard.
+
+### C7 — the package name
+
+**It is not shown anywhere yet, because no build has been uploaded.** Once there is one:
+`Distribution` → `Builds` → open a build → the **Build Details** page shows the **Package Name** in
+the middle.
+
+Until then, **you choose it**, and it must be:
+
+| Rule | Why |
+|---|---|
+| **Unique within the Meta Quest ecosystem** | Meta's own wording. Two apps with the same package name collide |
+| `com.<Company>.<App>` | Meta's recommended structure |
+| Lowercase, no spaces, no underscores | Android's rules |
+| **Cannot be changed after the first upload** | so get it right the first time |
+
+**Recommended: `com.signspace.signspace`**
+
+**Tell the agent the exact string.** It goes in two places — `toolchain.md` §1 and `accounts.md` §5 —
+and it is what Unity's Player Settings must say. `BuildScript` reads it from
+`unity/Assets/_Project/package-name.txt`.
+
+### C8 — the `Competition` release channel
+
+**Left nav → `Distribution` → `Release Channels` → the green `Create Release Channel` button, top right.**
+
+| Field | Value |
+|---|---|
+| **Name** | **`Competition`** — exactly this. **Case-sensitive.** Not "competition", not "Competition 2026" |
+| Description | one line, e.g. *"Meta VR Start Developer Competition 2026 build"* |
+| Channel access | **Private** (invite-only) |
+
+> ⚠️ **Two things to know before you type it:**
+> 1. **Release channel names are PERMANENT and cannot be changed.** You can delete a channel and create
+>    a new one with the name you want — but deleting also deletes every entitlement, so anyone who
+>    joined loses access. **Get the spelling right the first time.**
+> 2. Your app already ships with four default channels: **Production, RC, BETA, ALPHA**. The
+>    competition needs a *custom* one called `Competition`. You do **not** need to create `Internal` —
+>    **ALPHA** is the invite-only channel for day-to-day test builds, and keeping `Competition` clean
+>    for the real build is the better arrangement anyway.
+
+### C9 — upload a build and take the Invite URL
+
+**Order matters: upload the build first, then take the URL.**
+
+1. Upload any APK to the `Competition` channel (a throwaway is fine, it proves the path).
+2. `Distribution` → `Release Channels` → **click the channel name `Competition`**.
+3. The **Channel Settings** tab → the **Channel Invite** section → tick **"Grant access to users by URL"**.
+4. Copy the generated link with the copy button.
+
+> The URL page is disabled for new users 90 days after the last build upload to that channel. We
+> submit on 18 Nov and judging runs to 9 Dec, so we are comfortably inside that — but it means the
+> build must be uploaded close to the deadline, not early.
 
 **Send back:**
 ```
-package name = com.____________.signspace
+package name = com.signspace.signspace
 app id       = ____________
-channels     = Competition, Internal
+channels     = Competition
+invite url   = ____________
 ```
+
+> 🔒 The **App Secret** never goes in this repo, and the **release keystore password** goes in a
+> password manager — you need it at P9.1 to freeze the submission build, and it is the one thing
+> that, once lost, means you can never upload another build of this app.
 
 ---
 
