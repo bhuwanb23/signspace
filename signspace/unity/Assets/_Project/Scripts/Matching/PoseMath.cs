@@ -111,12 +111,12 @@ namespace Signspace.Matching
         /// carries palm orientation: rotating the wrist the wrong way has to
         /// break the match even if every finger is perfect.
         /// </summary>
-        /// <param name="fingerAngles">Per-finger chain angles, for the debug overlay.</param>
+        /// <param name="fingerAngles">Per-finger chain angles, for the debug overlay.
+        /// Pass a reused buffer: this runs every frame and must not allocate.</param>
         /// <param name="wristAngle">Wrist angle, the palm-orientation term.</param>
         public static float Distance(Quaternion[] target, Quaternion[] current,
-                                     out float[] fingerAngles, out float wristAngle)
+                                     float[] fingerAngles, out float wristAngle)
         {
-            fingerAngles = new float[FingerChainEnd.Length];
             wristAngle = 0f;
 
             if (target == null || current == null) return float.PositiveInfinity;
@@ -126,7 +126,7 @@ namespace Signspace.Matching
             for (int i = 0; i < FingerChainEnd.Length; i++)
             {
                 float a = ChainAngle(target, current, FingerChainEnd[i]);
-                fingerAngles[i] = a;
+                if (fingerAngles != null && i < fingerAngles.Length) fingerAngles[i] = a;
                 if (a > worst) worst = a;
             }
 
@@ -139,7 +139,7 @@ namespace Signspace.Matching
         /// <summary>Convenience overload that drops the diagnostics.</summary>
         public static float Distance(Quaternion[] target, Quaternion[] current)
         {
-            return Distance(target, current, out _ , out _);
+            return Distance(target, current, null, out _);
         }
 
         /// <summary>

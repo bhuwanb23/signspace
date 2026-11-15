@@ -343,25 +343,28 @@ Update this table at the end of every working day. It is the only place progress
 | `docs/01-idea/COMPETITION-FIT.md` | P0 | ✅ rubric → evidence mapping, award targeting |
 | `docs/02-tech/TECH-STACK.md` | P0 | ✅ every package, why this and not that |
 | `docs/02-tech/ARCHITECTURE.md` | P2 | ✅ systems, boundaries, data flow |
-| `docs/02-tech/POSE-FORMAT.md` | P2 | ✅ frozen schema + neutral contract |
-| `docs/02-tech/MATCH-ALGORITHM.md` | P2 | ✅ maths, weights, bands, tuning procedure |
-| `docs/02-tech/GAZE-INPUT.md` | P6 | ⬜ stub |
-| `docs/02-tech/MRUK-SHELF.md` | P4 | ⬜ stub |
-| `docs/02-tech/PERFORMANCE.md` | P7 | ⬜ stub — budget, targets, measured numbers |
-| `docs/03-content/SIGNSET.md` | P5 | ✅ the 12 shapes, the 3 families, the exclusions |
-| `docs/03-content/CAPTURE-PROTOCOL.md` | P5 | ⬜ next — the session plan for the signers |
-| `docs/03-content/TRACKABILITY.md` | P1/P3 | ⬜ filled from the P1.5 probe |
-| `docs/03-content/ACCESSIBILITY.md` | P6 | ⬜ stub |
+| `docs/02-tech/POSE-FORMAT.md` | P2 | ✅ frozen schema + neutral contract — **v1.1: canonical 26-joint set, name-based matching, index.json** |
+| `docs/02-tech/MATCH-ALGORITHM.md` | P2 | ✅ **v2: the metric changed.** The maths, the weights, the tuning procedure, and what the matcher deliberately doesn't do |
+| `docs/02-tech/GAZE-INPUT.md` | P6 | ✅ **written 15 Nov** — including the fact that **no Quest 3/3S has eye tracking** |
+| `docs/02-tech/MRUK-SHELF.md` | P4 | ✅ **written 15 Nov** — APIs, the plinth fallback, the FoV reflow, the 13-row test matrix |
+| `docs/02-tech/PERFORMANCE.md` | P7 | ✅ **method written 15 Nov** — the numbers fill on the device; the 3S gap is written down |
+| `docs/03-content/SIGNSET.md` | P5 | ✅ the 12 shapes, the 3 families, the exclusions — **now 6 shapes, 2 families** |
+| `docs/03-content/CAPTURE-PROTOCOL.md` | P5 | ✅ **written 15 Nov** — one 60-minute call, the consent script, the credit states, the contingency |
+| `docs/03-content/TRACKABILITY.md` | P1/P3 | ✅ **method written 15 Nov** — the table fills from the P1.5 probe |
+| `docs/03-content/ACCESSIBILITY.md` | P6 | ✅ **written 15 Nov** — the five paths, the calibration, **and the non-claims section** |
 | `docs/04-design/FIRST-FIVE-MINUTES.md` | P7 | ✅ beat sheet, second by second |
 | `docs/04-design/UX-STATES.md` | P2 | ✅ 16 states, none a failure state |
-| `docs/04-design/SOUND-MAP.md` | P7 | ⬜ stub |
+| `docs/04-design/SOUND-MAP.md` | P7 | ✅ **written 15 Nov** — every state has a sound or a documented silence |
 | `docs/05-build/RISKS.md` | P0 | ✅ 8 risks + the kill condition |
 | `docs/05-build/DEFINITION-OF-DONE.md` | P0 | ✅ signed off |
-| `docs/05-build/PLAYTEST-LOG.md` | P8 | ⬜ filled on Day 9 |
+| `docs/05-build/PLAYTEST-LOG.md` | P8 | ✅ **template written 15 Nov** — filled on Day 9 |
 | `docs/06-submission/SUBMISSION-COPY.md` | P9 | ✅ tagline set, 500-word description |
-| `docs/06-submission/VIDEO-SCRIPT.md` | P9 | ⬜ next — shot list with timecodes |
+| `docs/06-submission/VIDEO-SCRIPT.md` | P9 | ✅ **written 15 Nov** — 14 shots, 2:45, hands-first by 0:30, the hook at 0:00 |
 | `docs/06-submission/CHECKLIST.md` | P9 | ✅ form map + runbook |
 | `docs/08-decisions/ADR-00*.md` | — | ✅ seven decisions of record |
+
+**35 documents, 35 written, 0 stubs.** The remaining work is measurement, not writing: the numbers
+in `PERFORMANCE.md` and `TRACKABILITY.md` come from the device.
 
 ### Phase folders — built
 

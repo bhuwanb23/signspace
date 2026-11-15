@@ -114,7 +114,7 @@ namespace Signspace.Matching
             SetPaused(!trustworthy);
 
             float d = PoseMath.Distance(_target.LocalRotations, localRotations,
-                                        out _fingerAngles, out float wristAngle);
+                                        _fingerAngles, out float wristAngle);
 
             // Palm orientation is a gate, not a score. Rotating the wrist the wrong
             // way has to break the match even when every finger is perfect, but the
