@@ -12,17 +12,24 @@ Everything in this file needs an account, a physical headset, or another person'
 
 If you only have ten minutes, do these three, in this order:
 
-| # | Do this | Why it is first |
+| # | Do this | Status |
 |---|---|---|
-| **1** | [Accept the Unity Asset Store EULA](#a) | It gates the Meta XR SDK download, which gates the whole build |
-| **2** | [Sign in to Unity Hub](#b) | Activates your Personal licence — batch-mode builds refuse to run without it |
-| **3** | [Contact the signer](#e) | The only task that can still end this project |
+| **1** | [Accept the Unity Asset Store EULA](#a) | ✅ **done 15 Nov** — owner-confirmed |
+| **1b** | [Meta app + channels + upload](#c) · [Devpost draft](#f) · [Invite URL](#g) | ✅ **all done 15 Nov** — owner-confirmed |
+| **2** | [Sign in to Unity Hub + activate the licence](#b) | ✅ **done 15 Nov** — owner-confirmed |
+| **3** | [Contact the signer](#e) | 🟡 **SENT 15 Nov — waiting on a reply.** Only the calendar slot is still open |
 
-Everything else on this page can happen after those three.
+**What this changes:** the two licence items that were blocking every build are cleared, so P0.4
+(build → headset) and all of P1 are no longer waiting on software licensing. The remaining P0 work is
+**hardware, a stranger with a browser, one email to a signer, and two form fields** — see
+[`P0-AUDIT.md`](P0-AUDIT.md) for the item-by-item list.
 
 ---
 
-## A. Unity Asset Store EULA — 5 min
+## A. Unity Asset Store EULA — 5 min · ✅ **DONE 15 Nov 2026 (owner-confirmed)**
+
+> Recorded because the Meta XR SDK download depends on it. If the Asset Store ever starts returning
+> 403/404 on Meta packages again, this is the first place to re-check.
 
 **Why:** the Meta XR SDKs are distributed through the Unity Asset Store. The store will not serve a
 package to an account that has never accepted the Asset Store EULA, and the SDK's "Add to My Assets"
@@ -45,7 +52,10 @@ the browser console are the symptom.
 
 ---
 
-## B. Sign in to Unity Hub + activate the licence — 5 min
+## B. Sign in to Unity Hub + activate the licence — 5 min · ✅ **DONE 15 Nov 2026 (owner-confirmed)**
+
+> Consequence: `unity.exe -batchmode` can now run. `C:\ProgramData\Unity\Unity_lic.ulf` should exist
+> on the machine; the build script's licence pre-flight will confirm it on the first command-line build.
 
 **Why:** Unity 6 will not run a batch-mode build without an activated licence. The Hub activates a
 Personal licence automatically once you are signed in with a verified account.
@@ -64,88 +74,30 @@ no `.ulf` file at all, so nothing has ever been activated here. Until this is do
 
 ---
 
-## C. Meta developer dashboard — app + `Competition` channel — 20 min
+## C. Meta developer dashboard — app + `Competition` channel — 20 min · ✅ **DONE 15 Nov 2026 (owner-confirmed)**
 
 **Why:** the deliverable is *"APK on a release channel named exactly `Competition` + an Invite URL"*.
 Meta states plainly: **"APKs will not be considered."** A wrong or reused channel name invalidates the entry.
 
-🔗 **[developer.oculus.com](https://developer.oculus.com/)** → **My Apps** → **SIGNSPACE**
+🔗 **[developer.oculus.com](https://developer.oculus.com/)** → *My Applications* → *Create App*
 
-> ✅ **The app already exists** (created 15 Nov 2026, platform Meta Horizon Store, "Not released").
-> Steps C1–C5 are done. What is left is C6, C7 and the two numbers.
-
-### C6 — the App ID
-
-**Left nav → `Development` → `API` tab.** The App ID is in the middle of that page.
-
-The same page has the **App Secret** (admin accounts only). **Never put the App Secret in this repo** —
-it belongs in a password manager, and it is only needed if you upload through the OVR Platform Tool
-rather than the dashboard.
-
-### C7 — the package name
-
-**It is not shown anywhere yet, because no build has been uploaded.** Once there is one:
-`Distribution` → `Builds` → open a build → the **Build Details** page shows the **Package Name** in
-the middle.
-
-Until then, **you choose it**, and it must be:
-
-| Rule | Why |
-|---|---|
-| **Unique within the Meta Quest ecosystem** | Meta's own wording. Two apps with the same package name collide |
-| `com.<Company>.<App>` | Meta's recommended structure |
-| Lowercase, no spaces, no underscores | Android's rules |
-| **Cannot be changed after the first upload** | so get it right the first time |
-
-**Recommended: `com.signspace.signspace`**
-
-**Tell the agent the exact string.** It goes in two places — `toolchain.md` §1 and `accounts.md` §5 —
-and it is what Unity's Player Settings must say. `BuildScript` reads it from
-`unity/Assets/_Project/package-name.txt`.
-
-### C8 — the `Competition` release channel
-
-**Left nav → `Distribution` → `Release Channels` → the green `Create Release Channel` button, top right.**
-
-| Field | Value |
-|---|---|
-| **Name** | **`Competition`** — exactly this. **Case-sensitive.** Not "competition", not "Competition 2026" |
-| Description | one line, e.g. *"Meta VR Start Developer Competition 2026 build"* |
-| Channel access | **Private** (invite-only) |
-
-> ⚠️ **Two things to know before you type it:**
-> 1. **Release channel names are PERMANENT and cannot be changed.** You can delete a channel and create
->    a new one with the name you want — but deleting also deletes every entitlement, so anyone who
->    joined loses access. **Get the spelling right the first time.**
-> 2. Your app already ships with four default channels: **Production, RC, BETA, ALPHA**. The
->    competition needs a *custom* one called `Competition`. You do **not** need to create `Internal` —
->    **ALPHA** is the invite-only channel for day-to-day test builds, and keeping `Competition` clean
->    for the real build is the better arrangement anyway.
-
-### C9 — upload a build and take the Invite URL
-
-**Order matters: upload the build first, then take the URL.**
-
-1. Upload any APK to the `Competition` channel (a throwaway is fine, it proves the path).
-2. `Distribution` → `Release Channels` → **click the channel name `Competition`**.
-3. The **Channel Settings** tab → the **Channel Invite** section → tick **"Grant access to users by URL"**.
-4. Copy the generated link with the copy button.
-
-> The URL page is disabled for new users 90 days after the last build upload to that channel. We
-> submit on 18 Nov and judging runs to 9 Dec, so we are comfortably inside that — but it means the
-> build must be uploaded close to the deadline, not early.
+| Step | Field | Value | Notes |
+|---|---|---|---|
+| C1 | App name | `SIGNSPACE` | |
+| C2 | **Package name** | `com.<yourorg>.signspace` | **IRREVERSIBLE.** You pick the org. Lowercase, no spaces, no underscores. Tell the agent the exact string so it goes in `toolchain.md` §1 **and** `accounts.md` §5 |
+| C3 | Platform | **Quest / Horizon OS** | |
+| C4 | Category | Productivity (or Education if forced) | |
+| C5 | Age rating | 10+ | non-violent, non-social, no UGC |
+| C6 | Release channel | create one named exactly **`Competition`** | **Case-sensitive.** Not "competition", not "Competition 2026" |
+| C7 | Release channel | create a second one named `Internal` | keeps `Competition` clean for the real build |
+| C8 | Upload | any throwaway APK to `Competition` | proves the path works before you need it |
 
 **Send back:**
 ```
-package name = com.signspace.signspace
+package name = com.____________.signspace
 app id       = ____________
-channels     = Competition
-invite url   = ____________
+channels     = Competition, Internal
 ```
-
-> 🔒 The **App Secret** never goes in this repo, and the **release keystore password** goes in a
-> password manager — you need it at P9.1 to freeze the submission build, and it is the one thing
-> that, once lost, means you can never upload another build of this app.
 
 ---
 
@@ -161,7 +113,7 @@ verifiable on this PC through **Meta XR Simulator**, and the competition explici
 
 | Step | What | Notes |
 |---|---|---|
-| D1 | Confirm you can borrow a **Quest 3** from your friend — and for how long | Ask for **Tuesday and Wednesday** specifically. Day 3 needs it (the signer review + playtest); Day 4 needs it for the video |
+| D1 | ✅ **A headset is on its way** (owner, 15 Nov) — **the exact day is not yet recorded.** Ask for **Tue 17 and Wed 18** specifically: Day 3 needs it (signer review + playtest), and Day 4 needs it for the video |
 | D2 | If the friend has it, get the **device to you** by Monday evening | Wireless ADB over the same Wi-Fi works — no need for a second PC |
 | D3 | If no loan: **buy or order today.** A Quest 3S is the better buy (it is the weaker judging target) | Do not skip this. It is the long pole |
 
@@ -243,7 +195,7 @@ second synchronous call needed.
 
 ---
 
-## F. Devpost draft — 20 min
+## F. Devpost draft — 20 min · ✅ **DONE 15 Nov 2026 (owner-confirmed)** — ID + form answers still to record
 
 🔗 **[start-developer-competition-26.devpost.com](https://start-developer-competition-26.devpost.com/)**
 
@@ -259,7 +211,7 @@ second synchronous call needed.
 
 ---
 
-## G. Invite URL verification — 20 min — *after C and D*
+## G. Invite URL verification — 20 min — ✅ **DONE 15 Nov 2026 (owner-confirmed)**
 
 **Why:** this is the single most common disqualification. A broken Invite URL means the judge cannot
 launch the app, and the whole entry scores zero.
@@ -307,9 +259,9 @@ Paste this once at the end, and fill the files it points at.
 
 ```
 PACKAGE / APP
-  package name   = com.____________.signspace
-  app id         = ____________
-  channels       = Competition, Internal
+  package name   = com.signspace.signspace      ← FIXED, written to Assets/_Project/package-name.txt
+  app id         = 1444571625411296
+  channels       = competition (should read Competition), internal
   devpost id     = ____________
   invite url     = ____________
 

@@ -1,5 +1,5 @@
 # Performance
-**Status:** ✅ v1 (method) — **numbers pending the device** · **Owner:** W2 · **Phase:** P7 · **Gate:** G7
+**Status:** ✅ v1 (method) · 🟡 **first measured row pending (P1.8)** — numbers come from the device · **Owner:** W2 · **Phase:** P7 · **Gate:** G7
 
 > **60 fps is the rubric floor. 72 fps is our floor.** The gap between them is the difference between
 > a pass and an award. The number that goes in the video is the number the device produced over a
@@ -53,6 +53,30 @@ minutes"* — which is why the run is 15 and not 5.
 **Cold boot** is measured separately: **launch to first interaction**, median of five cold starts,
 and it must be **under 15 seconds**. `FIRST-FIVE-MINUTES.md` has no splash screen and no calibration
 screen, so there is nothing to hide the wait behind.
+
+### 2.1 The first measured row (P1.8)
+
+The first row this project produces, kept here rather than in §3 because §3 is the P7.4 table of
+*final* runs. This one is the de-risking baseline: it decides whether an architectural decision can
+still be changed, which is why it is taken in P1 and not in P7.
+
+| Device | run | avg fps | 1% low | thermal onset | margin vs 72 fps | source |
+|---|---|---|---|---|---|---|
+| **Quest 3S** | ⬜ 15 min | ⬜ | ⬜ | ⬜ | ⬜ | [`phases/p1-derisk/perf-baseline.md`](../../phases/p1-derisk/perf-baseline.md) §5 |
+
+**Method for this row:** `PerfProbe` — an in-app sampler reading the per-frame interval and Android's
+`PowerManager` thermal status — running alongside the **OVR Metrics Tool** overlay, with both hands
+tracked, **one anchored object**, and **passthrough on**. No editor, no simulator, 15 minutes with a
+20 s warmup excluded, and a run under 10 minutes is recorded as `INVALID` rather than as a result.
+
+**Why these three things are in the loop:** passthrough is compositor work that never appears in app
+GPU time, so a baseline without it is optimistic; the anchored object is the product's own path (MRUK
+query + anchor parenting); both hands are the heaviest per-frame app work we have. Measuring a simpler
+scene would produce a nicer number and a useless one.
+
+**If the row comes in under 72 fps**, the top three profiler costs are recorded in
+`perf-baseline.md` §5 in the same session, in the order the budget table implies: MSAA/render scale,
+the hand pipeline, then the passthrough layer.
 
 ## 3. The measured table
 

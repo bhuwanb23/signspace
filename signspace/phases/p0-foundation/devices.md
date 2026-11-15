@@ -11,11 +11,12 @@
 
 | # | Device | Owner | Where it is | Available from | Primary or verification |
 |---|---|---|---|---|---|
-| 1 | **Quest 3** | ⬜ **the owner** | ⬜ | ⬜ | ⬜ |
+| 1 | **Quest 3** | the owner | in transit | ⬜ **day to confirm** | ⬜ primary / verification |
 | 2 | **Quest 3S** | ⬜ | ⬜ | ⬜ | ⬜ |
 
-**Status: no headset is in hand today.** A Quest 3 is expected to be available via the owner's
-friend; a Quest 3S is not yet secured. See [`OWNER-TASKS.md`](OWNER-TASKS.md) §D.
+**Status (15 Nov 2026): a headset is on its way — the exact day is not yet recorded.** One Quest 3 was
+the expected route (friend's loan); a Quest 3S is still not secured. The matrix cannot be *signed* until
+the model and the arrival day are written in. See [`OWNER-TASKS.md`](OWNER-TASKS.md) §D.
 
 > **The dependency, stated plainly.** Four things cannot be done without a headset on the table:
 > G0's *"installs from the `Competition` channel"* criterion · the **P1.5 twenty-shape
@@ -24,7 +25,7 @@ friend; a Quest 3S is not yet secured. See [`OWNER-TASKS.md`](OWNER-TASKS.md) §
 > this PC through Meta XR Simulator, and the competition explicitly accepts **XR Simulator footage**
 > in the video.
 >
-> **Needed by: end of Day 2 (Mon 16 Nov).** After that the P1.5 probe and the fps number have no
+> **Needed by: Day 2–3 (Mon 16 – Tue 17 Nov).** Booking note: ask for Tue 17 **and** Wed 18 — Day 3 needs the device for the signer review call and the playtest, Day 4 needs it for the video. Original hard date: After that the P1.5 probe and the fps number have no
 > home.
 
 ### The gaps this leaves, and what we do about them
@@ -73,7 +74,7 @@ The environment that represents a judge's, not a lab.
 
 | # | Item | Status |
 |---|---|---|
-| 1 | Headset named, owner named, location named | ⬜ |
+| 1 | Headset named, owner named, location named | 🟡 model known (Quest 3, loan), **arrival day ⬜** |
 | 2 | **Primary build device** declared | ⬜ — **the 3S if one exists, otherwise the 3 and the gap is documented above** |
 | 3 | **Verification device** declared | ⬜ |
 | 4 | Room and lighting conditions written down | ⬜ |
@@ -86,4 +87,5 @@ The environment that represents a judge's, not a lab.
 
 | Date | Change | By |
 |---|---|---|
+| 15 Nov 2026 | Headset status updated: **in transit**, day to confirm. |
 | 15 Nov 2026 | File created. Development machine recorded in full. Headset inventory opened — **none in hand**. The three gaps (no 3S, no eye tracking, no headset today) and their mitigations are written down rather than left implicit. | agent |

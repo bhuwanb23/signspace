@@ -10,21 +10,22 @@
 
 | Field | Value | Rule |
 |---|---|---|
-| **Package name** | `com.<yourorg>.signspace` | Reverse-DNS, lowercase, no spaces, no underscores. **Cannot be changed later.** Write the real one here: `______________________` |
+| **Package name** | **`com.signspace.signspace`** ✅ fixed 15 Nov 2026 | Reverse-DNS, lowercase. **Cannot be changed after the first upload.** Must match `unity/Assets/_Project/package-name.txt` byte for byte — that file is what `BuildScript.cs` reads |
+| **Meta app ID** | **`1444571625411296`** | Created in the developer dashboard |
 | App display name | `SIGNSPACE` | |
-| Release channel 1 | **`Competition`** | Case-sensitive, exactly this, or the entry is invalid |
-| Release channel 2 | `Internal` | Day-to-day test builds; keeps `Competition` clean |
+| Release channel 1 | **`competition`** created · **should read `Competition`** | ⚠️ The rules say *a channel named "Competition"*. Rename it if the dashboard allows mixed case; screenshot the result either way |
+| Release channel 2 | **`internal`** | Day-to-day test builds; keeps the competition channel clean |
 | Category | Productivity (or Education if forced) | |
 | Age rating | 10+ | Content is non-violent, non-social, no UGC |
 
 ### Steps
 
-1. Meta developer dashboard → **Create app** → platform **Quest / Horizon OS**.
-2. Set the package name **exactly** as recorded above.
-3. Create release channel **`Competition`**; then create **`Internal`**.
-4. Upload any throwaway APK to `Competition` to prove the path works, then leave it.
-5. Record app ID + both channel names in `accounts.md` §5.
-6. Screenshot the channel list → `evidence/p0.3-competition-channel-<date>.png`.
+1. ✅ App created — **app ID `1444571625411296`**.
+2. ✅ Package name chosen — **`com.signspace.signspace`** — and written to `unity/Assets/_Project/package-name.txt`, which `BuildScript.cs` reads. The dashboard only displays it on **Distribution → Builds → Build Details** *after* the first upload; until then the file is the source of truth and must match what the upload reports.
+3. ✅ Channels exist: `competition`, `internal`.
+4. ⬜ **Rename `competition` → `Competition`** if mixed case is accepted; otherwise screenshot the refusal.
+5. ⬜ Upload the first APK to it to prove the path works **and** to surface the package name on the dashboard, then confirm the dashboard string equals the file.
+6. ⬜ Screenshot the channel list → `evidence/p0.3-competition-channel-<date>.png`.
 
 **Done when:** `Competition` exists and has accepted an upload, and the package name is written down in two places (here and `accounts.md`).
 
@@ -118,13 +119,13 @@ The Meta tools are installed by `metavr tools install <name>` and are scriptable
 | XR provider / OpenXR features enabled | ⬜ set in the editor — `XR Plug-in Management → Android`, Meta XR feature group |
 | Graphics API shipped | **Vulkan** — `BuildScript.ApplySettings()` pins it, so it cannot drift between builds |
 | Editor install path | `E:\unity\Editors` |
-| First build: result on 3S | ⬜ pass / ⬜ fail — **blocked on a Unity licence and on the headset** |
+| First build: result on 3S | ⬜ pass / ⬜ fail — **licence ✅ cleared 15 Nov; still blocked on the headset** |
 | fps in the empty scene | ⬜ |
 
 > **Two things are still needed before the first build can run, and neither is a code problem:**
-> 1. **A Unity licence.** Batch mode refuses to run without one:
+> 1. ~~**A Unity licence.**~~ ✅ **Cleared 15 Nov 2026.** For reference, the failure it used to produce:
 >    `[Licensing::Module] Error: 'com.unity.editor.headless' was not found.`
->    Fix: `unity auth login`, or sign in to Unity Hub — the Personal licence activates automatically.
+>    Fix was: `unity auth login`, or sign in to Unity Hub. Already done — if it ever recurs, that is the fix.
 > 2. **The Meta XR SDK importing.** It resolves from the public Unity registry, so it needs no
 >    Asset Store EULA. `scripts/setup_unity_project.ps1` creates the project, merges the manifest
 >    and compiles, all headless.

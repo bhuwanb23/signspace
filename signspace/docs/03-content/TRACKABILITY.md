@@ -51,6 +51,32 @@ thumb position that tracking cannot resolve. **Probing them anyway is the point*
 **The metric is the lock rate, not the confidence.** Confidence is the sensor's opinion of itself;
 the lock rate is whether the thing worked.
 
+### 2.2b How it is actually measured *(P1.5, 15 Nov 2026)*
+
+The procedure above is manual, and a manual procedure recorded from memory is a rumour with numbers
+attached. So the probe now measures and asks at the same time — `ProbeController` per 10-second hold:
+
+| Signal | Source | What it detects |
+|---|---|---|
+| **lock %** | fraction of frames inside the 12° lock band | "tracks, but never locks" vs "tracks and locks" |
+| **wrong %** | fraction of frames where a *different* shape is the nearest match (`Matcher.BestOtherId`) | **"tracks as a different shape" — the one dangerous failure** |
+| **dropouts** | tracked → lost transitions | **"flickers"** |
+| **manual score** | operator, 1–4 pinches, captured at the moment of judging | the human half: does it feel like it is tracking |
+
+**Two things this changed, both before any device data existed:**
+
+1. **The candidates had to be separable by our own metric or the probe would lie.** All 20 references
+   were run through the v2 chain metric pairwise first. M and N came out **10.3° apart** — inside the
+   lock threshold — because the references had been authored with effectively identical joint angles.
+   The app could not have told them apart however well the sensor performed, and the result would have
+   been filed as a sensor failure. N was re-authored; the pair now sits at 29.5° / 70.1°.
+2. **Attribution is decided in advance.** Seven candidates carry `authoringConfidence: low` because they
+   depend on contact or depth that a rotation-only format cannot express. A poor result on one of those
+   is recorded as **"not separable by this method"**, not as "the sensor cannot see it". The greyed-out
+   panel in the honest mirror can honestly say *we could not measure this reliably*.
+
+Raw notes, the twenty-shape table and the four session sheets: [`phases/p1-derisk/probe-raw.md`](../../phases/p1-derisk/probe-raw.md).
+
 ### 2.3 What to record
 
 | | |

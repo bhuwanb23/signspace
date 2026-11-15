@@ -1,27 +1,30 @@
 # GATE G0 — Does an empty build install from the `Competition` channel, and does the invite URL work for a stranger?
 
-**Phase:** P0 · **Verdict:** ⬜ not yet evaluated — **4 of 9 criteria met, 5 blocked on the owner**
+**Phase:** P0 · **Verdict:** 🟡 **not yet evaluated — 6 of 9 met, 1 partial, 2 open.** The two open boxes need the headset. Itemised in [`P0-AUDIT.md`](P0-AUDIT.md)
 
 ## Criteria — all must be true
 - [x] Meta Horizon Start membership is active on the submitting account (screenshot archived)
 - [x] Devpost draft exists; the real form field list is documented in `CHECKLIST.md`
-- [ ] App created; release channel named exactly `Competition` has accepted an upload
-- [ ] A build of the empty scene installs and runs on the primary device (Quest 3S)
-- [ ] Hand tracking and passthrough are visible in that build
-- [ ] The Invite URL reaches an install prompt from a signed-out, non-developer account
+- [~] App created ✅ (id `1444571625411296`) · channel **not yet named exactly `Competition`** · no upload yet
+- [ ] A build of the empty scene installs and runs on the primary device — **headset arriving**
+- [ ] Hand tracking and passthrough are visible in that build — **needs the same headset**
+- [x] The Invite URL reaches an install prompt from a signed-out, non-developer account _(owner-confirmed 15 Nov — screenshot still wanted in `evidence/`)_
 - [x] Every toolchain version is recorded; no `[VERIFY]` left in the tech stack table
 - [x] Baseline commit exists; branch policy written
-- [ ] Signer brief sent to ≥3 contacts, with a Day-5 capture slot in the calendar
+- [~] Signer brief **sent** 15 Nov; capture slot not yet agreed — the reply is the remaining half
 
 ### What is blocking each remaining box
 
-| Box | Blocked on | Who |
+| Box | Status | Who |
 |---|---|---|
-| App created · `Competition` channel | the Meta developer dashboard | **owner** — `OWNER-TASKS.md` §C |
-| Builds and runs on the headset | **a Unity licence** (batch mode refuses without one) and **the headset** | **owner** — `OWNER-TASKS.md` §B and §D |
-| Hands and passthrough visible | the same build | owner |
-| Invite URL | the build, plus a clean signed-out device | owner — `OWNER-TASKS.md` §G |
-| Signer brief to ≥3 contacts | the owner's contacts and calendar | **owner** — `OWNER-TASKS.md` §E |
+| App created · channel accepted an upload | ✅ 15 Nov | owner — `OWNER-TASKS.md` §C |
+| Builds and runs on the headset | ⬜ **the headset, nothing else** | owner — `OWNER-TASKS.md` §D |
+| Hands and passthrough visible | ⬜ same build | owner |
+| Invite URL | ✅ 15 Nov | owner — `OWNER-TASKS.md` §G |
+| Signer brief sent | 🟡 sent, awaiting reply | **owner** — `OWNER-TASKS.md` §E |
+
+**Both open boxes are one artefact: an installed APK.** The moment the headset is in hand, G0 is a
+single afternoon of `adb install` and two screenshots — no code has to change for it.
 
 ### Everything that does NOT need the owner
 

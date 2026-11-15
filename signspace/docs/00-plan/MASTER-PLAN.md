@@ -431,15 +431,15 @@ If that booking hasn't happened by the end of Day 1, the plan changes that night
 
 ## 11. THE FOUR-DAY PLAN (CONFIRMED — replaces §2)
 
-**Confirmed 14 Nov 2026:** deadline 19 Nov 01:30 IST · **solo** · Unity + Android toolchain already installed · **no signer booked yet** (one is expected during playtesting).
+**Confirmed 15 Nov 2026:** deadline 19 Nov 01:30 IST (**3 days, 16 hours**) · **solo** · Unity + Android toolchain already installed · **no signer booked yet** (one is expected during playtesting).
 
 | Day | Date | Work | Gates |
 |---|---|---|---|
-| **0** | Sat 14 Nov | P0.1 ✅ · P0.2 form map ✅ · **P0.3 app + `Competition` channel** · **P0.4 Unity build on the 3S** | G0 |
-| **1** | Sun 15 Nov | **P1 de-risk**: hands, grab, wrist-rotate verdict, 20-shape probe, MRUK, persistence, fps baseline | G1 |
-| **2** | Mon 16 Nov | **P2 core loop** (pose format, matcher, bands, hold, payoff) + **P3 feedback** (near-miss, honest mirror) | G2, G3 |
-| **3** | Tue 17 Nov | **P4 shelf** · **P6 gaze + eyes-only** · **P5 signer review call, evening** · **P7 polish** · 2-tester playtest | G4–G8 |
-| **4** | Wed 18 Nov | Flip authorship state if approved → **record video → submit by 23:59 IST** · verification only | G9 |
+| **1** | Sun 15 Nov (today) | P0.1 ✅ · P0.3 ✅ (app + channels) · P0.2 form map ✅ · **P0.4 Unity build** · **licence + EULA** | G0 |
+| **2** | Mon 16 Nov | **P1 de-risk**: hands, grab, wrist-rotate verdict, 20-shape probe, MRUK, persistence, fps baseline | G1 |
+| **3** | Tue 17 Nov | **P2 core loop** (pose format, matcher, bands, hold, payoff) + **P3 feedback** (near-miss, honest mirror) | G2, G3 |
+| **4** | Wed 18 Nov | **P4 shelf** · **P6 gaze + eyes-only** · **P5 signer review call, evening** · **P7 polish** · 2-tester playtest | G4–G8 |
+| — | *Tue 17 → Wed 18* | Flip authorship state if approved → **record video → submit by 23:59 IST Wed 18** | G9 |
 
 ### Scope for four days, solo
 

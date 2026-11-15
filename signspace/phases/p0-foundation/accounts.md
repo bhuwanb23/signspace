@@ -80,32 +80,21 @@ Three things must be true of the *same* identity:
 
 | Link | Recorded value |
 |---|---|
-| Meta developer account email | |
-| Meta organisation name | |
-| Meta organisation / member ID (if shown) | |
-| Devpost account email | |
+| Meta developer account email | *(withheld from the repo by choice)* |
+| Meta organisation name | *(withheld)* |
+| **Meta app ID** | **`1444571625411296`** |
+| **Package name** | **`com.signspace.signspace`** |
+| **Release channels** | **`competition`** · **`internal`** — see the case warning below |
+| Devpost account email | *(withheld)* |
 | Devpost username / profile URL | |
 | Devpost submission ID | *(from P0.2)* |
-| **Are (1) and (4) the same email?** | ⬜ yes / ⬜ no — if no, see below |
+| **Are the Meta and Devpost accounts the same email?** | ✅ yes — owner-confirmed 14 Nov |
 
-### The app — created 15 Nov 2026
+### ⚠️ The package name and the channel name are two different risks
 
-| Field | Value | Where it comes from |
-|---|---|---|
-| App name | `SIGNSPACE` | ✅ created, platform Meta Horizon Store |
-| **App ID** | ⬜ | `Development` → `API` tab |
-| **Package name** | ⬜ **recommend `com.signspace.signspace`** | not shown until a build exists. `Distribution` → `Builds` → a build → Build Details. **Unique in the Meta Quest ecosystem. Cannot change after the first upload.** |
-| Release channel | ⬜ `Competition` | `Distribution` → `Release Channels` → **Create Release Channel**. **Names are permanent.** |
-| Invite URL | ⬜ | same page → click the channel name → **Channel Settings** → **Channel Invite** → *Grant access to users by URL* |
-| Devpost entry URL | ⬜ | after P0.2 |
+**Package name — `com.signspace.signspace`** · fixed 15 Nov 2026 · **irreversible after the first upload.** It must match `PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, …)` exactly, which `BuildScript.cs` reads from `unity/Assets/_Project/package-name.txt`. That file now exists with exactly this string. Do not edit one without the other.
 
-> 🔒 **Never in this repo:** the App Secret, the release keystore password, any 2FA or recovery code.
-> The keystore password goes in a password manager — it is the one thing that, once lost, means you can
-> never upload another build of this app.
-
-> **The package name is written in two places** — `toolchain.md` §1 and here — because it is
-> irreversible and it must match Unity's Player Settings exactly. `BuildScript` reads it from
-> `unity/Assets/_Project/package-name.txt`, so the third copy is the one the build actually uses.
+**Channel name — `competition` (lowercase, as created).** The Official Rules and the *What to Submit* section both say a channel **named "Competition"**, capital C. Meta's channel names may or may not be case-sensitive in their system, but the risk is asymmetric: renaming is a two-minute job now and impossible to explain on 18 Nov. **Action: rename the channel to `Competition` if the dashboard allows mixed case; if it refuses, screenshot the refusal and record it here.** Either way, keep `Internal` for test builds.
 
 **If they differ:** that is allowed, but write down *why* and make sure you can still receive Devpost mail at the submitting address. Two addresses is a maintenance cost on Day 11; one address is not.
 
