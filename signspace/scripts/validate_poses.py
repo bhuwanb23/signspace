@@ -14,8 +14,11 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 import hand_model as hm  # noqa: E402
 
-SKIP = {"set-meta.json", "index.json"}
+SKIP = {"set-meta.json", "index.json", "probe-meta.json"}
 REQUIRED_SHAPE_KEYS = ("version", "id", "handedness", "jointCount", "jointNames", "q", "source")
+
+#: P1.4: HandPose.FromJson refuses any other schema version. Keep this in step with it.
+SUPPORTED_VERSION = 1
 
 
 def check(path: pathlib.Path, canonical: list[str]) -> list[str]:
@@ -29,6 +32,12 @@ def check(path: pathlib.Path, canonical: list[str]) -> list[str]:
         if k not in d:
             errs.append(f"{path.name}: missing '{k}'")
     if errs:
+        return errs
+
+    # P1.4: HandPose.FromJson refuses any other version, so catch it here at authoring time rather
+    # than on the headset. Keep this in step with HandPose.SupportedVersion.
+    if d["version"] != SUPPORTED_VERSION:
+        errs.append(f"{path.name}: schema version {d['version']}, this build reads {SUPPORTED_VERSION}")
         return errs
 
     n, q = d["jointCount"], d["q"]

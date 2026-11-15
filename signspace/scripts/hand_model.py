@@ -131,7 +131,15 @@ FINGER_ORDER = ["thumb", "index", "middle", "ring", "little"]
 #: Which joint in a finger carries the spread (abduction).
 ABDUCTION_JOINT = {f: chain[0] for f, chain in FINGERS.items()}
 
-#: Device-side name aliases, so one pose file works on both SDK hand layouts.
+#: Device-side name aliases, so one pose file works on every SDK hand layout.
+#:
+#: Corrected 15 Nov 2026 against Meta's "Choose a Hand Skeleton Version" table.
+#: The default skeleton since SDK v71 is OpenXR (26 joints, palm, no forearm);
+#: the legacy OVR skeleton is 24 joints, has NO palm and NO index/middle/ring
+#: metacarpal, and numbers each finger one joint lower than OpenXR does:
+#: OVR Hand_Index1 is the PROXIMAL phalange, not the metacarpal. The table used
+#: to assert the opposite, which would have rotated every finger one joint off
+#: its real axis. Keep this table in step with JointNames.cs.
 NAME_ALIASES = {
     "wrist": "Wrist",
     "wristroot": "Wrist",
@@ -145,53 +153,68 @@ NAME_ALIASES = {
     "thumb3": "ThumbDistal",
     "thumbtip": "ThumbTip",
     "thumb4": "ThumbTip",
+    # Thumb: OVR Thumb0 is the trapezium (no canonical home); Thumb1-3 are
+    # metacarpal / proximal / distal and the tip is separate.
+    "thumbmetacarpal": "ThumbMetacarpal",
+    "thumbbase": "ThumbMetacarpal",
+    "thumb1": "ThumbMetacarpal",
+    "thumbproximal": "ThumbProximal",
+    "thumb2": "ThumbProximal",
+    "thumbdistal": "ThumbDistal",
+    "thumb3": "ThumbDistal",
+    "thumbtip": "ThumbTip",
+    "thumb4": "ThumbTip",
+    # Index: OVR has no metacarpal, so 1..3 are proximal / intermediate / distal.
     "indexmetacarpal": "IndexMetacarpal",
     "indexbase": "IndexMetacarpal",
-    "index1": "IndexMetacarpal",
     "indexproximal": "IndexProximal",
-    "index2": "IndexProximal",
+    "index1": "IndexProximal",
     "indexintermediate": "IndexIntermediate",
-    "index3": "IndexIntermediate",
+    "index2": "IndexIntermediate",
     "indexdistal": "IndexDistal",
-    "index4": "IndexDistal",
+    "index3": "IndexDistal",
     "indextip": "IndexTip",
+    "index4": "IndexTip",
     "index5": "IndexTip",
     "middlemetacarpal": "MiddleMetacarpal",
     "middlebase": "MiddleMetacarpal",
-    "middle1": "MiddleMetacarpal",
     "middleproximal": "MiddleProximal",
-    "middle2": "MiddleProximal",
+    "middle1": "MiddleProximal",
     "middleintermediate": "MiddleIntermediate",
-    "middle3": "MiddleIntermediate",
+    "middle2": "MiddleIntermediate",
     "middledistal": "MiddleDistal",
-    "middle4": "MiddleDistal",
+    "middle3": "MiddleDistal",
     "middletip": "MiddleTip",
+    "middle4": "MiddleTip",
     "middle5": "MiddleTip",
     "ringmetacarpal": "RingMetacarpal",
     "ringbase": "RingMetacarpal",
-    "ring1": "RingMetacarpal",
     "ringproximal": "RingProximal",
-    "ring2": "RingProximal",
+    "ring1": "RingProximal",
     "ringintermediate": "RingIntermediate",
-    "ring3": "RingIntermediate",
+    "ring2": "RingIntermediate",
     "ringdistal": "RingDistal",
-    "ring4": "RingDistal",
+    "ring3": "RingDistal",
     "ringtip": "RingTip",
+    "ring4": "RingTip",
     "ring5": "RingTip",
+    # Pinky is the one finger OVR gives a metacarpal (Pinky0), so it numbers
+    # from 0 rather than from 1.
     "littlemetacarpal": "LittleMetacarpal",
     "pinkybase": "LittleMetacarpal",
-    "pinky1": "LittleMetacarpal",
+    "pinky0": "LittleMetacarpal",
     "littleproximal": "LittleProximal",
     "pinkyproximal": "LittleProximal",
-    "pinky2": "LittleProximal",
+    "pinky1": "LittleProximal",
     "littleintermediate": "LittleIntermediate",
     "pinkyintermediate": "LittleIntermediate",
-    "pinky3": "LittleIntermediate",
+    "pinky2": "LittleIntermediate",
     "littledistal": "LittleDistal",
     "pinkydistal": "LittleDistal",
-    "pinky4": "LittleDistal",
+    "pinky3": "LittleDistal",
     "littletip": "LittleTip",
     "pinkytip": "LittleTip",
+    "pinky4": "LittleTip",
     "pinky5": "LittleTip",
 }
 
@@ -199,14 +222,14 @@ NAME_ALIASES = {
 def canonical_joint_name(raw: str) -> str | None:
     """Map a device joint name onto the canonical set, or None if unknown.
 
-    Strips the Hand_ prefix and any _01/_02 suffixes, lowercases, and removes
-    separators, so 'Hand_IndexProximal', 'index proximal' and 'Index_Proximal'
-    all land on the same canonical joint.
+    Strips the XRHand_/Hand_ prefix and any _01/_02 suffixes, lowercases, and
+    removes separators, so 'XRHand_IndexProximal', 'Hand_IndexProximal', 'index
+    proximal' and 'Index_Proximal' all land on the same canonical joint.
     """
     if raw is None:
         return None
     cleaned = raw.strip().lower()
-    for prefix in ("hand_", "hand ", "finger_", "joint_"):
+    for prefix in ("xrhand_", "xrhand ", "hand_", "hand ", "finger_", "joint_"):
         if cleaned.startswith(prefix):
             cleaned = cleaned[len(prefix):]
     # drop trailing numeric bone suffixes like _01, _02
@@ -372,9 +395,20 @@ def _joint_delta(spec):
     return q
 
 
+def _resolve_shape(shape):
+    """Accept either a shape id or a shape dict.
+
+    P1.5 needs to author PROBE-ONLY shapes that must never appear in the shipped set:
+    they are references for measuring the sensor, not content, and putting them in
+    SHAPES would make make_pose.py ship them into index.json. Passing a dict through
+    the same maths keeps one authoring path and one set of conventions.
+    """
+    return SHAPES[shape] if isinstance(shape, str) else shape
+
+
 def shape_deltas(shape_id):
     """Per-joint delta quaternions for a shape, indexed like JOINT_NAMES."""
-    shape = SHAPES[shape_id]
+    shape = _resolve_shape(shape_id)
     deltas = {name: IDENTITY for name in JOINT_NAMES}
 
     for finger in ("index", "middle", "ring", "little"):

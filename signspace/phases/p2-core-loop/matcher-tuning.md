@@ -13,16 +13,16 @@ Measured against the six shipped shapes, that metric produces:
 
 | pair | v1 distance | what separates them |
 |---|---|---|
-| **U-V** | **3.1°** | index spread |
+| **U-V** | **5.4°** | index spread |
 | V-W | 27.0° | a third finger extended |
 | B-U | 51.8° | two fingers folded |
 | C-O | 56.1° | curvature and thumb contact |
 | *nearest accidental pair* | *133.6°* | — |
 
-**The near-miss threshold is 18°. U and V are 3.1° apart.**
+**The near-miss threshold is 18°. U and V are 5.4° apart.**
 
 The near-miss fires when the wrong shape is within 18° of the user's hand *and* closer than the
-target. With U and V only 3.1° apart, that is only ever true if the user makes a nearly perfect V.
+target. With U and V only 5.4° apart, that is only ever true if the user makes a nearly perfect V.
 A sloppy V — the exact case the feature exists for — sits 18-25° from V and 15-22° from U, and the
 near-miss **never fires**.
 
@@ -88,7 +88,7 @@ carries tracking noise. Dropping it moved the score from 2.77 to 3.06.
 | nearest **accidental** pair | 70.1° (C-O) |
 | tracking noise, p50 / p95 | 5.5° / 8.5° at 2° per joint |
 
-U-V went from **3.1° to 26.0°** — an 8.4× improvement in the signal that the near-miss depends on.
+U-V went from **5.4° to 26.0°** — a 4.8× improvement in the signal that the near-miss depends on. *(An earlier draft of this page quoted 3.1°; `scripts/tune_match.py` now prints 5.4° against the shipped poses, and the tool wins.)*
 
 ### Why the combinations were tried
 

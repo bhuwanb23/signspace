@@ -1,7 +1,7 @@
 # P1 — De-risk spike
 
-**Day 2 (Sun 8 Nov) · Budget 8 h · Gate:** G1 — Does grab-and-rotate feel good on device, and do at least 8 of 20 probed handshapes track reliably?
-**Status:** ⬜ Not started
+**Day 2 (Mon 16 Nov) · Budget 8 h · Gate:** G1 — Does grab-and-rotate feel good on device, and do at least 8 of 20 probed handshapes track reliably?
+**Status:** 🔄 In progress — **P1.1–P1.8 code complete, device verification pending (the whole phase is now waiting on one headset session)**
 
 ## Objective
 Prove, on real hardware, in one day, the four things the concept depends on: hands render well, grab feels good, wrist rotation is a viable core gesture, and the sensor can actually resolve enough handshapes to make a product. Plus the two platform bets — MRUK anchoring and persistence — and a measured frame budget.
@@ -13,20 +13,20 @@ Everything the concept assumes is true gets tested here, in one day, on real har
 
 | # | Task | Est | Workstream | Status |
 |---|---|---|---|---|
-| [P1.1](tasks/p1.1-hand-visual.md) | Custom hand visual running at frame rate | 45 min | W2 | ⬜ |
-| [P1.2](tasks/p1.2-grab-interaction.md) | Grab a free-floating object with hands only | 45 min | W2 | ⬜ |
-| [P1.3](tasks/p1.3-wrist-rotate.md) | Rotate the grabbed object with your own wrist | 1.5 h | W2 | ⬜ |
-| [P1.4](tasks/p1.4-reference-hand-and-pose.md) | Load a posed reference hand from JSON | 1 h | W2 | ⬜ |
-| [P1.5](tasks/p1.5-trackability-probe.md) | Probe 20 candidate handshapes on real hands, in real rooms | 2 h | W3 | ⬜ |
-| [P1.6](tasks/p1.6-mruk-surface.md) | Find a horizontal surface and anchor a cube to it | 1 h | W2 | ⬜ |
-| [P1.7](tasks/p1.7-persistence.md) | Survive a relaunch: the cube is still there | 45 min | W2 | ⬜ |
-| [P1.8](tasks/p1.8-perf-baseline.md) | Measure the baseline frame budget on Quest 3S | 45 min | W2 | ⬜ |
+| [P1.1](tasks/p1.1-hand-visual.md) | Custom hand visual running at frame rate | 45 min | W2 | 🟡 — code ✅, **never compiled**; run it on the headset ([log](hand-visual-log.md)) |
+| [P1.2](tasks/p1.2-grab-interaction.md) | Grab a free-floating object with hands only | 45 min | W2 | 🟡 — code ✅, **20-trial run pending** ([log](grab-log.md)) |
+| [P1.3](tasks/p1.3-wrist-rotate.md) | Rotate the grabbed object with your own wrist | 1.5 h | W2 | 🟡 — code ✅, **six cells pending** ([verdict](rotation-verdict.md)) |
+| [P1.4](tasks/p1.4-reference-hand-and-pose.md) | Load a posed reference hand from JSON | 1 h | W2 | 🟡 — code ✅; **version + ordering bugs fixed**; timing needs the device |
+| [P1.5](tasks/p1.5-trackability-probe.md) | Probe 20 candidate handshapes on real hands, in real rooms | 2 h | W3 | 🟡 — **20 poses + harness ready**, four sessions pending ([raw](probe-raw.md)) |
+| [P1.6](tasks/p1.6-mruk-surface.md) | Find a horizontal surface and anchor a cube to it | 1 h | W2 | 🟡 — **MRUK lifecycle + probe rig built**, four-condition readings pending ([log](mruk-log.md)) |
+| [P1.7](tasks/p1.7-persistence.md) | Survive a relaunch: the cube is still there | 45 min | W2 | 🟡 — **anchor-UUID save + anchor-relative restore built**, kill/reboot readings pending ([log](persistence-log.md)) |
+| [P1.8](tasks/p1.8-perf-baseline.md) | Measure the baseline frame budget on Quest 3S | 45 min | W2 | 🟡 — **in-app sampler + metrics-tool protocol built**, 15-min run pending ([baseline](perf-baseline.md)) |
 
 **Budget:** 8 h. This is the highest value-per-hour day in the project. If it needs 10 h, take them from P7.
 
 ## Inputs required before starting
 - A working empty-scene build on the primary device (P0.4)
-- A 26-joint hand mesh
+- ~~A 26-joint hand mesh~~ — **not needed**: `HandVisual` generates the hand from the canonical joints (P1.1)
 - Meta XR SDK v207 imported
 - OVR Metrics Tool installed
 - Two hours of daylight and one of lamplight
