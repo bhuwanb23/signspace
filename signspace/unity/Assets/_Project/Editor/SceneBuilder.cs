@@ -78,6 +78,16 @@ namespace Signspace.Editor
             source.matcher = matcher;
             debugOverlay.poseSource = source;
 
+            // ---- the reference hand: the thing you grab and turn ------------
+            var refGo = new GameObject("ReferenceHand");
+            var reference = refGo.AddComponent<Signspace.Matching.ReferenceHand>();
+            var visualGo = new GameObject("HandVisual");
+            visualGo.transform.SetParent(refGo.transform, false);
+            var visual = visualGo.AddComponent<Signspace.Matching.HandVisual>();
+            reference.visual = visual;
+            reference.pivot = refGo.transform;
+            reference.trackedHand = source;
+
             var loaderGo = new GameObject("SignSetLoader");
             var loader = loaderGo.AddComponent<Signspace.Matching.SignSetLoader>();
             loader.matcher = matcher;

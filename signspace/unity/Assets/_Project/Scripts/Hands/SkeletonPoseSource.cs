@@ -27,11 +27,32 @@ namespace Signspace.Matching
                  "Returning 1f keeps the app running but disables the pause behaviour.")]
         public MonoBehaviour confidenceProvider;
 
+        [Tooltip("Optional provider for the SDK's pinch state, for the grab-and-rotate mechanic. " +
+                 "Implement IHandStateProvider on a small component and assign it here.")]
+        public MonoBehaviour handStateProvider;
+
         /// <summary>Filled after the joint mapping is resolved. Shown in the debug overlay.</summary>
         public string JointReport { get; private set; } = "not resolved";
 
         /// <summary>True when every canonical joint was found on the device.</summary>
         public bool JointsFullyMapped { get; private set; }
+
+        /// <summary>
+        /// The tracked hand's wrist rotation, in the canonical frame.
+        /// The reference hand follows this, which is how you turn it with your own wrist.
+        /// </summary>
+        public Quaternion WristRotation =>
+            (_buffer != null && _buffer.Length > PoseMath.WristIndex) ? _buffer[PoseMath.WristIndex] : Quaternion.identity;
+
+        /// <summary>
+        /// Optional: supplies the SDK's pinch state, for the grab-and-rotate mechanic.
+        /// Implement this on a small component and assign it to handStateProvider.
+        /// </summary>
+        public interface IHandStateProvider
+        {
+            bool IsPinching { get; }
+            float PinchStrength { get; }
+        }
 
         Quaternion[] _buffer;
         int[] _deviceIndexForCanonical;   // device joint index per canonical joint, -1 if absent
