@@ -98,6 +98,21 @@ namespace Signspace.Editor
             var saveGo = new GameObject("SaveSystem");
             saveGo.AddComponent<Signspace.Matching.SaveSystem>();
 
+            // ---- P1.1: the two tracked hands, and the HandVisual prefab ---------------------
+            // This is the step that was missing entirely before P1.1: nothing in the scene had
+            // ever bound a tracked skeleton to the matcher, so the matcher was being fed an empty
+            // joint array and the reference hand's grab had no pinch source. BuildHandRig() emits
+            // Assets/_Project/Prefabs/HandVisual.prefab, instantiates both hands, and assigns the
+            // right hand's MetaHandSource to the reference hand.
+            HandRigBuilder.BuildHandRig();
+
+            // ---- P1.2: the grab test rig ---------------------------------------------------
+            // One floating cube, a PinchGrabber per hand, the trial logger and the no-fallback guard.
+            // This is a SPIKE rig, not content: P2 replaces the cube with the first real shape. It
+            // lives in the scene builder so that one command still produces a headset build that can
+            // answer P1.2's question.
+            GrabTestBuilder.BuildGrabTest();
+
             // ---- scene settings ---------------------------------------------
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(0.35f, 0.35f, 0.40f);

@@ -19,8 +19,18 @@ namespace Signspace.Matching
     /// a hand shape, which is exactly what this product needs to teach - and it cannot be mistaken
     /// for a photoreal attempt at a real hand, which would be worse.
     ///
-    /// COST: one capsule per bone, so 25 renderers. On the reference hand plus the tracked hand
-    /// that is ~50 draw calls of the 120 the budget allows. If it ever matters, merge the capsules
+    /// COST: one capsule per bone. Counted, not guessed, in P1.1: SegmentLengths has 20 entries
+    /// (palm + 4 per long finger + 3 thumb), so **20 renderers per hand** and 40 for the reference
+    /// hand plus the tracked hand - not the 25 this comment claimed before it was counted. That is
+    /// a third of the 120 draw-call budget in TECH-STACK.md section 4.
+    ///
+    /// TWO MODES, ONE MESH
+    /// -------------------
+    /// The reference hand is driven by ROTATIONS ONLY (ApplyPose) because the pose files store
+    /// rotations against an identity rest pose. The tracked hand is driven by WORLD POSITIONS
+    /// (FitToSkeleton) because a real hand's bone lengths are not the 20 constants below and
+    /// squeezing them in would look wrong. Both modes move the same 20 capsules, so the thing you
+    /// turn with your wrist is drawn by exactly the same code as the thing you are trying to match. If it ever matters, merge the capsules
     /// into one skinned mesh; do not do it before there is a frame problem.
     /// </summary>
     public class HandVisual : MonoBehaviour
@@ -36,6 +46,12 @@ namespace Signspace.Matching
 
         /// <summary>The joint transforms, in canonical order. Index matches JointNames.Canonical.</summary>
         public Transform[] joints;
+
+        /// <summary>
+        /// The capsule transform for each canonical joint, or null for joints that draw nothing
+        /// (the wrist and the five tips). Parallel to <see cref="joints"/>. Filled by Build().
+        /// </summary>
+        public Transform[] bones;
 
         /// <summary>Segment lengths in metres, per bone, keyed by the canonical joint name.</summary>
         static readonly System.Collections.Generic.Dictionary<string, float> SegmentLengths =
@@ -92,6 +108,8 @@ namespace Signspace.Matching
             EnsureMeshes();
 
             joints = new Transform[JointNames.Canonical.Length];
+            bones = new Transform[JointNames.Canonical.Length];
+            ParentIndices = new int[JointNames.Canonical.Length];
             var byName = new System.Collections.Generic.Dictionary<string, Transform>();
 
             for (int i = 0; i < JointNames.Canonical.Length; i++)
@@ -150,6 +168,17 @@ namespace Signspace.Matching
                 renderer.sharedMaterial = material;
                 var filter = bone.AddComponent<MeshFilter>();
                 filter.sharedMesh = joint == "Palm" ? _palmMesh : _capsuleMesh;
+
+                int jointIndex = JointNames.IndexOf(joint);
+                if (jointIndex >= 0) bones[jointIndex] = bone.transform;
+            }
+
+            for (int i = 0; i < JointNames.Canonical.Length; i++)
+            {
+                string parentName = Parents.ContainsKey(JointNames.Canonical[i])
+                    ? Parents[JointNames.Canonical[i]]
+                    : PreviousInFinger(JointNames.Canonical[i]);
+                ParentIndices[i] = parentName == null ? -1 : JointNames.IndexOf(parentName);
             }
 
             return joints;
@@ -194,6 +223,134 @@ namespace Signspace.Matching
             {
                 if (joints[i] == null) continue;
                 joints[i].localRotation = localRotations[i];
+            }
+        }
+
+        /// <summary>Index of each joint's parent in canonical order, or -1. Filled by Build().</summary>
+        public int[] ParentIndices;
+
+        /// <summary>
+        /// Drives the visual from a real, tracked skeleton. This is the tracked-hand mode: the
+        /// capsules are stretched and aimed to span each real bone, so the drawn hand is the
+        /// user's hand at the user's hand size instead of the 20 constants above.
+        ///
+        /// WHAT IT DOES, PER BONE
+        ///   1. take the bone's real start and end: the parent joint's world position and its own
+        ///   2. length = that distance, so a child's hand is not drawn as an adult's
+        ///   3. rotate the capsule so its +Y axis runs along the bone
+        ///   4. the palm gets a real basis - flattened along the palm normal, computed from the
+        ///      index and little metacarpals - so the palm faces the right way instead of
+        ///      presenting whichever roll FromToRotation happened to pick
+        ///
+        /// WHY NOT localRotation LIKE ApplyPose
+        /// ------------------------------------
+        /// A pose file has no positions: it was authored against a rest pose with identity local
+        /// rotations, so rotations are all it can carry. A tracked skeleton has real positions and
+        /// a real, different rest pose. Feeding rotations alone would replay the SDK's rest pose
+        /// onto our geometry, which is the difference between "a hand" and "a hand-shaped thing
+        /// wearing someone else's skeleton".
+        ///
+        /// The guard clamps absurd lengths rather than trusting the tracker: a lost joint can
+        /// report a position a metre away and a 2 m finger looks like broken hardware.
+        /// </summary>
+        public void FitToSkeleton(Transform[] sourceJoints)
+        {
+            if (bones == null || sourceJoints == null || ParentIndices == null) return;
+            int n = Mathf.Min(JointNames.Canonical.Length, Mathf.Min(bones.Length, sourceJoints.Length));
+
+            for (int i = 0; i < n; i++)
+            {
+                var bone = bones[i];
+                if (bone == null) continue;
+                int p = ParentIndices[i];
+                if (p < 0 || p >= n) continue;
+                var src = sourceJoints[i];
+                var srcParent = sourceJoints[p];
+                if (src == null || srcParent == null) continue;
+
+                Vector3 a = srcParent.position;
+                Vector3 d = src.position - a;
+                float length = d.magnitude;
+                if (length < 0.002f) continue;                      // collapsed: not a bone
+                length = Mathf.Min(length, 0.12f);                  // nothing on a hand is longer
+                Vector3 axis = d / d.magnitude;
+
+                bool isPalm = JointNames.Canonical[i] == "Palm";
+                Vector3 normal = isPalm ? PalmNormal(sourceJoints) : axis;
+                bone.rotation = isPalm
+                    ? Quaternion.LookRotation(normal, axis)
+                    : Quaternion.FromToRotation(Vector3.up, axis);
+                bone.position = a + d.normalized * (length * 0.5f);
+
+                float radius = (SegmentRadii.ContainsKey(JointNames.Canonical[i])
+                    ? SegmentRadii[JointNames.Canonical[i]] : 0.008f) * scale;
+                bone.localScale = isPalm
+                    ? new Vector3(radius * 2f, length * 0.5f, radius * 1.15f)
+                    : new Vector3(radius * 2f, length * 0.5f, radius * 2f);
+            }
+        }
+
+        /// <summary>
+        /// The palm's facing direction: across the knuckles, from the index side to the little side.
+        /// Falls back to the bone axis when the two metacarpals are not both tracked, which keeps
+        /// the palm visible rather than hiding it.
+        /// </summary>
+        static Vector3 PalmNormal(Transform[] src)
+        {
+            int wrist = JointNames.IndexOf("Wrist");
+            int index = JointNames.IndexOf("IndexMetacarpal");
+            int little = JointNames.IndexOf("LittleMetacarpal");
+            if (wrist < 0 || index < 0 || little < 0) return Vector3.forward;
+            if (wrist >= src.Length || index >= src.Length || little >= src.Length) return Vector3.forward;
+            if (src[wrist] == null || src[index] == null || src[little] == null) return Vector3.forward;
+
+            Vector3 toIndex = src[index].position - src[wrist].position;
+            Vector3 toLittle = src[little].position - src[wrist].position;
+            Vector3 n = Vector3.Cross(toIndex, toLittle);
+            return n.sqrMagnitude < 1e-8f ? Vector3.forward : n.normalized;
+        }
+
+        /// <summary>
+        /// Draw cost of this hand, counted from the meshes actually attached. Used by the P1.1
+        /// measurement and by the debug readout - a number from the scene, not from this file's
+        /// comments (which were wrong once already).
+        /// </summary>
+        public HandCost CountCost()
+        {
+            var cost = new HandCost();
+            if (bones == null) return cost;
+            for (int i = 0; i < bones.Length; i++)
+            {
+                if (bones[i] == null) continue;
+                var filter = bones[i].GetComponent<MeshFilter>();
+                var renderer = bones[i].GetComponent<MeshRenderer>();
+                if (filter == null || filter.sharedMesh == null || renderer == null) continue;
+                cost.renderers++;
+                cost.triangles += filter.sharedMesh.triangles.Length / 3;
+                if (renderer.isVisible) cost.visibleRenderers++;
+            }
+            return cost;
+        }
+
+        public struct HandCost
+        {
+            public int renderers;
+            public int visibleRenderers;
+            public int triangles;
+
+            public override string ToString() =>
+                renderers + " renderers (" + visibleRenderers + " visible), " + triangles + " triangles";
+        }
+
+        /// <summary>Shows or hides the whole hand without touching the joint data.</summary>
+        public void SetVisible(bool visible)
+        {
+            if (bones == null) return;
+            for (int i = 0; i < bones.Length; i++)
+            {
+                if (bones[i] == null) continue;
+                var renderer = bones[i].GetComponent<MeshRenderer>();
+                if (renderer != null && renderer.enabled != visible) renderer.enabled = visible;
             }
         }
 
