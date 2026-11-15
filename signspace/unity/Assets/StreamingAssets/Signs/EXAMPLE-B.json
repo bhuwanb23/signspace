@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "id": "B",
+  "handedness": "right",
+  "jointCount": 3,
+  "neutralCaptured": "2026-11-15T18:20:00Z",
+  "source": "reference-authored",
+  "jointNames": ["WristRoot", "Index1", "Index2"],
+  "q": [0,0,0,1,  0,0,0,1,  0,0,0,1],
+  "_comment": "TRUNCATED EXAMPLE: 3 joints shown so the format is readable. Real files carry every joint the SDK reports. Identity quaternions mean 'same as neutral'. Generate with scripts/make_pose.py or export from the editor."
+}
