@@ -1,0 +1,172 @@
+using System;
+using System.IO;
+using System.Security.Cryptography;
+using UnityEditor;
+using UnityEditor.Build.Reporting;
+using UnityEngine;
+
+namespace Signspace.Editor
+{
+    /// <summary>
+    /// Applies every Player setting the build needs, then builds the APK.
+    ///
+    /// WHY THIS EXISTS
+    /// ---------------
+    /// toolchain.md lists the settings as a checklist a human ticks. That is
+    /// exactly the kind of thing that gets half-ticked on Day 11. Here the
+    /// settings are code: they are reviewed in the diff, they are applied
+    /// identically every time, and the same command produces the submission
+    /// build on Day 4 that produced the test build on Day 1.
+    ///
+    /// The values come from phases/p0-foundation/toolchain.md section 2 and
+    /// docs/02-tech/TECH-STACK.md section 1.
+    ///
+    /// USAGE
+    ///   Unity.exe -batchmode -quit -projectPath unity \
+    ///             -executeMethod Signspace.Editor.BuildScript.BuildAndroid
+    ///
+    ///   Unity.exe -batchmode -quit -projectPath unity \
+    ///             -executeMethod Signspace.Editor.BuildScript.ApplySettingsOnly
+    ///
+    /// The package name is read from a small text file so that the single
+    /// irreversible decision lives in ONE place and is not duplicated here:
+    ///   unity/package-name.txt
+    /// </summary>
+    public static class BuildScript
+    {
+        const string ProjectRoot = "Assets/_Project";
+        const string ScenesPath = ProjectRoot + "/Scenes/Main.unity";
+        const string OutputFolder = "Builds/Android";
+        const string PackageNameFile = "Assets/_Project/package-name.txt";
+
+        // ---- the settings, all in one place -----------------------------
+        const string PackageName = "com.signspace.signspace";  // overridden by package-name.txt
+        const string ProductName = "SIGNSPACE";
+        const string CompanyName = "SIGNSPACE";
+        const int MinimumApi = 32;      // Android 12
+        const int TargetApi = 34;       // Android 14
+        const int BundleVersionCode = 1;
+        const string Version = "0.9.0";
+
+        [MenuItem("SIGNSPACE/Apply Player Settings")]
+        public static void ApplySettingsOnly()
+        {
+            ApplySettings();
+            Debug.Log("[BuildScript] player settings applied");
+        }
+
+        [MenuItem("SIGNSPACE/Build Android APK")]
+        public static void BuildAndroid()
+        {
+            ApplySettings();
+
+            string outDir = Path.Combine(Directory.GetCurrentDirectory(), OutputFolder);
+            Directory.CreateDirectory(outDir);
+            string apkPath = Path.Combine(outDir, "signspace.apk");
+
+            var options = new BuildPlayerOptions
+            {
+                scenes = new[] { ScenesPath },
+                locationPathName = apkPath,
+                target = BuildTarget.Android,
+                options = BuildOptions.None
+            };
+
+            Debug.Log("[BuildScript] building " + apkPath);
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            BuildSummary summary = report.summary;
+
+            Debug.Log($"[BuildScript] result   : {summary.result}");
+            Debug.Log($"[BuildScript] size     : {summary.totalSize / (1024 * 1024)} MB");
+            Debug.Log($"[BuildScript] duration : {summary.totalTime}");
+
+            if (summary.result != BuildResult.Succeeded)
+            {
+                Debug.LogError("[BuildScript] BUILD FAILED");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            Debug.Log("[BuildScript] sha256   : " + Sha256(apkPath));
+            Debug.Log("[BuildScript] apk      : " + apkPath);
+            EditorApplication.Exit(0);
+        }
+
+        /// <summary>
+        /// Applies the Android Player settings. Idempotent.
+        /// </summary>
+        public static void ApplySettings()
+        {
+            string packageName = ReadPackageName();
+
+            PlayerSettings.companyName = CompanyName;
+            PlayerSettings.productName = ProductName;
+            PlayerSettings.bundleVersion = Version;
+            PlayerSettings.bundleVersionCode = BundleVersionCode;
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, packageName);
+
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel32;
+            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel34;
+
+            // Quest is ARM64 only
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetIl2CppCompilerConfiguration(BuildTargetGroup.Android, Il2CppCompilerConfiguration.Release);
+
+            // linear colour space is correct for Quest
+            PlayerSettings.colorSpace = ColorSpace.Linear;
+
+            // ISDK needs the new input system
+            PlayerSettings.activeInputHandler = ActiveInputHandling.Both;
+
+            // texture compression
+            EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ASTC;
+            EditorUserBuildSettings.buildAppBundle = false;   // the competition wants an APK
+
+            // Vulkan first, GLES3 as the fallback
+            PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new[] { UnityEngine.Rendering.GraphicsDeviceType.Vulkan });
+            PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.Android, false);
+
+            // IL2CPP needs the NDK path; take it from the installed module
+            EditorUserBuildSettings.androidBuildSystem = AndroidBuildSystem.Gradle;
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[BuildScript] package name: " + packageName);
+        }
+
+        /// <summary>
+        /// Reads the package name from a text file, so the one irreversible
+        /// decision is recorded in exactly one place and can be changed before
+        /// the app is created on the Meta dashboard.
+        /// </summary>
+        static string ReadPackageName()
+        {
+            string path = Path.Combine(Directory.GetCurrentDirectory(), PackageNameFile);
+            try
+            {
+                if (File.Exists(path))
+                {
+                    string line = File.ReadAllText(path).Trim();
+                    if (!string.IsNullOrEmpty(line) && !line.StartsWith("#"))
+                    {
+                        return line.Split('\n')[0].Trim();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BuildScript] could not read the package name file: " + e.Message);
+            }
+            return PackageName;
+        }
+
+        public static string Sha256(string path)
+        {
+            using (var sha = SHA256.Create())
+            using (var stream = File.OpenRead(path))
+            {
+                return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+            }
+        }
+    }
+}

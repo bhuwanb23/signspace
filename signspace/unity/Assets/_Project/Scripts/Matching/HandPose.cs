@@ -17,7 +17,9 @@ namespace Signspace.Matching
         public int jointCount;
         public string neutralCaptured;  // ISO-8601, when the neutral pose was captured
         public string source;           // "reference-authored" | "signer-verified"
-        public string[] jointNames;     // length == jointCount, in SDK order
+        public string family;           // "spread" | "closure" -- used by the honest mirror
+        public string description;      // one line, for the reference hand's label
+        public string[] jointNames;     // length == jointCount, in canonical order
         public float[] q;               // length == jointCount * 4
     }
 
@@ -26,6 +28,8 @@ namespace Signspace.Matching
     {
         public string Id;
         public string Source;
+        public string Family;
+        public string Description;
         public Quaternion[] LocalRotations;
 
         public static HandPose FromJson(string json, out string error)
@@ -57,7 +61,14 @@ namespace Signspace.Matching
                 rots[i] = quat.normalized;
             }
 
-            return new HandPose { Id = p.id, Source = p.source, LocalRotations = rots };
+            return new HandPose
+            {
+                Id = p.id,
+                Source = p.source,
+                Family = p.family,
+                Description = p.description,
+                LocalRotations = rots
+            };
         }
 
         public int JointCount => LocalRotations?.Length ?? 0;
