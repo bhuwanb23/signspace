@@ -56,6 +56,10 @@ namespace Signspace.UI
         public float closeGlow = 0.65f;
         public float lockedGlow = 1.10f;
 
+        [Header("Paused — tracking too weak to judge (P3.5)")]
+        [Tooltip("The meter goes grey, still and dim; it must never keep pulsing a verdict it cannot support.")]
+        public Color pausedColor = new Color(0.55f, 0.57f, 0.60f, 1f);
+
         [Header("Transition")]
         [Tooltip("Seconds to blend between band colours. Below ~0.08 s a band change reads as a cut.")]
         public float colorBlendSeconds = 0.14f;
@@ -89,6 +93,17 @@ namespace Signspace.UI
             Band band = matcher.CurrentBand;
             float dt = Time.deltaTime;
             _clock += dt;
+
+            // P3.5: a dropout is not a verdict (ADR-003). The hold is already frozen by the matcher;
+            // this stops the visible meter from continuing to animate a band it can no longer trust.
+            if (matcher.IsPaused)
+            {
+                _current = Color.Lerp(_current, pausedColor,
+                                      Mathf.Clamp01(dt / Mathf.Max(0.01f, colorBlendSeconds)));
+                Apply(1f, warmingGlow / Mathf.Max(0.01f, lockedGlow) * 0.5f);
+                _shownBand = band;
+                return;
+            }
 
             // A band change is a transition, not a cut. Cutting colour on a threshold is what makes a
             // meter feel like a machine deciding about you.

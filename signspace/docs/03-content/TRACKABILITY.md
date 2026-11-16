@@ -147,12 +147,14 @@ written per shape from the category, not from a general statement:
 | Tracks but never locks | *"We can see this one, but the match is too tight for it today."* |
 
 **The number that goes in the product.** `NOVELTY-AND-PRIOR-ART.md` proposed *"x of y handshape-family
-variants are robustly trackable today"*. The real number comes from the table:
+variants are robustly trackable today"*. The real number comes from the table — and the table above
+is still empty, because **the P1.5 probe has not run on a device**. There is therefore no count to
+publish yet, and inventing one (an earlier draft said "4 of 20") would violate this document's own
+first rule.
 
-> *"**4 of 20** handshapes we tested are reliably trackable on a Quest 3S in normal light. Here are
-> the four."*
-
-With a **measurement date** next to it. A number without a date is a guess.
+Until the probe runs, the shipped panel says *"Trackability review pending — no device measurement
+yet"* (`HonestMirror.numbersMeasured = false`), and the count line is withheld rather than guessed.
+When it runs, the number goes in with a **measurement date** next to it.
 
 **The count is not fixed in advance.** If the probe finds six shapes that work, the number is six and
 the shipped set is those six. If it finds three, the number is three — and the cut ladder rung 5

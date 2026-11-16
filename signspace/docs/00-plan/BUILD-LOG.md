@@ -61,24 +61,31 @@ clears Meta's floor of 6000.0.66f2.
 
 ## 2. What is verified
 
-### 2.1 The build itself — ✅ VERIFIED
+### 2.1 The build itself — ✅ VERIFIED (16 Nov 2026, after the integration pass)
 
 ```text
 [BuildScript] active input handling = Both
+[BuildScript] package name: com.signspace.signspace, version code 10
+[BuildScript] scene tuning matches: locked 12 / close 24 / slack 15 / weights 21 joints, total weight 15.30
 [BuildScript] result   : Succeeded
-[BuildScript] apk size : 62 MB
-[BuildScript] version  : 0.9.0 (bundle version code 8)
-[BuildScript] sha256   : 10b8a944f784ecccf43fb91c88519dbc6cb969be81b2d1f961f0a52bcd4639c2
+[BuildScript] apk size : 61 MB
+[BuildScript] duration : 00:00:37
+[BuildScript] sha256   : 2879b8d0420bc3fc3191faa4a855f363d8ac1e6979ae3e5a27fa00ecdaf7c4ac
 ```
 
-From the built APK:
+From the built APK (`aapt2 dump badging` / `dump permissions`):
 
 ```text
-package: name='com.signspace.signspace' versionCode='8' versionName='0.9.0'
+package: name='com.signspace.signspace' versionCode='10' versionName='0.9.0'
 minSdkVersion:'32'   targetSdkVersion:'34'
 application-label:'SIGNSPACE'   native-code: 'arm64-v8a'
 uses-permission: name='horizonos.permission.HEADSET_CAMERA'
 ```
+
+The previous verified build (15 Nov) was version code **8**, 62 MB, sha256 `10b8a944…`. Version
+codes are consumed from `Assets/_Project/version-code.txt`, because Meta rejects a duplicate code
+without naming the conflicting build. The scene's serialised tuning is now asserted at build time:
+a mismatch aborts the build instead of shipping a 20° band on a 24° metric.
 
 ### 2.2 The toolchain — ✅ VERIFIED
 
@@ -248,3 +255,138 @@ honours a clear, specific disclosure far more than a vague one.
 |---|---|---|
 | 15 Nov 2026 | File created. Toolchain installed on E:, Unity project created, first compile (0 errors), first APK (62 MB). The metric redesigned and measured offline. The joint-alias tables reconciled. The nine stub specs written. Passthrough enabled and verified in the built manifest. | agent |
 | 16 Nov 2026 | P2 integrated: the v3 metric, the palm term, the bands, the hold timer, the left-hand policy, the schema v2, and ~20 new C# files — none of which had ever been compiled. Restored the Unity engine modules that had been dropped from `manifest.json` (144 compile errors). | agent |
+| 16 Nov 2026 | **Integration pass.** The merged tree compiled (8 errors fixed), the scene was regenerated with explicit tuning, the build now asserts it, the silently-missing payoff was restored, the APK was rebuilt at version code 10, `MATCH-ALGORITHM.md` moved to v3, the tuning raw output was regenerated, and the P3 feedback layer was wired into the scene. Details in §8. | agent |
+
+---
+
+## 8. Session log — 16 Nov 2026 (integration pass)
+
+Written in the order the work happened, because the order is the useful part: each defect was
+only visible after the previous one was fixed.
+
+### 8.1 The merged tree did not compile — ✅ FIXED, VERIFIED
+
+`P2`'s own documents said the code had never been compiled. That was still true. The first command
+returned **8 errors in 4 files**, and three of them were in the P2 code itself:
+
+| File | Error | Cause |
+|---|---|---|
+| `Matcher.cs` | CS0206 | `out BasisNote` passed a **property** as an out parameter |
+| `Matcher.cs` | CS0102 | `OrientationPenaltyDegrees` declared **twice** in the class |
+| `SurfaceProbe.cs` | CS0170 ×4 | `SurfaceCandidate best;` left unassigned by a short-circuited `finder != null && …` |
+| `ShelfAnchor.cs` | CS0170 ×5 | same pattern on `surface` |
+| `BandFeedback.cs` | CS0019 | `Color * Light` — `glowRatio` was meant, `glow` is the Light field |
+| `SceneBuilder.cs` | CS0104 | bare `Object` ambiguous with `using System;` |
+| `BuildScript.cs` | CS0117 | `PlayerSettings.bundleVersionCode` does not exist (Android-specific) |
+| `BuildScript.cs` | CS0117 | `PlayerSettings.activeInputHandler` does not exist — the regression that replaced the file-patch path |
+
+```bash
+"E:/unity/Editors/6000.3.28f1/Editor/Unity.exe" -batchmode -quit -projectPath . \
+  -logFile compile3.log -executeMethod Signspace.Editor.BuildScript.ApplySettingsOnly
+# EXIT=0; [BuildScript] active input handling = Both; [BuildScript] player settings applied
+```
+
+### 8.2 The scene ran neither tuned band — ✅ FIXED, VERIFIED
+
+`Main.unity` serialised `closeDeg: 20` and `orientationSlackDeg: 20`. The code said 24 and 15.
+Unity's serialised value wins, so the built app ran the older tuning and nothing reported it.
+
+Two changes, structural rather than a YAML edit:
+
+1. **One source of truth** — `Matcher.Tuned*` constants; the fields initialise from them.
+2. **The generator writes them explicitly** — `SceneBuilder` assigns every tuned value and logs it,
+   instead of relying on a default that a serialised scene silently overrides.
+3. **The build refuses a mismatch** — `BuildScript.VerifySceneTuning()` opens the scene, compares
+   all seven values (plus the weights asset), and aborts with the field name, the scene value and
+   the tuned value if any differ.
+
+```text
+[SceneBuilder] matcher tuning <- locked 12 / close 24 / release 2 / slack 15 / hold 0.70 s
+[BuildScript] scene tuning matches: locked 12 / close 24 / slack 15 / weights 21 joints, total weight 15.30
+```
+
+### 8.3 The lock payoff was silently absent — ✅ FIXED, VERIFIED
+
+`SceneBuilder` warned `Prefabs/LockPayoff.prefab missing` even though the prefab was committed. In a
+cold batch run the asset database had not imported it, `LoadAssetAtPath` returned null, and the
+scene was written **without the payoff** — half of G2 criterion 5, missing with one warning.
+
+Fixed by `AssetDatabase.Refresh()` before the loads, plus a regeneration fallback
+(`LockPayoffBuilder.Build()`) if the load still fails. The scene now logs:
+
+```text
+[SceneBuilder] LockPayoff.prefab did not load; regenerating it.
+[LockPayoff] wrote Assets/_Project/Prefabs/LockPayoff.prefab (ok), total 0.99 s
+[SceneBuilder] lock payoff wired, 0.99 s of a 1.20 s budget
+```
+
+### 8.4 Two defects in the build script itself — ✅ FIXED, VERIFIED
+
+- **A UTF-8 BOM in `Packages/manifest.json`** made the Package Manager reject the whole file
+  (`"not valid JSON … Char: 65279"`, *No packages loaded*) and Unity exited before compiling a
+  single script. The BOM came from a PowerShell write. Fixed by writing the file without one; the
+  committed content is byte-identical to the last good manifest.
+- **The version code had been reset to 1.** The APK claimed code 1 while the dashboard had code 8,
+  and Meta rejects a duplicate code with an error that does not name the build. Restored the
+  read-then-increment path from `Assets/_Project/version-code.txt`; this build consumed **9** for a
+  check and **10** for the final artefact.
+- **The logged size was `summary.totalSize`**, which reported *1256 MB* for a 62 MB APK. It now logs
+  the APK file's length (61 MB) and the build total separately, labelled as including intermediates.
+
+### 8.5 The metric evidence was stale — ✅ REGENERATED, VERIFIED
+
+`matcher-tuning-raw.txt` was UTF-16 with no v3 section, and `tune_match.py` still printed
+`closeDeg 20` in the shipped-threshold line. Regenerated as UTF-8 with a full v3 section and a
+decision block driven by one set of shipped constants:
+
+```text
+v3  max of weighted finger means   26.0   6.7   3.89   <- ships
+v3  flat weighted mean (the trap)   5.3   3.7   1.43
+shipped thresholds lockedDeg 12 / closeDeg 24 / nearMissMaxDeg 26
+```
+
+### 8.6 The P3 feedback layer — 🟡 BUILT, NOT DEVICE-TESTED
+
+Before this pass, `NearMissDisplay`, `HonestMirror` and `HandConfidenceReadout` existed as scripts
+that nothing instantiated. They are now in `Main.unity`:
+
+| Piece | Evidence |
+|---|---|
+| Near-miss line | `FeedbackUiBuilder` creates the canvas, `Text`, `CanvasGroup` and binds `NearMissDisplay` |
+| Near-miss rule | `scripts/near_miss_sim.py` → 36 pairs, 30 fires (every clean non-target shape), 0 disagreements; U↔V names the other shape |
+| Honest mirror | panel + a pinchable physical handle (`HonestMirrorHandle`); count line says *pending* because P1.5 has not run |
+| Pause | `TrackingConfidence` dims the panel and breathes a dot; `BandFeedback` goes grey and still while `IsPaused` |
+| Copy | 10 variants, final 5-word line — not yet read to a non-signer |
+
+The near-miss now compares the **finger term only**, so a correct shape with a twisted wrist can never
+be renamed as a different sign.
+
+### 8.7 Traps found in this pass, for the next person
+
+| Trap | Symptom | Fix |
+|---|---|---|
+| BOM in a JSON file | Package Manager: *Non-whitespace before {[ … Char: 65279*; **No packages loaded** | write JSON without a BOM; never `Out-File` it |
+| `summary.totalSize` | a 62 MB APK logged as 1256 MB | use the file's length for the artefact's size |
+| Cold `AssetDatabase` | a committed prefab loads as null and is silently omitted from the scene | `AssetDatabase.Refresh()` + regenerate fallback |
+| Serialised field vs code default | editor shows 24, the app runs 20 | generator writes values; build asserts them |
+| `Object` with `using System;` | CS0104 | qualify `UnityEngine.Object` |
+| Short-circuit + `out` struct | CS0170 on every field read after the guard | initialise to `default` |
+
+---
+
+## 9. What is next
+
+1. **Headset (or simulator) session** — measure σ per joint (P1.5), then re-run `tune_match.py
+   --sigma <measured>` and move the thresholds only if the tripwire fires. This is still item 1.
+2. **P3 people/device checks** — 20 sloppy attempts for false positives, the three degradation
+   scenarios, one stranger for the near-miss, the copy read to a non-signer.
+3. **P4 shelf** — replace the provisional `HonestMirrorHandle` placement with the real shelf object;
+   the binding is one event, so the panel does not change.
+4. **POSE-FORMAT §4.3** — the left-hand frame test; until it runs, `HandSupport.LeftHandSupported`
+   stays false and the honest mirror says so.
+
+**Open hardware dependencies, unchanged:** the real tracking-noise figure, 20/20 locks and 0/20
+false locks, the payoff filmed, a stranger locking a shape uncoached, the App ID, and
+`OVRManager → Hand Skeleton Version = Default (OpenXR)`. The simulator can retire the launch,
+tracking, matcher and near-miss risks; it cannot produce noise, passthrough, MRUK, thermal or
+silicon fps.

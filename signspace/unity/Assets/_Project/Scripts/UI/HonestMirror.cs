@@ -32,6 +32,9 @@ namespace Signspace.UI
         public string handLimitation = HandSupport.OneLineExplanation;
 
         [Header("Measured numbers — from TRACKABILITY.md, never invented")]
+        [Tooltip("Off until P3.6 has run on a device. A panel that prints '0 of 0' is worse than one " +
+                 "that says the measurement has not happened yet.")]
+        public bool numbersMeasured;
         public int robustVariants;
         public int totalVariants;
         public string measuredOn = "";
@@ -39,6 +42,8 @@ namespace Signspace.UI
 
         [Header("Authorship — mirrors set-meta.json (ADR-007)")]
         public SetMeta meta;
+        [Tooltip("Read at Open() so the panel shows the credit line actually shipped in set-meta.json.")]
+        public SignSetLoader loader;
 
         [Header("View")]
         public GameObject root;
@@ -71,8 +76,14 @@ namespace Signspace.UI
 
         void Build()
         {
+            SetMeta shipped = loader != null ? loader.Meta : meta;
+
             if (header != null)
-                header.text = $"{robustVariants} of {totalVariants} handshape variants are robustly trackable today";
+            {
+                header.text = numbersMeasured
+                    ? $"{robustVariants} of {totalVariants} handshape variants are robustly trackable today"
+                    : "Trackability review pending — no device measurement yet";
+            }
 
             if (body != null)
             {
@@ -94,8 +105,8 @@ namespace Signspace.UI
             if (credit != null)
             {
                 // The authorship line is data, never copy (ADR-007). Whatever ships, ships truthfully.
-                credit.text = meta != null && !string.IsNullOrEmpty(meta.creditLine)
-                    ? meta.creditLine
+                credit.text = shipped != null && !string.IsNullOrEmpty(shipped.creditLine)
+                    ? shipped.creditLine
                     : "Handshapes authored against published ASL references. Deaf signer review in progress.";
             }
         }

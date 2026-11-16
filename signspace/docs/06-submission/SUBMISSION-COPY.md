@@ -41,7 +41,7 @@ Sign language is three-dimensional. Almost every resource that teaches it is a f
 
 **The mechanic.** A life-size reference hand, captured from a Deaf signer, appears in front of you. Pinch it and turn it with your own wrist to see the depth a video can never show. Look at a finger and it highlights with its position. Your tracked hand mirrors beside it; a forgiving match responds as you shape. Hold it and it locks in.
 
-**Wrong answers are more informative than right ones.** When your handshape lands a few degrees from a *different* sign, SIGNSPACE names the sign you actually made: "That's not C. That's O — your thumb is 8° too far around." That is minimal-pair diagnosis, only possible with joint-level tracking.
+**Wrong answers are more informative than right ones.** When your handshape lands a few degrees from a *different* sign, SIGNSPACE names the sign you actually made: "That's not U. That's V." That is minimal-pair diagnosis, only possible with joint-level tracking.
 
 **Why hands-first is required, not optional.** With a controller you cannot turn the hand with your hand, and you cannot compare your shape to the reference — because the instrument being trained is holding a controller. A controller version is not a worse product. It is not a product.
 
@@ -53,11 +53,11 @@ Sign language is three-dimensional. Almost every resource that teaches it is a f
 
 **Accessibility by default.** Captions on, high contrast, speed control, one-handed play, eyes-only dwell selection, and a 30-second calibration that normalises to your hand's own range — because we don't require you to have a standard hand.
 
-**Performance.** ≥72 fps on Quest 3S across a 15-minute thermal run.
+**Performance target.** ≥72 fps on Quest 3S across a 15-minute thermal run — the instrument exists; the number is not claimed until it has been measured on the device.
 
 **What we don't claim.** We don't claim fluency. A 2020 RCT of 60 learners found no significant effect of VR platform on immediate ASL recall. We claim something narrower and testable: you can inspect a 3D handshape from any angle and be told which sign you actually produced. Neither is possible with video.
 
-**Integrity.** Handshapes are recorded by named Deaf signers and credited in-app. This is a handshape practice companion, not a replacement for a Deaf teacher. Facial and motion grammar are out of scope in v1. 12 shapes today; the engine is language-agnostic; 60 arrive at launch — **Q1 2027.**
+**Integrity.** Handshapes are authored against published ASL references and credited in-app; named Deaf signer review is in progress and the app says so rather than implying sign-off. This is a handshape practice companion, not a replacement for a Deaf teacher. Facial and motion grammar are out of scope in v1. Six shapes today; the engine is language-agnostic; more arrive with signer review.
 
 ---
 

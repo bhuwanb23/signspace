@@ -160,6 +160,18 @@ namespace Signspace.Editor
             var loader = loaderGo.AddComponent<Signspace.Matching.SignSetLoader>();
             loader.matcher = matcher;
 
+            // ---- P3: the feedback layer, in the scene rather than only in the repository ----
+            var rigCamera = rigGo.GetComponentInChildren<Camera>(true);
+            if (rigCamera != null)
+            {
+                FeedbackUiBuilder.Build(rigGo.transform, rigCamera, matcher, loader);
+            }
+            else
+            {
+                Debug.LogWarning("[SceneBuilder] no camera under the rig; the P3 near-miss and honest " +
+                                 "mirror views were not built. The log line and the event still work.");
+            }
+
             var stateGo = new GameObject("AppState");
             stateGo.AddComponent<Signspace.Matching.AppStateMachine>();
 

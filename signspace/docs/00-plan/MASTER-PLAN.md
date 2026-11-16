@@ -9,6 +9,8 @@
 ## 0. HOW TO USE THIS DOCUMENT
 
 > **The executable version of this plan lives in [`phases/`](../../phases/README.md).** Each phase there has a folder with a charter (`README.md`), a gate (`gate.md`) and **one file per sub-phase** under `tasks/`, each containing steps, acceptance criteria, artefacts and traps. This document stays the map; that folder is the work.
+>
+> **What actually exists, and what is verified:** [`BUILD-LOG.md`](BUILD-LOG.md). Every claim there carries ✅ VERIFIED / 🟡 BUILT / 🔴 CLAIMED, with the command that reproduces it. When this plan and that log disagree about what is built, the log is right.
 
 This is the **phase map**, not the detail. Every phase below has sub-phases, an exit gate, and a named output document. We will open each one and go deep, in order. Nothing here is allowed to be re-litigated in chat without coming back to this file and changing it deliberately.
 

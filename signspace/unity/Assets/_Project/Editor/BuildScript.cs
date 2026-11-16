@@ -41,6 +41,9 @@ namespace Signspace.Editor
         const string ScenesPath = ProjectRoot + "/Scenes/Main.unity";
         const string OutputFolder = "Builds/Android";
         const string PackageNameFile = "Assets/_Project/package-name.txt";
+        // Consumed, then incremented, on every build: Meta rejects an upload whose version code
+        // already exists on a channel, and its error does not name the conflicting build.
+        const string VersionCodeFile = "Assets/_Project/version-code.txt";
 
         // ---- the settings, all in one place -----------------------------
         const string PackageName = "com.signspace.signspace";  // overridden by package-name.txt
@@ -61,7 +64,8 @@ namespace Signspace.Editor
         [MenuItem("SIGNSPACE/Build Android APK")]
         public static void BuildAndroid()
         {
-            ApplySettings();
+            int versionCode = TakeVersionCode();
+            ApplySettings(versionCode);
 
             // A scene value silently overrides a code default, so a threshold that only exists in the
             // C# is a threshold the app may not be running. Refuse to build an app whose tuning
@@ -91,7 +95,11 @@ namespace Signspace.Editor
             BuildSummary summary = report.summary;
 
             Debug.Log($"[BuildScript] result   : {summary.result}");
-            Debug.Log($"[BuildScript] size     : {summary.totalSize / (1024 * 1024)} MB");
+            // The APK's own size, not summary.totalSize: that figure includes every intermediate and
+            // said "1256 MB" for a 62 MB APK, which is exactly the kind of number someone quotes.
+            long apkBytes = File.Exists(apkPath) ? new FileInfo(apkPath).Length : 0;
+            Debug.Log($"[BuildScript] apk size : {apkBytes / (1024 * 1024)} MB");
+            Debug.Log($"[BuildScript] build total : {summary.totalSize / (1024 * 1024)} MB (includes intermediates)");
             Debug.Log($"[BuildScript] duration : {summary.totalTime}");
 
             if (summary.result != BuildResult.Succeeded)
@@ -109,7 +117,7 @@ namespace Signspace.Editor
         /// <summary>
         /// Applies the Android Player settings. Idempotent.
         /// </summary>
-        public static void ApplySettings()
+        public static void ApplySettings(int? versionCode = null)
         {
             string packageName = ReadPackageName();
 
@@ -117,7 +125,9 @@ namespace Signspace.Editor
             PlayerSettings.productName = ProductName;
             PlayerSettings.bundleVersion = Version;
             // Android-specific in Unity 6: PlayerSettings.bundleVersionCode does not exist.
-            PlayerSettings.Android.bundleVersionCode = BundleVersionCode;
+            // null leaves the serialised value alone (ApplySettingsOnly must not consume a code).
+            if (versionCode.HasValue)
+                PlayerSettings.Android.bundleVersionCode = versionCode.Value;
             PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, packageName);
 
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel32;
@@ -149,7 +159,8 @@ namespace Signspace.Editor
             EditorUserBuildSettings.androidBuildSystem = AndroidBuildSystem.Gradle;
 
             AssetDatabase.SaveAssets();
-            Debug.Log("[BuildScript] package name: " + packageName);
+            Debug.Log("[BuildScript] package name: " + packageName +
+                      (versionCode.HasValue ? ", version code " + versionCode.Value : ""));
         }
 
         /// <summary>
@@ -261,6 +272,43 @@ namespace Signspace.Editor
                            " but the tuned value is " + expected.ToString("0.###") +
                            " - the scene predates the tuning. Rebuild it with SceneBuilder.");
             return false;
+        }
+
+        /// <summary>
+        /// Reads the bundle version code, then increments the stored value.
+        ///
+        /// Meta rejects an upload when a build with the same bundle version code already exists on a
+        /// release channel, and the error does not name the channel or the conflicting build.
+        /// </summary>
+        static int TakeVersionCode()
+        {
+            string path = Path.Combine(Directory.GetCurrentDirectory(), VersionCodeFile);
+            int code = BundleVersionCode;
+            try
+            {
+                if (File.Exists(path))
+                {
+                    int parsed;
+                    if (int.TryParse(File.ReadAllText(path).Trim(), out parsed) && parsed > 0)
+                        code = parsed;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BuildScript] could not read the version code file: " + e.Message);
+            }
+
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, (code + 1).ToString());
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[BuildScript] could not bump the version code file: " + e.Message);
+            }
+
+            return code;
         }
 
         /// <summary>

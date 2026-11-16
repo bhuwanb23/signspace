@@ -247,6 +247,10 @@ namespace Signspace.Matching
             float d = PoseMath.Distance(weights, _target.LocalRotations, localRotations,
                                         _fingerAngles, _jointAngles,
                                         out float wristAngle, out float flatDegrees);
+            // The finger term alone. The near-miss must diagnose the SHAPE, so it compares this and not
+            // the palm-inclusive total below: a correct handshape with a twisted wrist must never be
+            // renamed as a different sign (MATCH-ALGORITHM.md section 6).
+            float fingerDistance = d;
             DistanceDegrees = d;
             FlatDegrees = flatDegrees;
             UpdateWorstJoints();
@@ -363,12 +367,12 @@ namespace Signspace.Matching
             // U and V exactly 26 deg apart, a perfect U is inside the window
             // twice, and counting qualifiers would silence a correct call.
             bool unambiguous = bestOther < secondBestOther;
-            bool clearlyCloser = bestOther < d - nearMissMarginDeg;
+            bool clearlyCloser = bestOther < fingerDistance - nearMissMarginDeg;
 
             if (nearMissEnabled && !_locked && bestOtherId != null
                 && _band != Band.Locked
                 && bestOther <= nearMissMaxDeg
-                && bestOther < d
+                && bestOther < fingerDistance
                 && unambiguous
                 && clearlyCloser
                 && _goodConfidenceTimer >= nearMissConfidenceWindowSeconds
