@@ -80,6 +80,24 @@ namespace Signspace.Matching
         public static readonly string[] FingerNames = { "thumb", "index", "middle", "ring", "little" };
 
         /// <summary>
+        /// The JOINTED chains, in canonical indices, tips excluded (P2.2).
+        ///
+        /// FingerChainEnd above gives the chain's accumulated rotation in ONE quaternion, which was
+        /// metric v2. v3 needs the joints individually because the weights are per joint, so the
+        /// membership has to be explicit here. These arrays must match hand_model.FINGERS - the same
+        /// list, used by the Python tuner and by the C# matcher, so a difference would show up as a
+        /// metric that disagrees with its own tuning report.
+        /// </summary>
+        public static readonly int[][] FingerChains =
+        {
+            new[] {  2,  3,  4 },                       // thumb  : CMC, proximal, distal (no intermediate)
+            new[] {  6,  7,  8,  9 },                   // index  : metacarpal, proximal, intermediate, distal
+            new[] { 11, 12, 13, 14 },                   // middle
+            new[] { 16, 17, 18, 19 },                   // ring
+            new[] { 21, 22, 23, 24 }                    // little
+        };
+
+        /// <summary>
         /// Angle in degrees between two local joint rotations, 0..180.
         /// 2*acos(|w|) handles the q == -q ambiguity of quaternions.
         /// </summary>
@@ -143,12 +161,146 @@ namespace Signspace.Matching
         }
 
         /// <summary>
+        /// The weighted mean angle WITHIN one finger (P2.2).
+        ///
+        /// The denominator is the sum of the weights of the joints actually included, never the count
+        /// of them. That is the task's second trap, and it is not a pedantic one: dividing by the joint
+        /// count while weighting by role would silently scale every distance by (total weight / count),
+        /// so changing a weight in the asset would move every distance uniformly and the thresholds
+        /// would look wrong for no visible reason. Dividing by the total weight makes the number a
+        /// genuine mean, in degrees, that means the same thing whatever weights are in play.
+        ///
+        /// `worstIndex` receives the joint (canonical index) with the largest weighted contribution -
+        /// which is what the overlay needs to name, because "your thumb is 9 deg off" is actionable
+        /// and "you are 14 deg off" is not.
+        /// </summary>
+        public static float WeightedFingerMean(Quaternion[] target, Quaternion[] current, int[] chain,
+                                               JointWeights weights, float[] jointAngles,
+                                               out int worstIndex)
+        {
+            worstIndex = -1;
+            if (target == null || current == null) return float.PositiveInfinity;
+            if (weights == null) return float.PositiveInfinity;
+
+            float sum = 0f, total = 0f, worstContribution = -1f;
+            for (int i = 0; i < chain.Length; i++)
+            {
+                int j = chain[i];
+                if (j >= target.Length || j >= current.Length) continue;
+                float w = weights.Weight(j);
+                float angle = JointAngle(target[j], current[j]);
+                if (jointAngles != null && j < jointAngles.Length) jointAngles[j] = angle;
+
+                if (w <= 0f) continue;
+                sum += w * angle;
+                total += w;
+                if (w * angle > worstContribution) { worstContribution = w * angle; worstIndex = j; }
+            }
+            return total > 0f ? sum / total : 0f;
+        }
+
+        /// <summary>
+        /// P2.2's distance, in degrees: the worst finger's weighted mean, plus the flat weighted mean
+        /// for reporting, plus the palm term.
+        ///
+        /// WHY THE ACROSS-FINGER COMBINE IS A MAX AND NOT A MEAN, measured rather than argued
+        /// (scripts/tune_match.py, six shipped shapes, 2 deg/joint noise):
+        ///
+        ///     metric                       nearest pair   noise p95   pair/noise
+        ///     v2  max of chain angles            26.0         8.5        3.06
+        ///     v3  max of weighted finger means   26.0         6.7        3.89   <- this one
+        ///     v3  flat weighted mean (the trap)   5.3         3.7        1.43
+        ///
+        /// The flat mean collapses U-V - which differ only in index abduction - from 26 deg to 5.3 deg,
+        /// because the difference is spread across a whole hand. That is the task's first trap
+        /// ("averaging all 26 joints equally - the little finger then cancels out the thumb") measured
+        /// on our own content. Weighting *within* a finger and taking the max *across* fingers keeps
+        /// the separability and improves the noise floor by half, because the within-finger mean
+        /// averages noise while the across-finger max preserves a single wrong finger.
+        ///
+        /// `flatDegrees` is returned for the overlay and the log only. It is the number to show
+        /// beside D so a suspiciously small flat value can be recognised as "one finger is very
+        /// wrong" rather than "the shape is close".
+        /// </summary>
+        public static float Distance(JointWeights weights, Quaternion[] target, Quaternion[] current,
+                                     float[] fingerAngles, float[] jointAngles,
+                                     out float wristAngle, out float flatDegrees)
+        {
+            wristAngle = 0f;
+            flatDegrees = float.PositiveInfinity;
+
+            if (target == null || current == null) return float.PositiveInfinity;
+            if (target.Length != current.Length) return float.PositiveInfinity;
+
+            float worstFinger = 0f;
+            float flatSum = 0f, flatTotal = 0f;
+
+            // Every joint angle first, including Wrist and Palm. The flat mean is over "every weighted
+            // joint in the hand", and the wrist/palm carry 0.4 each - computing only the finger chains
+            // and then averaging across all weighted joints would have mixed 26 fresh angles with two
+            // stale ones, which is the kind of bug that shows up as a distance that never reaches zero.
+            if (jointAngles != null)
+            {
+                for (int j = 0; j < target.Length && j < jointAngles.Length; j++)
+                    jointAngles[j] = JointAngle(target[j], current[j]);
+            }
+
+            for (int f = 0; f < FingerChains.Length; f++)
+            {
+                int ignoredWorst;
+                float mean = WeightedFingerMean(target, current, FingerChains[f], weights,
+                                                jointAngles, out ignoredWorst);
+                if (fingerAngles != null && f < fingerAngles.Length) fingerAngles[f] = mean;
+                if (mean > worstFinger) worstFinger = mean;
+            }
+
+            // the flat mean, over every weighted joint in the hand (reporting only - see above)
+            if (jointAngles != null && weights != null)
+            {
+                for (int j = 0; j < target.Length; j++)
+                {
+                    float w = weights.Weight(j);
+                    if (w <= 0f) continue;
+                    flatSum += w * jointAngles[j];
+                    flatTotal += w;
+                }
+                if (flatTotal > 0f) flatDegrees = flatSum / flatTotal;
+            }
+
+            if (WristIndex < target.Length && WristIndex < current.Length)
+                wristAngle = JointAngle(target[WristIndex], current[WristIndex]);
+
+            return worstFinger;
+        }
+
+        /// <summary>
         /// Linear band 0..2 from a distance. 0 = warming, 1 = close, 2 = locked.
         /// </summary>
         public static int Band(float distanceDeg, float lockedDeg, float closeDeg)
         {
             if (distanceDeg <= lockedDeg) return 2;
             if (distanceDeg <= closeDeg) return 1;
+            return 0;
+        }
+
+        /// <summary>
+        /// The band test with a **degree-level** release offset, on top of the time hysteresis.
+        ///
+        /// The edges are not symmetric: entering a band uses the plain threshold, leaving it needs the
+        /// hand to be `releaseDeg` past the edge. Without this, a hand parked on an edge crosses it on
+        /// half its frames and the display strobes (P2.3 measured 1083 changes per 30 s with no
+        /// damping at all, and still 4 on the worst of 300 trials with the 150 ms timer alone).
+        ///
+        /// Only the exit is widened. Widening the entry too would mean the lock band were bigger than
+        /// the number written on it, and the number is what the overlay and the tuning table report.
+        /// </summary>
+        public static int Band(float distanceDeg, float lockedDeg, float closeDeg,
+                               float releaseDeg, int currentBand)
+        {
+            float lockEdge = lockedDeg + (currentBand == 2 ? releaseDeg : 0f);
+            float closeEdge = closeDeg + (currentBand >= 1 ? releaseDeg : 0f);
+            if (distanceDeg <= lockEdge) return 2;
+            if (distanceDeg <= closeEdge) return 1;
             return 0;
         }
     }

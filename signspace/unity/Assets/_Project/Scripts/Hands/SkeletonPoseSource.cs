@@ -16,6 +16,28 @@ namespace Signspace.Matching
     /// </summary>
     public class SkeletonPoseSource : MonoBehaviour
     {
+        // Which source owns which matcher. Static because a Matcher is a scene object and this is the
+        // only place that can see two sources pointing at one of them. Cleared on scene load so a
+        // domain-reload-off editor session cannot inherit a stale claim.
+        static readonly System.Collections.Generic.Dictionary<Matcher, SkeletonPoseSource> Drivers =
+            new System.Collections.Generic.Dictionary<Matcher, SkeletonPoseSource>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ClearClaims() { Drivers.Clear(); }
+
+        static bool ClaimMatcher(Matcher m, SkeletonPoseSource source)
+        {
+            SkeletonPoseSource existing;
+            if (Drivers.TryGetValue(m, out existing) && existing != null && existing != source) return false;
+            Drivers[m] = source;
+            return true;
+        }
+
+        static void ReleaseMatcher(Matcher m, SkeletonPoseSource source)
+        {
+            SkeletonPoseSource existing;
+            if (Drivers.TryGetValue(m, out existing) && existing == source) Drivers.Remove(m);
+        }
         [Tooltip("Joint transforms of ONE hand, in any order. Their names are matched to the " +
                  "canonical joint set, so the order in the list does not matter.")]
         public Transform[] joints;
@@ -30,6 +52,18 @@ namespace Signspace.Matching
         [Tooltip("Optional provider for the SDK's pinch state, for the grab-and-rotate mechanic. " +
                  "Implement IHandStateProvider on a small component and assign it here.")]
         public MonoBehaviour handStateProvider;
+
+        [Header("Role (P2.7)")]
+        [Tooltip("Whether this hand is allowed to drive the matcher. A second hand feeding the same " +
+                 "matcher overwrites its state every frame, so the right hand could never hold a lock " +
+                 "while the left hand was visible. HandSupport owns this decision; leave it alone " +
+                 "unless you are re-enabling left-hand play.")]
+        public bool driveMatcher = true;
+
+        [Tooltip("Mirror this hand's input into the right-handed reference frame before matching. " +
+                 "Force-disabled unless HandSupport.LeftHandSupported is true: the mirror is exact for " +
+                 "the poses, but whether the rig reports mirrored joint frames is a device question.")]
+        public bool mirrorInput = false;
 
         /// <summary>Filled after the joint mapping is resolved. Shown in the debug overlay.</summary>
         public string JointReport { get; private set; } = "not resolved";
@@ -57,6 +91,11 @@ namespace Signspace.Matching
         Quaternion[] _buffer;
         int[] _deviceIndexForCanonical;   // device joint index per canonical joint, -1 if absent
         bool _mapped;
+        bool _claimed;
+        bool _mirrorSuppressed;
+
+        /// <summary>True when this source is the one feeding its matcher right now.</summary>
+        public bool DrivesMatcher => driveMatcher && matcher != null;
 
         public int JointCount => joints?.Length ?? 0;
 
@@ -190,7 +229,10 @@ namespace Signspace.Matching
 
         void Update()
         {
-            if (matcher == null || joints == null || joints.Length == 0) return;
+            // The buffer fills whether or not this hand drives the matcher: P1.3 rates gestures with
+            // the left hand, and WristRotation reads the buffer. Not driving means "not feeding the
+            // game", not "not tracking".
+            if (joints == null || joints.Length == 0) return;
             if (!_mapped) ResolveJointMapping();
 
             // fill the canonical-order buffer from the device joints
@@ -204,8 +246,48 @@ namespace Signspace.Matching
                 _buffer[c] = t.localRotation;       // LOCAL, relative to parent
             }
 
+            // P2.7: one hand, one matcher. The mirror is exact for the poses (mirror_sim.py section 2)
+            // but whether the rig's left-hand frames are mirrored is unknown until POSE-FORMAT 4.3
+            // runs, so the policy - not this component - decides.
+            if (mirrorInput && !HandSupport.LeftHandSupported)
+            {
+                if (!_mirrorSuppressed)
+                {
+                    _mirrorSuppressed = true;
+                    Debug.LogError("[SkeletonPoseSource] mirrorInput was requested on " + name +
+                                   " but HandSupport.LeftHandSupported is false, so it is off: " +
+                                   HandSupport.Why);
+                }
+            }
+            else if (mirrorInput)
+            {
+                HandMirror.MirrorInPlace(_buffer);
+            }
+
+            if (!driveMatcher || matcher == null) return;
+
+            if (!_claimed)
+            {
+                _claimed = true;
+                if (!ClaimMatcher(matcher, this))
+                {
+                    Debug.LogError("[SkeletonPoseSource] " + name + " is the second pose source bound to " +
+                                   "the same Matcher, so it is now off. Two hands feeding one matcher " +
+                                   "overwrite each other every frame and no lock could survive. See " +
+                                   "HandSupport and P2.7.");
+                    driveMatcher = false;
+                    return;
+                }
+            }
+
             float conf = confidenceOverride >= 0f ? confidenceOverride : ReadConfidence();
             matcher.Tick(_buffer, conf, Time.deltaTime);
+        }
+
+        void OnDisable()
+        {
+            if (_claimed && matcher != null) ReleaseMatcher(matcher, this);
+            _claimed = false;
         }
 
         /// <summary>

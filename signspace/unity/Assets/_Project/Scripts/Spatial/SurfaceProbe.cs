@@ -181,7 +181,7 @@ namespace Signspace.Spatial
             _querySeconds = Time.realtimeSinceStartup - queryStart;
             _rejects = finder != null ? finder.LastRejectionSummary : "no finder";
 
-            SurfaceCandidate best = default;
+            SurfaceCandidate best;
             bool ok = finder != null && finder.TryGetPrimary(out best);
             if (!ok)
             {

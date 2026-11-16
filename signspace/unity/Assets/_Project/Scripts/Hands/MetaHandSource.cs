@@ -87,6 +87,13 @@ namespace Signspace.Matching
         /// <summary>True when the SDK says this hand's skeleton data is valid this frame.</summary>
         public bool IsTracked { get; private set; }
 
+        /// <summary>
+        /// True when this hand is allowed to drive the matcher (P2.7). A tracked left hand reports
+        /// false in this build: it is still tracked, still drawn, and still usable by P1.3's rating
+        /// trials, it just does not play the game.
+        /// </summary>
+        public bool FeedsMatcher { get; private set; }
+
         /// <summary>0..1. From the SDK's confidence enum when available, else 1 while tracked, else 0.</summary>
         public float Confidence { get; private set; }
 
@@ -489,6 +496,21 @@ namespace Signspace.Matching
             if (poseSource != null)
             {
                 poseSource.BindCanonical(_canonical, "MetaHandSource(" + hand + ")");
+
+                // P2.7: the policy is applied here, at the only moment both the hand and its pose
+                // source are known. A hand that cannot be matched still binds and still reports - it
+                // just does not feed the game, so P1.3's rating trials keep working and the right hand
+                // is never fighting the left for the matcher.
+                FeedsMatcher = HandSupport.FeedsMatcher(hand);
+                poseSource.driveMatcher = FeedsMatcher;
+                poseSource.mirrorInput = HandSupport.MirrorsInput(hand);
+
+                if (!FeedsMatcher)
+                {
+                    Debug.Log("[MetaHandSource:" + hand + "] tracking, but not feeding the matcher: " +
+                              HandSupport.Why + ". The user-facing line is in the honest mirror: \"" +
+                              HandSupport.OneLineExplanation + "\"");
+                }
             }
 
             if (verboseLogging) Debug.Log("[MetaHandSource:" + hand + "] " + Report);
