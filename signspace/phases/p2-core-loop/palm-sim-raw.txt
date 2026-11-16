@@ -1,0 +1,94 @@
+==============================================================================
+P2.6 palm orientation - basis, sensitivity, and choosing k and O_slack
+==============================================================================
+
+1. DO ANY OF OUR SHAPES DIFFER IN PALM FACING?
+   (O between every pair of the authored six, no tracking noise)
+   B    0.0   0.0   0.0   0.0   0.0   0.0
+   U    0.0   0.0   0.0   0.0   0.0   0.0
+   V    0.0   0.0   0.0   0.0   0.0   0.0
+   W    0.0   0.0   0.0   0.0   0.0   0.0
+   C    0.0   0.0   0.0   0.0   0.0   0.0
+   O    0.0   0.0   0.0   0.0   0.0   0.0
+
+   basis source per shape:
+     B  palm-frame     axes 11.0 deg apart (too parallel)
+     U  palm-frame     axes 86.0 deg apart (a metacarpal is curled)
+     V  palm-frame     axes 86.5 deg apart (a metacarpal is curled)
+     W  palm-frame     axes 86.3 deg apart (a metacarpal is curled)
+     C  palm-frame     axes 2.4 deg apart (too parallel)
+     O  palm-frame     axes 1.8 deg apart (too parallel)
+
+   largest orientation difference between any two authored shapes: 0.0 deg
+   -> NONE. All six are authored from the same neutral with finger deltas only, so no
+      authored pair can be told apart by palm facing - the content that would exercise
+      this term does not exist yet (see palm-tuning.md section 6).
+
+2. NO PHANTOM ERRORS - O over a full wrist turn about each axis (5 deg steps)
+   roll  (+Y, pronation)    O(0)= 0.0  max step-to-step change  5.0 deg  -> smooth
+   flex  (+X, flexion)      O(0)= 0.0  max step-to-step change  5.0 deg  -> smooth
+   dev   (+Z, deviation)    O(0)= 0.0  max step-to-step change  5.0 deg  -> smooth
+   (a step is 5 deg, so a smooth sweep changes by <= 5 deg per step; an Euler decomposition
+    spikes past that wherever two axes cross)
+
+2b. CONDITIONING - palm-facing jitter under 2 deg/joint noise, both basis sources
+   shape   axes apart  amplification 1/sin  O sd, palm frame  O sd, knuckle plane
+   B             11.0                  5.2              0.00                 5.80
+   U             86.0                  1.0              0.00                88.63
+   V             86.5                  1.0              0.00                37.48
+   W             86.3                  1.0              0.00                45.87
+   C              2.4                 24.2              0.00                24.44
+   O              1.8                 31.0              0.00                26.03
+   -> the knuckle plane multiplies the tracker's own noise by roughly 1/sin(separation). On this
+      rig every shape has a narrow fan, so it is rejected and the palm frame is what runs.
+
+3. SENSITIVITY CURVE - correct handshape, palm turned. O_slack = 15 deg
+     turn      O   penalty | D_total k=0.25 | D_total k=0.50 | D_total k=0.75 | D_total k=1.00
+        0    0.0       0.0 |         0.0 |         0.0 |         0.0 |         0.0
+       10   10.0       0.0 |         0.0 |         0.0 |         0.0 |         0.0
+       15   15.0       0.0 |         0.0 |         0.0 |         0.0 |         0.0
+       20   20.0       5.0 |         1.3 |         2.5 |         3.8 |         5.0
+       30   30.0      15.0 |         3.8 |         7.5 |        11.3 |        15.0
+       45   45.0      30.0 |         7.5 |        15.0 |        22.5 |        30.0
+       60   60.0      45.0 |        11.3 |        22.5 |        33.8 |        45.0
+       90   90.0      75.0 |        18.8 |        37.5 |        56.3 |        75.0
+      120  120.0     105.0 |        26.3 |        52.5 |        78.8 |       105.0
+      180  180.0     165.0 |        41.3 |        82.5 |       123.8 |       165.0
+
+   lock threshold 12 deg, close threshold 24 deg
+   a deliberately mis-facing hand must fail to LOCK; a hand within the slack must not be
+   penalised at all.
+
+4. CHOOSING k - the smallest weight that does the job, so the gate stays a gate
+       k   D_total @30 deg    vs lock 12   D_total @20 deg   D_total @15 deg
+    0.25               3.8   locks, -8.2               1.3               0.0
+    0.40               6.0   locks, -6.0               2.0               0.0
+    0.50               7.5   locks, -4.5               2.5               0.0
+    0.60               9.0   locks, -3.0               3.0               0.0
+    0.75              11.3   locks, -0.7               3.8               0.0
+    1.00              15.0   fails, +3.0               5.0               0.0
+   -> ships k = 1.00: a perfect handshape with the palm 30 deg out reads 15.0 deg and cannot lock, while anything inside the 15 deg slack
+      adds exactly 0.0 deg - so a naturally different resting wrist is not punished (ADR-003).
+
+5. WITH TRACKING NOISE (2 deg/joint) - does a mis-facing hand ever read as locked?
+     turn  readings inside lock band   inside close band
+        0                     100.0%              100.0%
+       15                     100.0%              100.0%
+       20                     100.0%              100.0%
+       30                       0.0%              100.0%
+       45                       0.0%                0.0%
+       60                       0.0%                0.0%
+   -> the mis-facing column must be 0.0% from 30 deg up. That is the done-when.
+
+5b. WRIST-ONLY NOISE - O for a correct hand, 2 deg on the wrist and palm (2000 trials)
+   O: mean 2.42  sd 1.41  p95 5.07  p99 6.43  max 9.06
+   the 15 deg slack is 10.6 sd of that jitter, so a correctly
+   facing hand is essentially never penalised by tracking noise alone.
+
+==============================================================================
+DECISION: O_slack = 15.0 deg, k = 1.00
+==============================================================================
+  the slack is the task's own figure and survives the measurement: inside 15 deg the term
+  contributes exactly zero, so a naturally different resting wrist is not punished (ADR-003).
+  k is the smallest weight on the tested list that puts a 30 deg mis-face at least 3 deg past
+  the lock band - a gate that only pushes a wrong hand just over the line is a coin flip.

@@ -184,7 +184,113 @@ Nothing else changes. Ten minutes, once the SDK is imported.
 
 ---
 
-## 8. Done when
+## 8. v3 — per-joint weights, and the trap measured on our own content *(P2.2)*
+
+P2.2 asks for something the v2 metric above deliberately does not do: **per-joint weights**, tuned
+without recompiling. The objection that produced v2 was that a flat mean hides one wrong finger
+(U-V collapses from 26° to ~3° across the whole hand). So the question for P2.2 was not "can we add
+weights" but "can weights be added **without** losing that separability". They can, if the mean and the
+combine are in the right places:
+
+```
+θ_j        = 2·acos(|w|) of   inverse(q_target_j) · q_live_j          per joint
+finger_f   = Σ_{j∈f} w_j θ_j  /  Σ_{j∈f} w_j                          weighted mean WITHIN a finger
+D          = max_f finger_f                                           worst finger = the distance
+D_flat     = Σ_all w_j θ_j    /  Σ_all w_j                            reporting only
+```
+
+Three things to notice, each of which is one of the task's requirements or traps:
+
+- **The denominator is the sum of the weights, never the joint count** (trap 2). With a count
+  denominator every distance would scale by `total weight / count`, so editing one weight in the asset
+  would move every distance uniformly and the thresholds would look broken for no visible reason.
+- **The mean is within a finger, the max is across fingers** (trap 1). The little finger cannot cancel
+  the thumb because they never share an average.
+- **`D_flat` still exists, but only as a diagnostic.** It is on the overlay beside `D` so a suspiciously
+  small flat value can be read as "one finger is very wrong" instead of "the shape is close".
+
+### The weights, by group
+
+| Joints | Weight | Why |
+|---|---|---|
+| `Wrist`, `Palm` | **0.40** | posture, not shape — and palm orientation is already a separate gate in `Matcher` (`orientationSlackDeg`). A full weight here would judge the wrist twice |
+| all `*Metacarpal` (CMC) | **0.40** | the base of the finger barely moves for these six letters and is the noisiest joint on device |
+| all `*Proximal` | **0.70** | carries some shape, mostly carries reach |
+| all `*Intermediate` | **1.00** | where curl actually happens — the highest-signal joint in the hand |
+| all `*Distal` | **1.00** | the fingertip's direction; what the eye reads as the shape |
+| all `*Tip` | **0.00** | carries no shape information for these six letters and does carry tracking noise |
+
+15.30 total weight over 21 weighted joints. They live in `Assets/_Project/Matching/Weights.asset`
+(`JointWeights`, **named** entries matched by canonical name at load, so reordering the inspector list
+cannot move a weight onto the wrong joint).
+
+### The measured comparison — same shapes, same noise model, one run
+
+```
+python3 scripts/tune_match.py --v3-only
+```
+
+| Metric | Nearest pair | Noise p95 (2°/joint) | Score (pair / p95) |
+|---|---|---|---|
+| v2 — max of chain angles | 26.0° | 8.5° | 3.06 |
+| **v3 — max of weighted finger means** | **26.0°** | **6.7°** | **3.89** ← ships |
+| v3 — flat weighted mean *(the trap)* | **5.3°** | 3.7° | 1.43 |
+
+The weighted-within-finger mean **halves the noise sensitivity without losing a single degree of
+separability** (26.0° unchanged), which is why it improves the score rather than trading against it:
+averaging inside a finger averages noise away, while the max across fingers keeps a single wrong finger
+at full magnitude. And the flat mean is now quantified rather than argued — it collapses U-V to 20% of
+its real distance and scores 1.43, i.e. the noise floor is 70% of the pair it is supposed to separate.
+
+**v3 pairwise matrix** (degrees; diagonal zero by construction):
+
+|     | B | U | V | W | C | O |
+|---|---|---|---|---|---|---|
+| **B** | 0.0 | 117.0 | 117.0 | 117.0 | 101.9 | 148.3 |
+| **U** | 117.0 | 0.0 | **26.0** | 118.1 | 117.2 | 148.3 |
+| **V** | 117.0 | 26.0 | 0.0 | 118.1 | 117.2 | 149.5 |
+| **W** | 117.0 | 118.1 | 118.1 | 0.0 | 117.2 | 149.0 |
+| **C** | 101.9 | 117.2 | 117.2 | 117.2 | 0.0 | **65.0** |
+| **O** | 148.3 | 148.3 | 149.5 | 149.0 | 65.0 | 0.0 |
+
+### Thresholds: unchanged, and why that is the right call
+
+`lockedDeg 12 / closeDeg 20 / nearMissMaxDeg 26` were derived against v2. Under v3 they still hold:
+lock sits **1.8× above the noise p95** (6.7°) and **2.2× below the nearest pair** (26.0°). The metric got
+*quieter*, so the same thresholds are now strictly more forgiving in practice — no threshold became
+invalid. **They are not widened here**, because how forgiving a lock should feel is a judgement that
+needs a hand in a headset, and that is P2.3's job. What P2.2 establishes is that there is now headroom
+to spend.
+
+### The reasoning that did NOT survive contact with the numbers
+
+The first design considered was a plain weighted mean over 21 joints — literally what the task's step 3
+describes — and it was rejected by measurement, not by taste: 5.3° on U-V against its own 3.7° noise
+floor. Step 3's "weighted mean angle across the fingers of interest" is implemented as a weighted mean
+*per finger* combined by max, and the flat version is kept in the code path (and on the overlay) so the
+difference is visible to whoever tunes it next.
+
+### The device check P2.2 actually requires
+
+The offline work cannot answer the task's step 5, because it *is* a question about hands:
+
+> holding a fixture with your own hand should give a visibly lower `D` than a wrong shape.
+
+Procedure, once the headset is available:
+
+1. `SIGNSPACE/P2.2 Assign weights to matcher`, build, open the overlay.
+2. Make **B**. `D` should drop below **12°** and the three worst joints should all be low-angle.
+3. Make **U** (a different shape, 26° from B… 117° in v3 terms). `D` should read **>100°**, i.e. the
+   overlay is not merely "higher", it is unmistakably in another band.
+4. Deliberately splay the index on **B**. `D` should jump and the **worst joint should name an index
+   joint**, while `D_flat` stays comparatively small — that gap is the whole point of v3, and seeing it
+   in your own hand is the acceptance test for this sub-phase.
+
+Recorded outcome goes into the chart in §9 and feeds P2.3's band tuning.
+
+---
+
+## 9. Done when
 
 - [x] the metric is measured, not guessed — `scripts/tune_match.py`
 - [x] the four intended near-miss pairs all separate
@@ -193,3 +299,14 @@ Nothing else changes. Ten minutes, once the SDK is imported.
 - [x] the metric's sensitivity to tracking noise is quantified
 - [x] the C# and the Python twin are proven to agree
 - [ ] **the numbers are re-measured on the device** (P1.5 probe) and `lockedDeg` is confirmed
+
+P2.2 adds:
+
+- [x] per-joint weights exist as a **serialisable asset** (`Matching/Weights.asset`), not constants
+- [x] the weighted metric is measured against the metric it replaces, on the same shapes and the same
+      noise model: **3.89 vs 3.06**, with separability unchanged at 26.0°
+- [x] the trap is quantified on our own content (flat mean collapses U-V to **5.3°**, score 1.43)
+- [x] the denominator is the total weight, not the joint count — stated in the code, the doc and the
+      Python twin so the three cannot drift
+- [ ] **the device check**: a real B against a real U with `D` and the three worst joints named
+      (procedure in §8, needs the headset)

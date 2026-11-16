@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "shapes": ["B-left", "C-left", "V-left"],
+  "note": "TEST FIXTURES, NOT SHIPPED. Inputs to the POSE-FORMAT 4.3 left-hand device procedure. This folder lives outside StreamingAssets so no mirrored file can reach a build by accident."
+}

@@ -1,0 +1,21 @@
+==============================================================================
+P2.5 lock payoff timeline (mirrors LockPayoff.cs)
+==============================================================================
+  phase                                            from     to    len
+  hand dissolves (scale + fade + brighten)         0.00   0.40   0.40
+  object starts forming inside the hand            0.30   0.52   0.22
+  object arcs to the anchor                        0.30   0.75   0.45
+  overshoot and settle                             0.75   0.87   0.12
+  reference hand returns                           0.87   0.99   0.12
+  TOTAL                                            0.00   0.99   0.99
+
+  overlap between the hand going and the object arriving: +0.10 s
+  pass: the object starts forming before the hand is gone - no empty frame.
+  pass: 0.99 s inside the 1.20 s budget (0.21 s of headroom, 82% used).
+
+  repetitions 1-3: 0.99 s   afterwards: 0.54 s (x0.55)
+  the trap this avoids: a payoff that feels long is skipped, and a skipped payoff is not a reward.
+
+  previs: 118 frames at 60 fps -> assets/raw/video/lock-payoff-previs.mp4 (81 kB)
+  storyboard: phases/p2-core-loop/lock-payoff-storyboard.png
+  NOT footage. `take01.mp4` must be shot on the device (shot list in lock-payoff.md section 6).
