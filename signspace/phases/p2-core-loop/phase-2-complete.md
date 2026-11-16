@@ -18,7 +18,7 @@
 | Tasks built | **7 / 7** |
 | Gate criteria evidenced by measurement in this repository | **5 / 8** |
 | Gate criteria that cannot be true without hardware | **3 / 8** (20/20 on device, the filmed payoff, the stranger) |
-| C# files that have ever been compiled | **0 of 56** — there is no Unity editor in this environment |
+| C# files that compile | **56 of 56** — `-executeMethod BuildScript.ApplySettingsOnly`, 16 Nov 2026, 0 errors (Unity 6000.3.28f1); none has run on a device |
 | Simulators that regenerate a phase number | **7** (`tune_match`, `band_sim`, `hold_sim`, `payoff_previs`, `palm_sim`, `mirror_sim`, `lint_copy`) |
 
 The phase did what a phase should do: it produced numbers, and **four of those numbers contradicted the
@@ -53,7 +53,7 @@ joints, no normalising by joint count. Every number is degrees; **no percentage 
 12–24°, locked < 12°** with 2° release hysteresis and 150 ms dwell; colour + motion + sound, never text;
 `lint_copy.py` to prove it.
 **Measured:** 100% band survival at ≤ 12°, **0%** at ≥ 12.5°, **0.0% false close**; copy lint **0
-violations** across 17 user-facing strings.
+violations** across 20 user-facing strings in 7 files (re-run 16 Nov; P3 added three).
 **Why the thresholds are those thresholds:** 24 is not "about 25" — the nearest wrong shape sits at 26.0°,
 so any threshold above it would call a different word "close".
 
@@ -173,8 +173,8 @@ work.
 ## 7. Limitations — stated, not smoothed over
 
 **Unverified by construction**
-- **No C# has ever been compiled.** 56 files, ~7 tasks of code, zero editor runs. The most likely
-  first-run failures are ordinary: a missing `.meta`, a prefab reference that resolves to null, a
+- **Compiled, never executed.** All 56 files compile (16 Nov 2026, 0 errors) but no scene has been
+  played on a headset, so nothing here is verified at runtime. The most likely first-run failures are ordinary: a missing `.meta`, a prefab reference that resolves to null, a
   namespace slip in the two newest files, `LockPayoff.prefab` opening with a missing mesh.
 - **No device measurement exists for anything.** Every "measured" number in this report comes from a
   simulator that models the hand and a 2°/joint noise floor. The simulators are good — they have already

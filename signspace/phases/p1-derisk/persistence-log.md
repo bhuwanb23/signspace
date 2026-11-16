@@ -5,7 +5,7 @@
 closes the task and it needs the headset
 
 > The acceptance test is "cube restores after a kill/relaunch" and "after a headset reboot". Neither
-> can be produced here: nothing in this repository has ever been compiled, there is no headset, and a
+> can be produced here: the code compiles (16 Nov, 0 errors) but there is no headset, and a
 > relaunch test cannot be simulated by reading code. What this page fixes is the *design* — what is
 > saved, why in that form, what happens when the room is gone — so that the three readings in §6
 > either pass or point at a specific mechanism.

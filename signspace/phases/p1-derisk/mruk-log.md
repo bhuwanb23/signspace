@@ -6,7 +6,7 @@ table in §5 is empty on purpose and is the part that closes the task
 
 > The task's own acceptance test is "cube sits on real furniture in **≥2 of 4** conditions, and
 > time-to-detection measured". Neither number can be produced in this sandbox: there is no headset
-> here and no Unity editor, so nothing in this phase has ever been compiled. What this page contains
+> here; the phase now compiles (16 Nov, 0 errors) but has not run on device. What this page contains
 > is (a) the SDK facts the code is now built on, verified against Meta's reference rather than
 > remembered, (b) three bugs found *before* the first reading, each of which would have produced a
 > false "MRUK does not work" verdict, and (c) the exact table to fill.
@@ -47,7 +47,7 @@ correctly, but checking them is what exposed the three problems in §3.
 
 **One deliberate exception: `LoadSceneFromDevice` is called reflectively.** Its return type has moved
 between MRUK versions (`Task<LoadDeviceResult>` in the v207 reference, `void` in older docs and
-community samples), and nothing here has ever been compiled. A compile error on that one line would
+community samples), and the reflected call cannot be type-checked at compile time. A wrong signature would
 cost the phase its first build; not calling it costs nothing, because the prefab loads the scene on
 startup by default and the boot waits for the room either way. So `MrukBoot.TryRequestDeviceLoad`
 finds the overload at runtime, polls it if it is a `Task`, and logs which happened. Room identity

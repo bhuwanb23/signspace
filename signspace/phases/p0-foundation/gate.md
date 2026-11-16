@@ -1,6 +1,6 @@
 # GATE G0 — Does an empty build install from the `Competition` channel, and does the invite URL work for a stranger?
 
-**Phase:** P0 · **Verdict:** 🟡 **not yet evaluated — 6 of 9 met, 1 partial, 2 open.** The two open boxes need the headset. Itemised in [`P0-AUDIT.md`](P0-AUDIT.md)
+**Phase:** P0 · **Verdict:** 🟡 **not yet evaluated — 5 of 9 met, 2 partial, 2 open.** The two open boxes need the headset. Itemised in [`P0-AUDIT.md`](P0-AUDIT.md)
 
 ## Criteria — all must be true
 - [x] Meta Horizon Start membership is active on the submitting account (screenshot archived)

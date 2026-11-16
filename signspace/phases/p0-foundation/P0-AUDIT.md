@@ -60,7 +60,7 @@ dashboard work, and the EULA/licence pair. What is left is **one artefact and th
 
 | Was | Now |
 |---|---|
-| P0 was the long pole, 5 of 9 boxes open | **6 of 9 met.** The 2 open boxes are one installed build |
+| P0 was the long pole, 5 of 9 boxes open | **5 of 9 met, 2 partial.** The 2 open boxes are one installed build |
 | The licence was the risk | irrelevant — cleared |
 | The signer could end the project and had not been contacted | contacted; the residual risk is now *a reply in time*, not *a stranger saying yes* |
 | Invite URL unproven | proven — the entry reaches a stranger |
@@ -86,4 +86,5 @@ Not blocking anything, but each closes a row permanently:
 | Date | Change |
 |---|---|
 | 15 Nov 2026 | File created. Licence + EULA marked complete on owner confirmation; P0 reduced to 11 binary items with 4 device-blocked, 5 browser/inbox-blocked, 2 signature-blocked. G0 re-scored: **4 of 9 met, 1 partial** — the earlier "5 of 9" in the README was an overcount that treated app creation and the channel upload as one criterion. |
-| 15 Nov 2026 (later) | Owner confirmed the dashboard work (channel + upload), the Devpost draft and the invite URL as done, a headset is **arriving**, and the signer brief was **sent**. Open list cut from 11 to **6**: one installed APK (3 boxes + the P1.5 probe), three strings, one reply, two signatures. **G0: 6 of 9 met, 1 partial, 2 open.** |
+| 16 Nov 2026 | Tally checked against the tick list in `gate.md`: **5 met, 2 partial, 2 open**, not "6 of 9 met, 1 partial" — the 6 counted the invite URL twice once the toolchain row was already ticked. The three open/partial blockers are unchanged. |
+| 15 Nov 2026 (later) | Owner confirmed the dashboard work (channel + upload), the Devpost draft and the invite URL as done, a headset is **arriving**, and the signer brief was **sent**. Open list cut from 11 to **6**: one installed APK (3 boxes + the P1.5 probe), three strings, one reply, two signatures. **G0: 6 of 9 met, 1 partial, 2 open** (corrected 16 Nov to 5 met / 2 partial — see below). |
