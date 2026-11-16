@@ -56,13 +56,17 @@ namespace Signspace.UI
         public float closeGlow = 0.65f;
         public float lockedGlow = 1.10f;
 
-        [Header("Paused — tracking too weak to judge (P3.5)")]
-        [Tooltip("The meter goes grey, still and dim; it must never keep pulsing a verdict it cannot support.")]
-        public Color pausedColor = new Color(0.55f, 0.57f, 0.60f, 1f);
-
         [Header("Transition")]
         [Tooltip("Seconds to blend between band colours. Below ~0.08 s a band change reads as a cut.")]
         public float colorBlendSeconds = 0.14f;
+
+        // P3.5. How far the display dims while the matcher is paused - tracking too weak to judge. It dims
+        // and stops breathing; it never goes out, because a dark meter is indistinguishable from a dead app.
+        // The dim lives HERE rather than in TrackingConfidence because this component owns the property
+        // block that writes the halo's colour every frame: anything else setting the material colour is
+        // overwritten on the next Update, which looks implemented and does nothing.
+        [Tooltip("How far the halo dims while the app is paused waiting for the tracker.")]
+        [Range(0f, 1f)] public float pauseDim = 0.6f;
         [Tooltip("The single snap on lock entry, in seconds. Not a loop: the lock itself is still.")]
         public float lockSnapSeconds = 0.12f;
         public float lockSnapScale = 0.35f;
@@ -92,18 +96,12 @@ namespace Signspace.UI
 
             Band band = matcher.CurrentBand;
             float dt = Time.deltaTime;
-            _clock += dt;
+            bool paused = matcher.IsPaused;
 
-            // P3.5: a dropout is not a verdict (ADR-003). The hold is already frozen by the matcher;
-            // this stops the visible meter from continuing to animate a band it can no longer trust.
-            if (matcher.IsPaused)
-            {
-                _current = Color.Lerp(_current, pausedColor,
-                                      Mathf.Clamp01(dt / Mathf.Max(0.01f, colorBlendSeconds)));
-                Apply(1f, warmingGlow / Mathf.Max(0.01f, lockedGlow) * 0.5f);
-                _shownBand = band;
-                return;
-            }
+            // A breathing meter is a measuring meter. While the app is waiting for the tracker, motion
+            // stops dead: only the colour is left, dimmed. That combination reads as "still here, not
+            // judging" and it cannot be mistaken for a measurement in progress.
+            if (!paused) _clock += dt;
 
             // A band change is a transition, not a cut. Cutting colour on a threshold is what makes a
             // meter feel like a machine deciding about you.
@@ -138,7 +136,7 @@ namespace Signspace.UI
                     scale += pulse * closePulseScale * Mathf.Lerp(0.4f, 1f, closeness);
                     glowRatio = Mathf.Lerp(closeGlow * 0.7f, closeGlow, closeness) / lockedGlow;
 
-                    if (ring != null)
+                    if (ring != null && !paused)
                     {
                         var s = ring.localScale;
                         float r = Mathf.Lerp(ringOuterScale, ringInnerScale, closeness);
@@ -162,27 +160,38 @@ namespace Signspace.UI
             }
 
             _lastDistance = matcher.DistanceDegrees;
-            Apply(scale, glowRatio);
+
+            // No motion at all while paused, whatever the band was doing a frame ago.
+            if (paused) scale = 1f;
+
+            Apply(scale, glowRatio, paused);
         }
 
-        void Apply(float scale, float glowRatio)
+        void Apply(float scale, float glowRatio, bool paused)
         {
+            // Dim by multiplying the colour, not by setting alpha: an unlit material is opaque, and alpha
+            // on an opaque surface changes nothing on screen - a dim that does not dim.
+            Color shown = paused
+                ? new Color(_current.r * (1f - pauseDim), _current.g * (1f - pauseDim),
+                            _current.b * (1f - pauseDim), _current.a)
+                : _current;
+
             if (halo != null)
             {
                 halo.transform.localScale = Vector3.one * scale;
                 halo.GetPropertyBlock(_block);
                 if (halo.sharedMaterial != null && halo.sharedMaterial.HasProperty(BaseColorId))
-                    _block.SetColor(BaseColorId, _current);
+                    _block.SetColor(BaseColorId, shown);
                 if (halo.sharedMaterial != null && halo.sharedMaterial.HasProperty(ColorId))
-                    _block.SetColor(ColorId, _current);
+                    _block.SetColor(ColorId, shown);
                 if (halo.sharedMaterial != null && halo.sharedMaterial.HasProperty(EmissionId))
-                    _block.SetColor(EmissionId, _current * glowRatio);
+                    _block.SetColor(EmissionId, shown * glowRatio);
                 halo.SetPropertyBlock(_block);
             }
 
             if (glow != null)
             {
-                glow.color = _current;
+                glow.color = shown;
                 glow.intensity = glowIntensityAtLock * Mathf.Clamp(glowRatio, 0.1f, 1.2f);
                 glow.enabled = true;
             }

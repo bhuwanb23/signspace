@@ -17,7 +17,7 @@ set against the weaker device.
 | Total frame | **13.9 ms** | 72 Hz |
 | CPU | ≤ 8.0 ms | matching is 6 shapes × 5 finger comparisons = 30 quaternion comparisons per frame. Microseconds, not milliseconds. |
 | GPU | ≤ 6.5 ms | **the real constraint** |
-| Draw calls | ≤ 120 | the shelf is 6 objects; everything else is a handful of quads |
+| Draw calls | ≤ 120 | shelf-only estimate: 12 objects + 12 markers + 2 furniture = 26 (`phases/p4-shelf/budget-check.md`); measure the full frame |
 | Triangles (visible) | ≤ 150k | reference hand ~8k, low-poly, untextured geometry |
 | Materials | ≤ 12 unique | shared, unlit or very cheap lit |
 | Realtime lights | **0** | baked or unlit only |
@@ -128,7 +128,7 @@ measuring with and without.
 | **The matcher** | 6 shapes × 5 fingers = 30 quaternion comparisons per frame | it should be invisible. If it is not, something is allocating. **The budget is zero allocations per frame** — `ARCHITECTURE.md` §3 |
 | The gaze highlight | a raycast and a label update per finger | is the highlight updating every frame or only on change? |
 | The reference hand | a skinned mesh with 26 bones | bone count and skinning cost |
-| The shelf | 6 objects, each an object | draw calls, and are they instanced? |
+| The shelf | 12 objects + 12 slot markers + 2 furniture = 26 estimated draw calls, 912 triangles | hypothetical single-pass shelf estimate in `phases/p4-shelf/budget-check.md`; measure the full frame |
 
 **The allocation trap.** `Matcher.Tick` must not allocate. Every buffer is fixed size and reused —
 the finger angles array is allocated once and passed in, and `PoseMath.Distance` writes into it

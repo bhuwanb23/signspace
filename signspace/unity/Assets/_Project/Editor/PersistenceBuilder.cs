@@ -44,7 +44,7 @@ namespace Signspace.Editor
                       "  adb shell rm -f /sdcard/Android/data/com.signspace.signspace/files/signspace-save.json");
         }
 
-        public static void Build()
+        public static void Build(bool includeProbe = true)
         {
             // ---- 1. only this rig is live ---------------------------------------------------
             string[] quiet = { "GrabTest", "ProbeRig", "RotationTrial" };
@@ -90,18 +90,22 @@ namespace Signspace.Editor
             plate.transform.localPosition = Vector3.zero;
             Tint(plate, new Color(0.16f, 0.17f, 0.20f));
 
-            // The acceptance object. 10 cm, same as every other rig in this phase.
-            var cube = FindOrMake(shelfGo.transform, "TestCube", PrimitiveType.Cube);
-            cube.transform.localScale = Vector3.one * 0.10f;
-            cube.transform.localPosition = new Vector3(-0.18f, 0.06f, 0f);
-            Tint(cube, new Color(0.15f, 0.9f, 1f));
+            if (includeProbe)
+            {
+                // The acceptance object. 10 cm, same as every other rig in this phase.
+                var cube = FindOrMake(shelfGo.transform, "TestCube", PrimitiveType.Cube);
+                cube.transform.localScale = Vector3.one * 0.10f;
+                cube.transform.localPosition = new Vector3(-0.18f, 0.06f, 0f);
+                Tint(cube, new Color(0.15f, 0.9f, 1f));
 
-            // a nose so a rotation error is visible, not just a translation error
-            var nose = FindOrMake(cube.transform, "Nose", PrimitiveType.Sphere);
-            nose.transform.localScale = Vector3.one * 0.35f;
-            nose.transform.localPosition = new Vector3(0f, 0f, 0.75f);
-            var noseCollider = nose.GetComponent<Collider>();
-            if (noseCollider != null) Object.DestroyImmediate(noseCollider);
+                // a nose so a rotation error is visible, not just a translation error
+                var nose = FindOrMake(cube.transform, "Nose", PrimitiveType.Sphere);
+                nose.transform.localScale = Vector3.one * 0.35f;
+                nose.transform.localPosition = new Vector3(0f, 0f, 0.75f);
+                var noseCollider = nose.GetComponent<Collider>();
+                if (noseCollider != null) Object.DestroyImmediate(noseCollider);
+
+            }
 
             var plinth = FindOrMake(shelfGo.transform, "Plinth", PrimitiveType.Cube);
             plinth.transform.localScale = new Vector3(0.46f, 0.02f, 0.14f);
@@ -118,24 +122,56 @@ namespace Signspace.Editor
             anchor.shelfRoot = shelfGo.transform;
             anchor.plinthRoot = plinth;
 
-            // ---- 5. the probe ---------------------------------------------------------------
-            var probeGo = GameObject.Find("PersistenceProbe");
-            if (probeGo == null) probeGo = new GameObject("PersistenceProbe");
-            var probe = probeGo.GetComponent<PersistenceProbe>();
-            if (probe == null) probe = probeGo.AddComponent<PersistenceProbe>();
-            probe.shelf = anchor;
-            probe.save = save;
-            probe.boot = boot;
-            probe.hand = Object.FindFirstObjectByType<MetaHandSource>();
+            // ---- 4b. the shelf's objects and its breathing (P4.2) ---------------------------
+            // One owner for the idle: twelve objects each with their own Update is the trap the task
+            // names, and the switch that turns it off has to exist before P7 needs it.
+            anchor.objectPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/_Project/Prefabs/ShelfObject.prefab");
+            if (anchor.objectPrefab == null)
+                Debug.LogWarning("[PersistenceBuilder] ShelfObject.prefab missing: locked shapes will " +
+                                 "have nothing to put on the shelf. Run SIGNSPACE/P4.2 or re-import.");
 
-            // ---- 6. what the operator has to do ---------------------------------------------
-            Debug.Log(
-                "[PersistenceBuilder] P1.7 rig ready. The three rows that close the task:\n" +
-                "  launch 1  nothing saved  -> outcome PlacedFresh, cube lands on the table\n" +
-                "  launch 2  kill from recents, relaunch -> outcome Restored, same physical square\n" +
-                "  launch 3  reboot the headset, relaunch -> outcome Restored again\n" +
-                "Pull the log:\n" +
-                "  adb shell run-as com.signspace.signspace cat /sdcard/Android/data/com.signspace.signspace/files/persistence-probe.jsonl");
+            anchor.objectMaterial = BuildMaterials.Get(
+                BuildMaterials.Folder + "/ShelfObject.mat", Color.white);
+
+            Transform slotRoot = shelfGo.transform.Find("Slots");
+            if (slotRoot == null)
+            {
+                var slots = new GameObject("Slots");
+                slots.transform.SetParent(shelfGo.transform, false);
+                slots.transform.localPosition = new Vector3(0f, 0.012f, 0f);   // just above the plate
+                slotRoot = slots.transform;
+            }
+            anchor.slotRoot = slotRoot;
+            anchor.slotEmptyMaterial = BuildMaterials.Get(
+                BuildMaterials.Folder + "/SlotEmpty.mat", new Color(0.30f, 0.32f, 0.35f, 1f));
+
+            var idle = shelfGo.GetComponent<ShelfIdle>();
+            if (idle == null) idle = shelfGo.AddComponent<ShelfIdle>();
+            anchor.idle = idle;
+            anchor.RefreshSlots();
+
+            if (includeProbe)
+            {
+                // ---- 5. the probe ---------------------------------------------------------------
+                var probeGo = GameObject.Find("PersistenceProbe");
+                if (probeGo == null) probeGo = new GameObject("PersistenceProbe");
+                var probe = probeGo.GetComponent<PersistenceProbe>();
+                if (probe == null) probe = probeGo.AddComponent<PersistenceProbe>();
+                probe.shelf = anchor;
+                probe.save = save;
+                probe.boot = boot;
+                probe.hand = Object.FindFirstObjectByType<MetaHandSource>();
+
+                // ---- 6. what the operator has to do ---------------------------------------------
+                Debug.Log(
+                    "[PersistenceBuilder] P1.7 rig ready. The three rows that close the task:\n" +
+                    "  launch 1  nothing saved  -> outcome PlacedFresh, cube lands on the table\n" +
+                    "  launch 2  kill from recents, relaunch -> outcome Restored, same physical square\n" +
+                    "  launch 3  reboot the headset, relaunch -> outcome Restored again\n" +
+                    "Pull the log:\n" +
+                    "  adb shell run-as com.signspace.signspace cat /sdcard/Android/data/com.signspace.signspace/files/persistence-probe.jsonl");            }
+
         }
 
         static GameObject FindOrMake(Transform parent, string name, PrimitiveType type)

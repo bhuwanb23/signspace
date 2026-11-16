@@ -43,7 +43,10 @@ namespace Signspace.Spatial
             SaveTooOld = 3,        // a save exists but predates relative transforms
             AnchorNotFound = 4,    // a save exists and the anchor did not come back
             Plinth = 5,            // no surface at all: the fallback, which is not a failure
-            NoFinder = 6           // misconfigured scene
+            NoFinder = 6,          // misconfigured scene
+            DifferentRoom = 7,
+            RoomNotFound = 8,
+            UnsupportedLayout = 9
         }
 
         [Header("Dependencies")]
@@ -56,8 +59,31 @@ namespace Signspace.Spatial
         [Header("Shelf")]
         public Transform shelfRoot;
         public GameObject objectPrefab;
-        public int slotCount = 6;
+        public Material objectMaterial;
+        [Tooltip("Twelve slots for distinct unlocked shapes. Repeating a shape returns to its existing slot.")]
+        public int slotCount = 12;
+        [Tooltip("Slots are laid out in rows of this many. Two rows of six fits the 0.50 x 0.16 plate; " +
+                 "one row of twelve does not.")]
+        public int slotColumns = 6;
         public float slotSpacing = 0.075f;
+        [Tooltip("Row depth. Only has to clear the depth of one object.")]
+        public float slotRowSpacing = 0.065f;
+
+        [Header("Slots (P4.2)")]
+        [Tooltip("Objects sit under one slot transform each, so a slot's position is defined once and the " +
+                 "flight, the resting place and the empty marker cannot disagree.")]
+        public Transform slotRoot;
+        [Tooltip("Marker for a slot. Optional: one is generated from a quad if it is left empty, because " +
+                 "the empty-slot affordance must exist in the build rather than in the wiring.")]
+        public GameObject slotMarker;
+        [Tooltip("Material for the next, still-empty slot. Dim: it is an invitation, not a hole.")]
+        public Material slotEmptyMaterial;
+        [Tooltip("Marker scale, in metres. Small squares on the shelf's surface.")]
+        public float slotMarkerScale = 0.05f;
+        [Tooltip("The one owner of the shelf's breathing. Optional: found if left empty.")]
+        public ShelfIdle idle;
+        [Tooltip("Clearance above the slot marker, in metres. The shape's mesh bounds determine its lift.")]
+        public float slotObjectClearance = 0.001f;
         public float distanceFromUser = 0.45f;
         public float heightOffset = 0.02f;
 
@@ -70,6 +96,13 @@ namespace Signspace.Spatial
         public float restoreWaitSeconds = 20f;
 
         public bool ParentToAnchor = true;
+
+        [Header("Launch log (P4.1 step 5)")]
+        [Tooltip("Append one line per launch: which condition was chosen, on what, and why. Read by P8's " +
+                 "playtest analysis and by the video edit.")]
+        public bool writeLaunchLog = true;
+        [Tooltip("File name, written to Application.persistentDataPath.")]
+        public string launchLogFile = "shelf-launches.jsonl";
 
         [Header("Plinth fallback")]
         [Tooltip("Shown when no surface is found. Same screen position as the shelf would occupy.")]
@@ -90,9 +123,19 @@ namespace Signspace.Spatial
         public string SavedAnchorId { get; private set; } = "";
         public string ResolvedAnchorId { get; private set; } = "";
 
+        /// <summary>What the shelf landed on, and its score. Empty when it landed on the plinth.</summary>
+        public string ChosenLabel { get; private set; } = "";
+        public float ChosenScore { get; private set; } = -1f;
+        /// <summary>The line appended for this launch, or "" when logging is off.</summary>
+        public string LastLaunchRecord { get; private set; } = "";
+
         readonly List<GameObject> _spawned = new List<GameObject>();
         ISurfaceFinder _finder;
         bool _pendingSurfaceOffer;
+        bool _begun;
+        float _nextRoomCheck;
+        string _lastObservedRoom = "";
+        bool _lastRoomKnown;
 
         void Awake()
         {
@@ -104,7 +147,74 @@ namespace Signspace.Spatial
 
         void Start()
         {
-            StartCoroutine(Begin());
+            StartCoroutine(RunBegin());
+        }
+
+        /// <summary>
+        /// Begin(), then log — in that order and from one place, so a launch record cannot be skipped by
+        /// an early `yield break` on one of the six outcome paths.
+        /// </summary>
+        IEnumerator RunBegin()
+        {
+            yield return Begin();
+            _begun = true;
+            _lastRoomKnown = _finder != null && _finder.TryGetCurrentRoomId(out _lastObservedRoom);
+            LogLaunch();
+        }
+
+        void LogLaunch(string eventType = "launch")
+        {
+            LastLaunchRecord = BuildLaunchRecord(eventType);
+            Debug.Log("[ShelfAnchor] launch: " + LastLaunchRecord);
+            if (!writeLaunchLog) return;
+            try
+            {
+                string path = System.IO.Path.Combine(Application.persistentDataPath, launchLogFile);
+                System.IO.File.AppendAllText(path, LastLaunchRecord + "\n");
+            }
+            catch (Exception e)
+            {
+                // A log that cannot be written must never take the shelf with it.
+                Debug.LogWarning("[ShelfAnchor] could not append the launch log: " + e.Message);
+            }
+        }
+
+        string BuildLaunchRecord(string eventType)
+        {
+            string finderNote = "no finder";
+            var mrukFinder = _finder as MrUkSurfaceFinder;
+            if (mrukFinder != null) finderNote = mrukFinder.LastRejectionSummary;
+
+            return "{"
+                + "\"event\":\"" + Escape(eventType) + "\","
+                + "\"utc\":\"" + DateTime.UtcNow.ToString("o") + "\","
+                + "\"app\":\"" + Escape(Application.version) + "\","
+                + "\"outcome\":\"" + Result + "\","
+                + "\"onSurface\":" + (OnSurface ? "true" : "false") + ","
+                + "\"label\":\"" + Escape(ChosenLabel) + "\","
+                + "\"score\":" + ChosenScore.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ","
+                + "\"anchor\":\"" + Escape(CurrentAnchorId) + "\","
+                + "\"savedAnchor\":\"" + Escape(SavedAnchorId) + "\","
+                + "\"homeAnchor\":\"" + Escape(save != null ? save.Data.anchorId : "") + "\","
+                + "\"room\":\"" + Escape(_finder != null ? _finder.RoomId : "") + "\","
+                + "\"savedRoom\":\"" + Escape(save != null ? save.Data.roomId : "") + "\","
+                + "\"schema\":" + (save != null ? save.Data.schema : 0) + ","
+                + "\"writesBlocked\":" + (save != null && save.WritesBlocked ? "true" : "false") + ","
+                + "\"saveStatus\":\"" + Escape(save != null ? save.LastSaveStatus : "no save") + "\","
+                + "\"layout\":\"" + Escape(save != null ? save.Data.layoutVariant : "") + "\","
+                + "\"unlockOrder\":\"" + Escape(save != null ? string.Join(",", save.Data.unlocked) : "") + "\","
+                + "\"resolveMs\":" + ResolveMilliseconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + ","
+                + "\"restoreMs\":" + RestoreMilliseconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + ","
+                + "\"driftM\":" + WorldDriftMeters.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture) + ","
+                + "\"detail\":\"" + Escape(OutcomeDetail) + "\","
+                + "\"finder\":\"" + Escape(finderNote) + "\""
+                + "}";
+        }
+
+        static string Escape(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("\\", "/").Replace("\"", "'").Replace("\n", " ").Replace("\r", " ");
         }
 
         IEnumerator Begin()
@@ -117,72 +227,94 @@ namespace Signspace.Spatial
                 OutcomeDetail = "no ISurfaceFinder: the scene has no MrUkSurfaceFinder assigned, so " +
                                 "nothing can be placed on furniture. Using the plinth.";
                 UsePlinth();
+                RestoreMilliseconds = (Time.realtimeSinceStartup - startedAt) * 1000f;
                 yield break;
             }
 
             SavedAnchorId = save != null ? save.Data.anchorId : "";
 
-            // ---- no usable save: normal first-run placement --------------------------------
-            if (save == null || !save.HasPlacement)
-            {
-                Result = save != null && !string.IsNullOrEmpty(save.Data.anchorId)
-                    ? Outcome.SaveTooOld
-                    : Outcome.NotStarted;
-                OutcomeDetail = save != null ? save.PlacementUnavailableReason : "no SaveSystem";
+            yield return WaitForRoomOrTimeout(startedAt);
 
-                // restoreOnStart=false means "do not try to re-find anything", not "place nothing":
-                // the shelf still has to appear, so it is placed from the live surface and saved.
-                yield return WaitForRoomOrTimeout(startedAt);
+            if (save == null || (!save.HasPlacement && string.IsNullOrEmpty(save.Data.anchorId) && !save.WritesBlocked))
+            {
                 Place(offerOnly: false);
                 if (Result == Outcome.NotStarted) Result = OnSurface ? Outcome.PlacedFresh : Outcome.Plinth;
                 RestoreMilliseconds = (Time.realtimeSinceStartup - startedAt) * 1000f;
                 yield break;
             }
 
-            if (!restoreOnStart)
+            if (save.WritesBlocked || !save.HasPlacement || !restoreOnStart)
             {
-                yield return WaitForRoomOrTimeout(startedAt);
-                Place(offerOnly: false);
-                Result = OnSurface ? Outcome.PlacedFresh : Outcome.Plinth;
-                OutcomeDetail = "restoreOnStart is off, so the saved anchor was ignored and the shelf " +
-                                "was placed from the live surface";
-                RestoreMilliseconds = (Time.realtimeSinceStartup - startedAt) * 1000f;
-                yield break;
+                Result = Outcome.SaveTooOld;
+                OutcomeDetail = "placement unavailable or save read-only; original file is preserved";
+                UsePlinth();
             }
+            else
+                ResolveForCurrentRoom();
+            RestoreMilliseconds = (Time.realtimeSinceStartup - startedAt) * 1000f;
+        }
 
-            // ---- wait for the room, then resolve ------------------------------------------
-            yield return WaitForRoomOrTimeout(startedAt);
-
+        // A single saved home placement, plus a temporary plinth outside that room. Progress remains
+        // global: unlocks made on the plinth are saved, but never replace the home's room or anchor.
+        void ResolveForCurrentRoom()
+        {
+            string room;
+            if (_finder == null || !_finder.TryGetCurrentRoomId(out room))
+            {
+                Result = Outcome.RoomNotFound;
+                OutcomeDetail = "current room UUID unavailable; saved placement preserved";
+                UsePlinth();
+                return;
+            }
+            if (!string.Equals(room, save.Data.roomId, StringComparison.OrdinalIgnoreCase))
+            {
+                Result = Outcome.DifferentRoom;
+                OutcomeDetail = "different room; saved home placement preserved";
+                UsePlinth();
+                return;
+            }
+            if (save.Data.layoutVariant != SaveSystem.DefaultLayout)
+            {
+                Result = Outcome.UnsupportedLayout;
+                OutcomeDetail = "unknown layout variant; saved data preserved";
+                UsePlinth();
+                return;
+            }
+            slotColumns = 6;
             float t0 = Time.realtimeSinceStartup;
             SurfaceCandidate surface;
             Transform anchorTransform;
-            bool ok = _finder.TryResolve(SavedAnchorId, out surface, out anchorTransform);
+            bool resolved = _finder.TryResolve(save.Data.anchorId, out surface, out anchorTransform);
             ResolveMilliseconds = (Time.realtimeSinceStartup - t0) * 1000f;
-
-            if (!ok)
+            if (!ParentToAnchor || !resolved || anchorTransform == null ||
+                !string.Equals(surface.RoomId, room, StringComparison.OrdinalIgnoreCase))
             {
-                // THE DOCUMENTED NOT-FOUND BEHAVIOUR.
-                // The save is left INTACT on purpose. A shelf that forgets its anchor because the
-                // headset launched in another room would lose a week of progress to a walk down the
-                // corridor; instead the plinth is shown now and the saved anchor is retried on the
-                // next launch, or the moment a room loads.
+                bool alreadyFallback = Result == Outcome.AnchorNotFound && !OnSurface;
                 Result = Outcome.AnchorNotFound;
-                OutcomeDetail = "saved anchor '" + Shorten(SavedAnchorId) + "' did not come back (" +
-                                DescribeWhyNotFound() + "). The save is kept, the plinth is shown, and " +
-                                "the anchor will be retried on the next launch.";
-                UsePlinth();
-                RestoreMilliseconds = (Time.realtimeSinceStartup - startedAt) * 1000f;
-                Debug.LogWarning("[ShelfAnchor] " + OutcomeDetail);
-                yield break;
+                OutcomeDetail = "saved anchor unavailable in current room; saved placement preserved";
+                if (!alreadyFallback) UsePlinth();
+                return;
             }
-
             Restore(surface, anchorTransform);
-            RestoreMilliseconds = (Time.realtimeSinceStartup - startedAt) * 1000f;
+        }
 
-            Debug.Log("[ShelfAnchor] restored onto '" + surface.Label + "' in " +
-                      ResolveMilliseconds.ToString("0.0") + " ms (resolve), " +
-                      RestoreMilliseconds.ToString("0.0") + " ms (total), drift " +
-                      WorldDriftMeters.ToString("0.000") + " m");
+        void Update()
+        {
+            if (!_begun || _finder == null || save == null || !save.HasPlacement || save.WritesBlocked ||
+                !restoreOnStart || Time.unscaledTime < _nextRoomCheck) return;
+            _nextRoomCheck = Time.unscaledTime + 1f;
+            string room;
+            bool known = _finder.TryGetCurrentRoomId(out room);
+            bool changed = known != _lastRoomKnown ||
+                (known && !string.Equals(room, _lastObservedRoom, StringComparison.OrdinalIgnoreCase));
+            // Retry an unresolved anchor in the same room as MRUK finishes localising.
+            if (!changed && !(known && Result == Outcome.AnchorNotFound)) return;
+            _lastRoomKnown = known;
+            _lastObservedRoom = room;
+            var previous = Result;
+            ResolveForCurrentRoom();
+            // A transition is an additional JSONL event; retries are not relaunch measurements.
+            if (changed || previous != Result) LogLaunch("room-transition");
         }
 
         /// <summary>
@@ -236,6 +368,8 @@ namespace Signspace.Spatial
             OnSurface = true;
             CurrentAnchorId = surface.AnchorId;
             ResolvedAnchorId = surface.AnchorId;
+            ChosenLabel = surface.Label;
+            ChosenScore = surface.Score;
 
             if (hadDiagnostic) WorldDriftMeters = Vector3.Distance(transform.position, before);
             else WorldDriftMeters = -1f;
@@ -259,8 +393,12 @@ namespace Signspace.Spatial
         /// </summary>
         public void Place(bool offerOnly)
         {
-            // `default`: the short-circuit leaves `surface` unassigned when _finder is null, which the
-            // compiler correctly refuses to let us read after the `found` check.
+            if (save != null && (save.WritesBlocked || !string.IsNullOrEmpty(save.Data.anchorId)))
+            {
+                // Never silently migrate a saved shelf. Explicit reset is a separate operation.
+                if (offerOnly) _pendingSurfaceOffer = true;
+                return;
+            }
             SurfaceCandidate surface = default;
             bool found = _finder != null && _finder.TryGetPrimary(out surface);
 
@@ -284,6 +422,17 @@ namespace Signspace.Spatial
             if (_finder.TryResolve(surface.AnchorId, out resolved, out anchorTransform) == false)
                 anchorTransform = null;
 
+            Guid roomGuid, anchorGuid;
+            if (!ParentToAnchor || anchorTransform == null ||
+                !Guid.TryParse(surface.RoomId, out roomGuid) || roomGuid == Guid.Empty ||
+                !Guid.TryParse(surface.AnchorId, out anchorGuid) || anchorGuid == Guid.Empty)
+            {
+                Result = Outcome.RoomNotFound;
+                OutcomeDetail = "stable room/anchor UUID unavailable; using temporary plinth";
+                UsePlinth();
+                return;
+            }
+
             if (ParentToAnchor && anchorTransform != null)
                 transform.SetParent(anchorTransform, false);
             else
@@ -294,9 +443,11 @@ namespace Signspace.Spatial
 
             CurrentAnchorId = surface.AnchorId;
             ResolvedAnchorId = surface.AnchorId;
+            ChosenLabel = surface.Label;
+            ChosenScore = surface.Score;
             OnSurface = true;
 
-            if (save != null)
+            if (save != null && ParentToAnchor && anchorTransform != null)
             {
                 save.RecordPlacement(surface.RoomId, surface.AnchorId, surface.Label,
                                      transform.localPosition, transform.localRotation, transform.position);
@@ -338,6 +489,10 @@ namespace Signspace.Spatial
                 FaceUser();
             }
             CurrentAnchorId = "";
+            ResolvedAnchorId = "";
+            WorldDriftMeters = -1f;
+            ChosenLabel = "plinth";
+            ChosenScore = -1f;
             if (Result == Outcome.NotStarted) Result = Outcome.Plinth;
             SetMode(false);
             RestoreUnlocked();
@@ -354,11 +509,21 @@ namespace Signspace.Spatial
         /// <summary>Re-spawn every object for the shapes already unlocked in this room.</summary>
         public void RestoreUnlocked()
         {
-            foreach (var go in _spawned) if (go != null) Destroy(go);
+            if (idle == null) idle = FindFirstObjectByType<ShelfIdle>();
+            foreach (var go in _spawned)
+            {
+                if (go == null) continue;
+                if (idle != null) idle.Unregister(go.transform);
+                Destroy(go);
+            }
             _spawned.Clear();
             if (save == null || objectPrefab == null) return;
-            for (int i = 0; i < save.Data.unlocked.Count; i++)
-                SpawnAt(i, save.Data.unlocked[i]);
+            for (int i = 0; i < save.Data.unlocked.Count && i < slotCount; i++)
+            {
+                var go = SpawnAt(i, save.Data.unlocked[i]);
+                RegisterIdle(go);       // restored objects are already at rest: no settle to wait for
+            }
+            RefreshSlots();
         }
 
         /// <summary>Called by the lock payoff. Places one object with a settle animation.</summary>
@@ -371,13 +536,228 @@ namespace Signspace.Spatial
 
         GameObject SpawnAt(int slot, string shapeId)
         {
-            if (objectPrefab == null) return null;
-            var go = Instantiate(objectPrefab, transform);
-            float x = (slot - (slotCount - 1) * 0.5f) * slotSpacing;
-            go.transform.localPosition = new Vector3(x, 0f, 0f);
-            go.name = $"ShelfObject_{shapeId}_{slot}";
+            if (objectPrefab == null || slot < 0 || slot >= slotCount) return null;
+
+            Transform slotTransform = SlotTransform(slot);
+            ClearSlot(slot, null);
+            var go = Instantiate(objectPrefab, slotTransform != null ? slotTransform : transform);
+            go.name = "ShelfObject_" + shapeId + "_" + slot;
+
+            var view = go.GetComponent<ShelfObjectView>();
+            if (view != null)
+            {
+                if (objectMaterial != null) view.objectMaterial = objectMaterial;
+                view.SetShape(shapeId);
+            }
+            if (slotTransform != null) go.transform.localPosition = Vector3.up * ObjectLift(shapeId);
+
+            // No breathing yet: anything that arrives with a settle registers when it has stopped
+            // moving (Settle), because the idle and the settle would otherwise write the same scale.
             _spawned.Add(go);
+            RefreshSlots();
             return go;
+        }
+
+        /// <summary>
+        /// The transform for a slot, created once and reused. Slot 0 is the leftmost of the front row and
+        /// the grid is centred on the shelf, so a two-object shelf is not stuck against one edge.
+        /// </summary>
+        public Transform SlotTransform(int slot)
+        {
+            if (slot < 0 || slot >= slotCount) return null;
+            Transform parent = slotRoot != null ? slotRoot : transform;
+            string name = "Slot_" + slot;
+            Transform existing = parent.Find(name);
+            if (existing != null) return existing;
+
+            int columns = slotColumns > 0 ? slotColumns : slotCount;
+            int rows = (slotCount + columns - 1) / columns;
+            int column = slot % columns;
+            int row = slot / columns;
+
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(
+                (column - (columns - 1) * 0.5f) * slotSpacing,
+                0f,
+                (row - (rows - 1) * 0.5f) * slotRowSpacing);
+            return go.transform;
+        }
+
+        /// <summary>
+        /// Show the filled slots and ONE empty one - the hook at the end of the session. From the first
+        /// launch that means a single dimmed slot and nothing else, which is the point: the shelf is a
+        /// record with room in it, not a trophy cabinet that happens to be empty.
+        /// </summary>
+        public void RefreshSlots()
+        {
+            int unlocked = save != null && save.Data != null ? save.Data.unlocked.Count : 0;
+
+            for (int i = 0; i < slotCount; i++)
+            {
+                Transform slot = SlotTransform(i);
+                if (slot == null) continue;
+
+                bool isNextEmpty = i == unlocked;
+                bool visible = i < unlocked || isNextEmpty;
+
+                Transform marker = slot.Find("Marker");
+                if (marker == null && visible)
+                {
+                    marker = MakeMarker(slot);
+                    if (marker == null) continue;
+                }
+                if (marker == null) continue;
+
+                marker.gameObject.SetActive(visible);
+                if (!visible) continue;
+
+                var renderer = marker.GetComponent<Renderer>();
+                if (renderer == null) continue;
+
+                // Tint RGB rather than relying on alpha (the material can be opaque). Refresh both
+                // states so a marker brightens when its slot becomes occupied.
+                if (slotEmptyMaterial != null) renderer.sharedMaterial = slotEmptyMaterial;
+                Tint(renderer, isNextEmpty
+                    ? new Color(0.30f, 0.32f, 0.35f, 1f)
+                    : new Color(0.58f, 0.60f, 0.64f, 1f));
+            }
+        }
+
+        Transform MakeMarker(Transform slot)
+        {
+            GameObject go = slotMarker != null ? Instantiate(slotMarker, slot) : MakeQuadMarker(slot);
+            if (go == null) return null;
+            go.name = "Marker";
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localScale = Vector3.one * slotMarkerScale;
+            return go.transform;
+        }
+
+        static MaterialPropertyBlock _tintBlock;
+
+        static void Tint(Renderer renderer, Color colour)
+        {
+            if (renderer == null || renderer.sharedMaterial == null) return;
+            if (_tintBlock == null) _tintBlock = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(_tintBlock);
+            if (renderer.sharedMaterial.HasProperty("_BaseColor")) _tintBlock.SetColor("_BaseColor", colour);
+            if (renderer.sharedMaterial.HasProperty("_Color")) _tintBlock.SetColor("_Color", colour);
+            renderer.SetPropertyBlock(_tintBlock);
+        }
+
+        static GameObject MakeQuadMarker(Transform slot)
+        {
+            // A generated marker rather than a required prefab: the affordance has to exist in a scene
+            // nobody wired.
+            var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            var collider = go.GetComponent<Collider>();
+            if (collider != null)
+            {
+                if (Application.isPlaying) Destroy(collider); else DestroyImmediate(collider);
+            }
+            go.transform.SetParent(slot, false);
+            go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);   // flat on the shelf
+            return go;
+        }
+
+        /// <summary>
+        /// One object per slot. Meeting a shape you already have does not put a second copy on the shelf -
+        /// it goes back to its own slot, and the copy that was there steps aside. A shelf that grows two
+        /// of everything the user repeats is a scoreboard, not a shelf.
+        /// </summary>
+        void ClearSlot(int slot, GameObject except)
+        {
+            Transform target = SlotTransform(slot);
+            if (target == null) return;
+
+            for (int i = _spawned.Count - 1; i >= 0; i--)
+            {
+                var other = _spawned[i];
+                if (other == null)
+                {
+                    _spawned.RemoveAt(i);
+                    continue;
+                }
+                if (other == except || other.transform.parent != target) continue;
+                _spawned.RemoveAt(i);
+                if (idle != null) idle.Unregister(other.transform);
+                Destroy(other);
+            }
+        }
+
+        /// <summary>Hand an object to the idle, once it has stopped moving. One owner, one baseline.</summary>
+        void RegisterIdle(GameObject go)
+        {
+            if (go == null) return;
+            if (idle == null) idle = FindFirstObjectByType<ShelfIdle>();
+            if (idle == null) return;                 // no idle in the scene is a valid configuration
+            idle.Register(go.transform);
+            idle.Rebaseline(go.transform);            // whatever it was scaled to on arrival is the rest scale
+        }
+
+        /// <summary>
+        /// Take ownership of an object that has already flown here (the lock payoff builds it, so it can
+        /// be seen leaving the hand). From this call on it is a shelf object: one slot, one silhouette,
+        /// registered with the one idle.
+        /// </summary>
+        public GameObject Adopt(GameObject go, string shapeId)
+        {
+            if (go == null) return null;
+
+            int index = SlotIndexFor(shapeId);
+            Transform slot = SlotTransform(index);
+            if (slot == null) return go;              // no free slot: leave it where it landed
+
+            var view = go.GetComponent<ShelfObjectView>();
+            if (view == null)
+            {
+                // The payoff's prototype is not a shelf object (a plain cube from the P2 rig). Replace it
+                // with the shelf's own, so what stays in the room is one kind of thing, not two.
+                Destroy(go);
+                var replacement = SpawnAt(index, shapeId);
+                if (replacement != null) StartCoroutine(Settle(replacement));
+                return replacement;
+            }
+
+            ClearSlot(index, go);
+            go.transform.SetParent(slot, false);
+            go.transform.localPosition = Vector3.up * ObjectLift(shapeId);
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one;
+            if (objectMaterial != null) view.objectMaterial = objectMaterial;
+            view.SetShape(shapeId);
+
+            if (!_spawned.Contains(go)) _spawned.Add(go);
+            RegisterIdle(go);
+            RefreshSlots();
+            return go;
+        }
+
+        /// <summary>Lift the mesh so its bottom rests just above its marker.</summary>
+        public float ObjectLift(string shapeId)
+        {
+            var mesh = ShelfSilhouettes.For(shapeId);
+            return Mathf.Max(0f, -mesh.bounds.min.y) + slotObjectClearance;
+        }
+
+        /// <summary>Which slot a shape belongs in, or -1 when there is no free slot.</summary>
+        public int SlotIndexFor(string shapeId)
+        {
+            int index = -1;
+            if (save != null && save.Data != null) index = save.Data.unlocked.IndexOf(shapeId);
+            if (index < 0) index = save != null && save.Data != null ? save.Data.unlocked.Count : 0;
+            return index >= slotCount ? -1 : index;
+        }
+
+        /// <summary>
+        /// The slot an object for this shape should fly to. An already-unlocked shape goes back to its own
+        /// slot; a new one takes the next empty slot.
+        /// </summary>
+        public bool TryGetSlotFor(string shapeId, out Transform slot)
+        {
+            slot = SlotTransform(SlotIndexFor(shapeId));
+            return slot != null;
         }
 
         IEnumerator Settle(GameObject go)
@@ -388,9 +768,16 @@ namespace Signspace.Spatial
             float k = 0f;
             while (k < 1f)
             {
+                if (t == null) yield break;
                 k += Time.deltaTime / 0.35f;
                 t.localScale = Vector3.Lerp(target * 0.01f, target, Mathf.SmoothStep(0f, 1f, k));
                 yield return null;
+            }
+
+            if (t != null)
+            {
+                t.localScale = target;
+                RegisterIdle(go);
             }
         }
 

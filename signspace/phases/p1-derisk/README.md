@@ -1,7 +1,7 @@
 # P1 — De-risk spike
 
 **Day 2 (Mon 16 Nov) · Budget 8 h · Gate:** G1 — Does grab-and-rotate feel good on device, and do at least 8 of 20 probed handshapes track reliably?
-**Status:** 🔄 In progress — **P1.1–P1.8 code complete and compiled 16 Nov 2026 (0 errors, Unity 6000.3.28f1); device verification pending (the whole phase is now waiting on one headset session)**
+**Status:** 🔄 In progress — **P1.1–P1.8 code complete, device verification pending (the whole phase is now waiting on one headset session)**
 
 ## Objective
 Prove, on real hardware, in one day, the four things the concept depends on: hands render well, grab feels good, wrist rotation is a viable core gesture, and the sensor can actually resolve enough handshapes to make a product. Plus the two platform bets — MRUK anchoring and persistence — and a measured frame budget.
@@ -13,7 +13,7 @@ Everything the concept assumes is true gets tested here, in one day, on real har
 
 | # | Task | Est | Workstream | Status |
 |---|---|---|---|---|
-| [P1.1](tasks/p1.1-hand-visual.md) | Custom hand visual running at frame rate | 45 min | W2 | 🟡 — code ✅, **compiled 16 Nov** (0 errors); run it on the headset ([log](hand-visual-log.md)) |
+| [P1.1](tasks/p1.1-hand-visual.md) | Custom hand visual running at frame rate | 45 min | W2 | 🟡 — code ✅, **never compiled**; run it on the headset ([log](hand-visual-log.md)) |
 | [P1.2](tasks/p1.2-grab-interaction.md) | Grab a free-floating object with hands only | 45 min | W2 | 🟡 — code ✅, **20-trial run pending** ([log](grab-log.md)) |
 | [P1.3](tasks/p1.3-wrist-rotate.md) | Rotate the grabbed object with your own wrist | 1.5 h | W2 | 🟡 — code ✅, **six cells pending** ([verdict](rotation-verdict.md)) |
 | [P1.4](tasks/p1.4-reference-hand-and-pose.md) | Load a posed reference hand from JSON | 1 h | W2 | 🟡 — code ✅; **version + ordering bugs fixed**; timing needs the device |

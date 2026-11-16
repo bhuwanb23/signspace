@@ -9,7 +9,7 @@
 
 | Layer | Choice | Version | Why this one |
 |---|---|---|---|
-| **Engine** | Unity | **6.3 LTS, 6000.3.28f1** — pinned 15 Nov 2026 and confirmed by `ProjectSettings/ProjectVersion.txt`; clears Meta's 6000.0.66f2 floor | Best-documented gaze + hand path; every Meta sample project ships a Unity version; fastest solo route to a finished APK |
+| **Engine** | Unity | 6 LTS (`6000.x`) — pin the exact patch to the v207 support matrix `[VERIFY]` | Best-documented gaze + hand path; every Meta sample project ships a Unity version; fastest solo route to a finished APK |
 | **XR runtime** | Meta XR All-in-One SDK | **v207** | The competition names v207 APIs explicitly; All-in-One bundles Core + Interaction + MRUK in one import |
 | **Interaction** | Meta XR Interaction SDK (ISDK) | v207 | Grab, Poke, Gaze building blocks — hand-roll only what ISDK doesn't cover |
 | **Room understanding** | MRUK (MR Utility Kit) | v207 | The only sanctioned surface detection + anchor API; also the named rubric technology |

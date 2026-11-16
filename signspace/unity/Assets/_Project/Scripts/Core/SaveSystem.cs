@@ -15,16 +15,25 @@ namespace Signspace.Matching
     /// See ARCHITECTURE.md section 4.
     /// </summary>
     [Serializable]
+    public class ShapeUnlock
+    {
+        public string shapeId = "";
+        // Empty for a migrated legacy unlock: do not invent a historic timestamp.
+        public string unlockedUtc = "";
+    }
+
+    [Serializable]
     public class SaveData
     {
         /// <summary>
-        /// 2 since P1.7. Version 1 had an anchor id and no relative transform, which is not enough to
-        /// put anything back where it was - so a version 1 file is READ, never silently trusted.
+        /// Schema 3 adds per-shape UTC records, a layout variant and an explicit placement-valid flag.
+        /// Schema 1/2 saves migrate without inventing historic unlock timestamps.
         /// </summary>
-        public int schema = 2;
+        public int schema = 3;
 
         public string roomId = "";
         public string anchorId = "";          // the surface's identity: the system anchor UUID
+        public bool placementValid = false;  // true only when anchor-relative coordinates were recorded
         public string anchorLabel = "";       // TABLE / COUCH / BED / STORAGE, for the log and UI
 
         // The thing P1.7 is actually about. These are in the ANCHOR's local space, so they mean the
@@ -45,9 +54,20 @@ namespace Signspace.Matching
         public string savedUtc = "";
         public int restoreCount = 0;
 
+        // `unlocked` remains the authoritative order for existing callers and legacy migration.
         public List<string> unlocked = new List<string>();
+        public List<ShapeUnlock> unlockRecords = new List<ShapeUnlock>();
+        public string layoutVariant = "grid-6x2-v1";
         public bool calibrated = false;
         public string lastShapeId = "";
+
+        /// <summary>
+        /// P3.2: the near-miss off switch. Stored here so the choice survives a relaunch, and read by
+        /// Matcher on Awake. P6.5 surfaces it in-space as the sixth accessibility toggle - the switch
+        /// exists now, with no UI of its own, so that "turn the diagnosis off" is never blocked on a
+        /// phase that has not run yet.
+        /// </summary>
+        public bool nearMissEnabled = true;
     }
 
     public class SaveSystem : MonoBehaviour
@@ -57,13 +77,21 @@ namespace Signspace.Matching
 
         public SaveData Data { get; private set; } = new SaveData();
 
+        public const int CurrentSchema = 3;
+        public const string DefaultLayout = "grid-6x2-v1";
+        public bool WritesBlocked { get; private set; }
+        public string LoadStatus { get; private set; } = "not loaded";
+        public bool LastSaveSucceeded { get; private set; }
+        public string LastSaveStatus { get; private set; } = "not attempted";
+        [Serializable] class SchemaHeader { public int schema; }
+
         public event Action OnUnlocked;
 
         public string Path => System.IO.Path.Combine(Application.persistentDataPath, fileName);
 
         /// <summary>True when the file holds enough to restore a physical placement.</summary>
         public bool HasPlacement =>
-            Data != null && Data.schema >= 2 && !string.IsNullOrEmpty(Data.anchorId);
+            Data != null && Data.placementValid && !string.IsNullOrEmpty(Data.anchorId);
 
         /// <summary>Why there is no placement, for the log. Empty when there is one.</summary>
         public string PlacementUnavailableReason
@@ -72,9 +100,8 @@ namespace Signspace.Matching
             {
                 if (Data == null) return "no save data";
                 if (string.IsNullOrEmpty(Data.anchorId)) return "the save holds no anchor (nothing placed yet)";
-                if (Data.schema < 2)
-                    return "save schema " + Data.schema + " predates relative transforms; it stores an " +
-                           "anchor id but no offset, so the shelf is re-placed from the surface instead";
+                if (!Data.placementValid)
+                    return "saved placement has no trusted anchor-relative transform; using plinth";
                 return "";
             }
         }
@@ -90,31 +117,76 @@ namespace Signspace.Matching
 
         public void Load()
         {
+            WritesBlocked = false;
             try
             {
-                if (!File.Exists(Path)) { Data = new SaveData(); return; }
-                var json = File.ReadAllText(Path);
+                string backup = Path + ".bak";
+                if (!File.Exists(Path) && File.Exists(backup))
+                {
+                    // A previous fallback rename may have been interrupted. Recover the last committed file.
+                    File.Copy(backup, Path);
+                }
+                if (!File.Exists(Path)) { Data = new SaveData(); LoadStatus = "new"; return; }
+                string json = File.ReadAllText(Path);
+                var header = JsonUtility.FromJson<SchemaHeader>(json);
+                if (header == null || header.schema < 1 || header.schema > CurrentSchema)
+                    throw new InvalidDataException("unknown or missing schema; file preserved");
                 var loaded = JsonUtility.FromJson<SaveData>(json);
-                Data = loaded ?? new SaveData();
+                if (loaded == null) throw new InvalidDataException("empty save");
+                Data = loaded;
                 if (Data.unlocked == null) Data.unlocked = new List<string>();
+                if (Data.unlockRecords == null) Data.unlockRecords = new List<ShapeUnlock>();
+                // Preserve list order and unknown legacy dates, rather than pretending to know them.
+                foreach (string id in Data.unlocked)
+                    if (!string.IsNullOrEmpty(id) && !Data.unlockRecords.Exists(r => r != null && r.shapeId == id))
+                        Data.unlockRecords.Add(new ShapeUnlock { shapeId = id, unlockedUtc = "" });
+                if (string.IsNullOrEmpty(Data.layoutVariant)) Data.layoutVariant = DefaultLayout;
+                int oldSchema = header.schema;
+                Data.schema = CurrentSchema;
+                LoadStatus = oldSchema < CurrentSchema ? "migrated schema " + oldSchema : "loaded";
+                // A migration is in memory until the next normal save; schema 1 remains ineligible
+                // for placement until a new anchor-local placement is explicitly recorded.
+                if (oldSchema < CurrentSchema) Data.placementValid = oldSchema >= 2 && !string.IsNullOrEmpty(Data.anchorId);
             }
             catch (Exception e)
             {
-                // A corrupt save must never stop the app from starting. The
-                // worst outcome is an empty shelf, which is a normal outcome.
-                Debug.LogWarning("[SaveSystem] could not read the save file: " + e.Message);
+                // Never overwrite a corrupt, future or unreadable file with an empty save on quit.
+                WritesBlocked = true;
+                LoadStatus = "read-only: " + e.Message;
                 Data = new SaveData();
+                Debug.LogWarning("[SaveSystem] " + LoadStatus);
             }
         }
 
         public void Save()
         {
+            LastSaveSucceeded = false;
+            if (WritesBlocked) { LastSaveStatus = "blocked: original file preserved"; return; }
+            string tmp = Path + ".tmp", backup = Path + ".bak";
             try
             {
-                File.WriteAllText(Path, JsonUtility.ToJson(Data, true));
+                File.WriteAllText(tmp, JsonUtility.ToJson(Data, true));
+                if (!File.Exists(Path))
+                {
+                    File.Move(tmp, Path);
+                    LastSaveSucceeded = true;
+                    LastSaveStatus = "written";
+                    return;
+                }
+                // Atomic replacement where supported. The old file is retained as a recovery backup.
+                try { File.Replace(tmp, Path, backup); }
+                catch (PlatformNotSupportedException)
+                {
+                    if (File.Exists(backup)) File.Delete(backup);
+                    File.Move(Path, backup);
+                    File.Move(tmp, Path);
+                }
+                LastSaveSucceeded = true;
+                LastSaveStatus = "written";
             }
             catch (Exception e)
             {
+                LastSaveStatus = "write failed: " + e.Message;
                 Debug.LogWarning("[SaveSystem] could not write the save file: " + e.Message);
             }
         }
@@ -125,6 +197,7 @@ namespace Signspace.Matching
             if (string.IsNullOrEmpty(shapeId)) return;
             if (Data.unlocked.Contains(shapeId)) return;
             Data.unlocked.Add(shapeId);
+            Data.unlockRecords.Add(new ShapeUnlock { shapeId = shapeId, unlockedUtc = DateTime.UtcNow.ToString("o") });
             Save();
             OnUnlocked?.Invoke();
         }
@@ -141,20 +214,22 @@ namespace Signspace.Matching
         public void RecordPlacement(string roomId, string anchorId, string anchorLabel,
                                     Vector3 localPos, Quaternion localRot, Vector3 worldPosForMeasurement)
         {
-            if (string.IsNullOrEmpty(anchorId))
+            Guid roomGuid, anchorGuid;
+            if (!Guid.TryParse(roomId, out roomGuid) || roomGuid == Guid.Empty ||
+                !Guid.TryParse(anchorId, out anchorGuid) || anchorGuid == Guid.Empty)
             {
-                Debug.LogWarning("[SaveSystem] refusing to record a placement with no anchor id");
+                Debug.LogWarning("[SaveSystem] placement lacks a stable room/anchor UUID; not saved");
                 return;
             }
-
-            if (Data.anchorId != anchorId)
+            if (!string.IsNullOrEmpty(Data.anchorId) &&
+                (!string.Equals(Data.anchorId, anchorId, StringComparison.OrdinalIgnoreCase) ||
+                 !string.Equals(Data.roomId, roomId, StringComparison.OrdinalIgnoreCase)))
             {
-                // The shelf belongs to a surface, not to a person: progress does not travel.
-                Data.unlocked.Clear();
-                Data.restoreCount = 0;
+                Debug.LogWarning("[SaveSystem] refusing to overwrite an existing shelf placement");
+                return;
             }
-
-            Data.schema = 2;
+            Data.schema = CurrentSchema;
+            Data.placementValid = true;
             Data.roomId = roomId ?? "";
             Data.anchorId = anchorId;
             Data.anchorLabel = anchorLabel ?? "";
@@ -176,6 +251,7 @@ namespace Signspace.Matching
         public void ClearPlacement()
         {
             Data.anchorId = "";
+            Data.placementValid = false;
             Data.roomId = "";
             Data.anchorLabel = "";
             Data.localPos = Vector3.zero;
@@ -187,16 +263,14 @@ namespace Signspace.Matching
         }
 
         /// <summary>
-        /// Binds this save to an anchor without a transform. Kept for callers that only care which
-        /// surface owns the progress.
+        /// Legacy identity-only call is deliberately ignored: an identity alone cannot restore a
+        /// shelf safely without an anchor-relative transform.
         /// </summary>
         public void BindToAnchor(string roomId, string anchorId)
         {
-            if (Data.anchorId == anchorId) return;
-            Data.roomId = roomId ?? "";
-            Data.anchorId = anchorId ?? "";
-            Data.unlocked.Clear();
-            Save();
+            // Identity without an anchor-local transform is not a usable placement. Do not mutate
+            // an existing shelf or pretend that the default transform was actually measured.
+            Debug.LogWarning("[SaveSystem] BindToAnchor requires a measured local transform; ignored");
         }
 
         public bool MatchesAnchor(string anchorId) => Data.anchorId == anchorId;

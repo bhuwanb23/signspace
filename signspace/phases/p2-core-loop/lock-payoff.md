@@ -19,12 +19,17 @@ the one thing that cannot be done here
 |---|---|---|---|
 | The reference hand dissolves — scale, fade, **and brightens** | 0.00 | 0.40 | 0.40 s |
 | The object starts forming **inside the hand** | 0.30 | 0.52 | 0.22 s |
-| The object arcs to the anchor | 0.30 | 0.75 | 0.45 s |
-| Overshoot and settle | 0.75 | 0.87 | 0.12 s |
-| The reference hand returns for the next attempt | 0.87 | 0.99 | 0.12 s |
-| **Total** | | | **0.99 s** |
+| The object arcs to its shelf slot | 0.30 | 0.80 | 0.50 s |
+| Overshoot and settle | 0.80 | 0.92 | 0.12 s |
+| The reference hand returns for the next attempt | 0.92 | 1.04 | 0.12 s |
+| **Total** | | | **1.04 s** |
 
-**0.99 s of a 1.20 s budget — 82% used, 0.21 s of headroom.** The number is not a hope: it is computed
+> **P4.2 moved one number.** The arc is 0.50 s, not 0.45 s, because it now ends on a real shelf slot
+> rather than a temporary anchor: 500 ms is long enough to read as travel and still leaves the whole
+> sequence inside the 1.2 s budget. The total went 0.99 s → 1.04 s, headroom 0.21 s → 0.16 s, and the
+> compressed repetition 0.54 s → 0.57 s. These are calculated durations, not device measurements.
+
+**1.04 s of a 1.20 s budget — 87% used, 0.16 s of headroom.** The number is not a hope: it is computed
 twice, once by `LockPayoff.TotalSeconds` (which `SIGNSPACE/P2.5 Check payoff timing` reads) and once by
 `scripts/payoff_previs.py`, which fails if either the budget or the overlap check breaks.
 
@@ -63,9 +68,9 @@ bulge, and the overshoot was moved to where it belongs — the settle.
 The task names it exactly: *making it longer because it looks nice — it will be skipped by the third
 repetition.* Two defences, one structural and one behavioural:
 
-- **Structural**: the budget is 1.2 s and the payoff is 0.99 s. The 0.21 s of headroom exists so that a
+- **Structural**: the budget is 1.2 s and the payoff is 1.04 s. The 0.16 s of headroom exists so that a
   heavier object mesh or a slow frame does not silently push it over.
-- **Behavioural**: after **3** locks the whole sequence is compressed to **×0.55 → 0.54 s**, keeping its
+- **Behavioural**: after **3** locks the whole sequence is compressed to **×0.55 → 0.57 s**, keeping its
   proportions. The reward is not removed — removing it would say the achievement stopped mattering — it
   is made quick, which is what a person wants from a thing they have already seen three times.
 
@@ -85,7 +90,7 @@ It ships as `Audio/SFX/lock_chime.wav` — **synthesised, so it is correct in st
 timbre**: the real one is struck wood and this is additive sine. P7 replaces the file; nothing in the
 code changes, because the clip is an inspector reference. It starts 50 ms after the lock, so it lands
 with the *object forming* rather than with the input event, and its 1.6 s tail deliberately outlives the
-0.99 s visual — the reward is allowed to ring.
+1.04 s visual — the reward is allowed to ring.
 
 **The "haptic" is a lie told honestly.** Controller-free hand tracking has no actuator, so there is
 nothing to buzz. What exists is the one channel the tracked hand owns — its own appearance — so
@@ -128,7 +133,7 @@ this:
    part that reads as "it went somewhere".
 3. Make **B**, hold until the object has settled, **then hold one more second** of tail so the edit has
    somewhere to cut.
-4. Do it **four times**, because the fourth repetition is the compressed version (0.54 s) and the edit may
+4. Do it **four times**, because the fourth repetition is the compressed version (0.57 s) and the edit may
    want the quick one — and because the first three tries will have a hand that is not quite the shape.
 5. Same camera height and same hand position for every take, so the 0:45 cut matches the surrounding shots.
 6. Keep the **chime** in the capture. If the take is captured with system audio muted, the audio must be
@@ -138,7 +143,7 @@ this:
 
 ## 7. Done when
 
-- [x] **Lock payoff completes in < 1.2 s** — 0.99 s of a 1.20 s budget, computed by both the component
+- [x] **Lock payoff completes in < 1.2 s** — 1.04 s of a 1.20 s budget, computed by both the component
       and the timing script, with the overlap and the budget as assertions rather than opinions.
 - [x] **The dissolution reads as transformation, not deletion** — brighten-while-shrinking, a 0.10 s
       overlap in which the object is already forming, a crossfade through the hand, and a settle at the

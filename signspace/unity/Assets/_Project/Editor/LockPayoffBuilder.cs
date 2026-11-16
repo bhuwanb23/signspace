@@ -57,7 +57,7 @@ namespace Signspace.Editor
             payoff.dissolveSeconds = 0.40f;
             payoff.objectFormStart = 0.30f;
             payoff.objectFormSeconds = 0.22f;
-            payoff.arcSeconds = 0.45f;
+            payoff.arcSeconds = 0.50f;
             payoff.settleSeconds = 0.12f;
             payoff.handReturnSeconds = 0.12f;
             payoff.budgetSeconds = 1.2f;

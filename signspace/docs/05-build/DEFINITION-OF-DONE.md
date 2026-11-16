@@ -32,6 +32,10 @@ Each phase closes only when its gate in `phases/pN-*/gate.md` is **PASS**, with 
 - [ ] Every accessibility toggle works and persists
 - [ ] `python3 scripts/validate_poses.py` passes
 - [ ] `python3 scripts/count.py` passes
+- [ ] `python3 scripts/check_trackability.py` passes — the honest mirror's every number traces to
+      `trackability.json`, the file carries a date if it claims a measurement, and the panel's sentence
+      appears verbatim in `TRACKABILITY.md` (`P3.6`)
+- [ ] `python3 scripts/lint_copy.py` passes — no user-facing string reads as a verdict (`P2.3`, `P3.3`)
 - [ ] `main` builds from a clean clone
 
 ## 3. Never true of a submitted build

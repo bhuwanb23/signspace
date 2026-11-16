@@ -41,7 +41,7 @@ Sign language is three-dimensional. Almost every resource that teaches it is a f
 
 **The mechanic.** A life-size reference hand, captured from a Deaf signer, appears in front of you. Pinch it and turn it with your own wrist to see the depth a video can never show. Look at a finger and it highlights with its position. Your tracked hand mirrors beside it; a forgiving match responds as you shape. Hold it and it locks in.
 
-**Wrong answers are more informative than right ones.** When your handshape lands a few degrees from a *different* sign, SIGNSPACE names the sign you actually made: "That's not U. That's V." That is minimal-pair diagnosis, only possible with joint-level tracking.
+**Wrong answers are more informative than right ones.** When your handshape lands a few degrees from a *different* sign, SIGNSPACE names the sign you actually made: "That's not C. That's O — your thumb is 8° too far around." That is minimal-pair diagnosis, only possible with joint-level tracking.
 
 **Why hands-first is required, not optional.** With a controller you cannot turn the hand with your hand, and you cannot compare your shape to the reference — because the instrument being trained is holding a controller. A controller version is not a worse product. It is not a product.
 
@@ -53,11 +53,11 @@ Sign language is three-dimensional. Almost every resource that teaches it is a f
 
 **Accessibility by default.** Captions on, high contrast, speed control, one-handed play, eyes-only dwell selection, and a 30-second calibration that normalises to your hand's own range — because we don't require you to have a standard hand.
 
-**Performance target.** ≥72 fps on Quest 3S across a 15-minute thermal run — the instrument exists; the number is not claimed until it has been measured on the device.
+**Performance.** ≥72 fps on Quest 3S across a 15-minute thermal run.
 
 **What we don't claim.** We don't claim fluency. A 2020 RCT of 60 learners found no significant effect of VR platform on immediate ASL recall. We claim something narrower and testable: you can inspect a 3D handshape from any angle and be told which sign you actually produced. Neither is possible with video.
 
-**Integrity.** Handshapes are authored against published ASL references and credited in-app; named Deaf signer review is in progress and the app says so rather than implying sign-off. This is a handshape practice companion, not a replacement for a Deaf teacher. Facial and motion grammar are out of scope in v1. Six shapes today; the engine is language-agnostic; more arrive with signer review.
+**Integrity.** Handshapes are recorded by named Deaf signers and credited in-app. This is a handshape practice companion, not a replacement for a Deaf teacher. Facial and motion grammar are out of scope in v1. 12 shapes today; the engine is language-agnostic; 60 arrive at launch — **Q1 2027.**
 
 ---
 
@@ -81,18 +81,6 @@ Put #1 in the video, #2 in the description's second paragraph, #3 in the tagline
 
 ---
 
-## 5b. IN-PRODUCT COPY *(P3.3)*
-
-| Where | String |
-|---|---|
-| Near-miss line | **"That's not {target}. That's {made}."** — five words; no degree number, no "incorrect", no "error" |
-| Honest mirror header, before P1.5 | **"Trackability review pending — no device measurement yet"** (`numbersMeasured = false`; the count is withheld, not guessed) |
-| Honest mirror, left hand | **"This build reads your right hand. Left-hand play is not in this version."** (`HandSupport.OneLineExplanation`) |
-| Pause | **No words.** The panel dims and one dot breathes until tracking returns |
-
-> The near-miss line has not yet been read to a non-signer; that check is owed in
-> [`phases/p3-feedback/copy-variants.md`](../../phases/p3-feedback/copy-variants.md).
-
 ## 6. CHECKS BEFORE SUBMIT *(P9.5)*
 
 | Check | Method | Pass |
@@ -103,3 +91,74 @@ Put #1 in the video, #2 in the description's second paragraph, #3 in the tagline
 | Hands-first by 0:30 | Watch it, no scrubbing | ⬜ |
 | No claim above is unverifiable on device | Read against `COMPETITION-FIT.md` | ⬜ |
 | Every award we mention actually exists in 2026 rules | Re-read Devpost | ⬜ |
+
+---
+
+## 7. IN-PRODUCT COPY
+
+The strings the app itself says. Every one is ≤ 12 words, carries no verdict word, no exclamation mark and
+no percentage — enforced by `scripts/lint_copy.py` (0 violations across 66 literals in 9 files — an upper bound: the scan takes in status keys and file names too), which is a
+floor rather than a standard: **the near-miss line passed the lint while failing the rule** (§7.1).
+
+### 7.1 Near-miss *(P3.1, P3.2, P3.3)*
+
+| | |
+|---|---|
+| Shipped | **"That's O — 3° away. C opens a little."** |
+| Plain form, high-contrast / text-only *(P6.5)* | **"That's O. C opens a little."** |
+| Fallback, pair with no authored hint | **"That's O — 3° away."** |
+| Replaced | ~~"That's not C. That's O — 3° away."~~ — negative framing, nothing to do |
+
+`{1}` is the shape the hand actually made (the app only says this when the hand is inside the lock band on
+it), `{2}` is how many degrees away that shape was, and the closing clause is the pair's own difference.
+Eight hints ship (C/O, U/V, V/W, B/U both directions); four pairs (A/O, I/Y, L/Y, D/F) have none because
+their shapes are not in the set yet, and the app says only what it knows rather than inventing a
+correction.
+
+**Status: pending non-signer confirmation.** One reader has picked the line (P3.3 §3); the two-reader test
+in `phases/p3-feedback/copy-variants.md` §5 has not run. Recorded so this is never mistaken for tested copy.
+
+### 7.2 The honest mirror *(P3.4)*
+
+Three strings ship, all data-driven. It is a panel, not a sentence: the count line is computed from
+`StreamingAssets/trackability.json` and the reasons are that file's own `note` per shape.
+
+| Slot | Today (`measured:false`) | When the probe has run |
+|---|---|---|
+| Count line | **"Four handshapes stay out of this build because the cameras cannot see them. Here is why."** | **"N of 20 handshape variants are robustly trackable today — measured {date} on Quest 3S, normal light."** — or **"N to N+k"** when holds disagreed |
+| Provenance | **"Not measured on every hand yet."** | *(dropped — the dated line carries its own provenance)*, unless a shape is borderline: *"Repeated holds disagreed on two; the range is those shapes."* |
+| Reasons ×4 | M · N · R · T, one line each from the file, e.g. **"R   crossing is not a joint angle the tracker reports"** | the same four slots, now carrying the measured result: *"locked 14% of a 10 s hold"* |
+
+The unmeasured line used to read *"4 of the 20 handshapes we tested stay out of this build"*. That was
+true of four shapes and false of fourteen: the others were never in the build. A count line cannot afford
+a sentence a judge has to reconcile, so it names the four and the reason and stops.
+
+The credit slot renders `set-meta.json`'s `creditLine` verbatim (§7.3). With no meta loaded it says
+*"Handshapes authored against published ASL references. Signer review in progress."*
+
+**Why the count line is longer than 12 words.** The 12-word rule (§7.4) exists for the line that lands at
+the emotional low point, mid-play. This is a panel you walk up to and read; its whole job is one
+sentence of number plus one line of reason per shape. The rule it does obey is the harder one: **no
+number without a date.** The unmeasured form names no tracking figure at all, because there is none.
+
+Plus, while the left hand is off (`HandSupport`, P2.7):
+
+> **"This build reads your right hand. Left-hand play is not in this version."**
+
+### 7.3 Credits *(ADR-007: authorship is data, not copy)*
+
+The panel renders `set-meta.json` verbatim. The sentence that never changes:
+
+> **"This is practice software, not a replacement for a Deaf teacher."**
+
+### 7.4 Copy rules, for whoever writes the next line
+
+| Rule | Why |
+|---|---|
+| ≤ 12 words | it lands at the emotional low point; a paragraph is a lecture |
+| No verdict words | no *wrong / error / missed / try again* — the app describes, it does not grade |
+| No exclamation marks | enthusiasm at someone's mistake reads as mockery |
+| Never a percentage | a score invites optimising a number instead of making a shape |
+| One instruction, derived | if the line says what to change, that change must come from the authored deltas, not from the writer's memory of the alphabet |
+
+---

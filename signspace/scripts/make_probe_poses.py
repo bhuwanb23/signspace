@@ -236,39 +236,6 @@ PROBE_SHAPES = {
         },
         "thumb": _thumb(flex_base=4.0, flex_prox=6.0, flex_distal=4.0, abd=+42.0, opp=6.0),
     },
-    # ---- the facing pair (P2.6 content gap / G3) -----------------------------------
-    # K and P are the SAME finger posture with the palm turned 90 degrees: this is the only
-    # authored pair where the difference is orientation and nothing else, so it is the pair
-    # that proves the palm term works on real content rather than on a synthetic rotation.
-    # P carries "wrist": pronation, which no previous shape used - every one of them left
-    # Wrist and Palm at identity, which is why the gap existed.
-    "K": {
-        "family": "spread",
-        "authoringConfidence": "medium",
-        "description": "Index and middle extended and together, thumb resting between them, "
-                       "ring and little folded. Palm forward.",
-        "fingers": {
-            "index":  _finger(flex_base=4.0, abd=+2.0),
-            "middle": _finger(flex_base=4.0, abd=-2.0),
-            "ring":   _finger(flex_base=82.0, flex_prox=96.0, flex_inter=66.0, flex_distal=8.0, abd=-4.0),
-            "little": _finger(flex_base=84.0, flex_prox=98.0, flex_inter=68.0, flex_distal=8.0, abd=-8.0),
-        },
-        "thumb": _thumb(flex_base=16.0, flex_prox=22.0, flex_distal=10.0, abd=+6.0, opp=34.0),
-    },
-    "P": {
-        "family": "spread",
-        "authoringConfidence": "medium",
-        "description": "K with the palm turned down. Identical fingers; the only difference is "
-                       "90 degrees of pronation, which is exactly what the palm term measures.",
-        "fingers": {
-            "index":  _finger(flex_base=4.0, abd=+2.0),
-            "middle": _finger(flex_base=4.0, abd=-2.0),
-            "ring":   _finger(flex_base=82.0, flex_prox=96.0, flex_inter=66.0, flex_distal=8.0, abd=-4.0),
-            "little": _finger(flex_base=84.0, flex_prox=98.0, flex_inter=68.0, flex_distal=8.0, abd=-8.0),
-        },
-        "thumb": _thumb(flex_base=16.0, flex_prox=22.0, flex_distal=10.0, abd=+6.0, opp=34.0),
-        "wrist": {"twist": 90.0},
-    },
 }
 
 #: Probe order. Shipped six first (they are the ones that must survive), then the suspected
@@ -277,11 +244,6 @@ PROBE_SHAPES = {
 PROBE_ORDER = ["B", "U", "V", "W", "C", "O",
                "A", "M", "N", "T", "R", "S",
                "D", "E", "F", "G", "I", "L", "X", "Y"]
-
-#: The facing pair (P2.6's content gap). Deliberately NOT in PROBE_ORDER: they are not
-#: trackability candidates, and adding them to the probe would lengthen P1.5's session from
-#: 20 shapes to 22 for no measurement reason. They get their own folder.
-FACING_IDS = ["K", "P"]
 
 
 def shape_for(shape_id):
@@ -353,18 +315,6 @@ def main():
     if not args.dry_run:
         index = {"version": 1, "shapes": PROBE_ORDER}
         (out / "index.json").write_text(json.dumps(index, indent=2) + "\n")
-
-        # ---- the facing pair, in its own folder ---------------------------------------
-        facing_dir = out.parent / "Facing"
-        facing_dir.mkdir(parents=True, exist_ok=True)
-        for shape_id in FACING_IDS:
-            payload = payload_for(shape_id)
-            errs, _ = ps.validate(payload, list(hm.JOINT_NAMES),
-                                  filename=f"Facing/{shape_id}.json")
-            problems += errs
-            (facing_dir / f"{shape_id}.json").write_text(json.dumps(payload, indent=2) + "\n")
-        (facing_dir / "index.json").write_text(
-            json.dumps({"version": 1, "shapes": FACING_IDS}, indent=2) + "\n")
 
         meta = {
             "version": 1,

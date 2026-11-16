@@ -18,7 +18,7 @@
 | Tasks built | **7 / 7** |
 | Gate criteria evidenced by measurement in this repository | **5 / 8** |
 | Gate criteria that cannot be true without hardware | **3 / 8** (20/20 on device, the filmed payoff, the stranger) |
-| C# files that compile | **56 of 56** — `-executeMethod BuildScript.ApplySettingsOnly`, 16 Nov 2026, 0 errors (Unity 6000.3.28f1); none has run on a device |
+| C# files that have ever been compiled | **0 of 56** — there is no Unity editor in this environment |
 | Simulators that regenerate a phase number | **7** (`tune_match`, `band_sim`, `hold_sim`, `payoff_previs`, `palm_sim`, `mirror_sim`, `lint_copy`) |
 
 The phase did what a phase should do: it produced numbers, and **four of those numbers contradicted the
@@ -53,7 +53,7 @@ joints, no normalising by joint count. Every number is degrees; **no percentage 
 12–24°, locked < 12°** with 2° release hysteresis and 150 ms dwell; colour + motion + sound, never text;
 `lint_copy.py` to prove it.
 **Measured:** 100% band survival at ≤ 12°, **0%** at ≥ 12.5°, **0.0% false close**; copy lint **0
-violations** across 20 user-facing strings in 7 files (re-run 16 Nov; P3 added three).
+violations** across 17 user-facing strings.
 **Why the thresholds are those thresholds:** 24 is not "about 25" — the nearest wrong shape sits at 26.0°,
 so any threshold above it would call a different word "close".
 
@@ -69,8 +69,8 @@ went wrong.
 a temporary anchor, a chime plus a controller-free haptic substitute, and the hand returns. `LockPayoff`
 asserts its own budget at runtime; `payoff_previs.py` renders the timing without Unity; a 6-frame
 storyboard.
-**Measured:** **0.99 s of a 1.20 s budget (82%)**; overlapping stages buy 0.10 s; after 3 locks the payoff
-scales to 0.54 s so mastery does not feel slower than learning.
+**Calculated:** **1.04 s of a 1.20 s budget (87%)**; overlapping stages buy 0.10 s; after 3 locks the payoff
+scales to 0.57 s so mastery does not feel slower than learning.
 **Owed:** the footage. `lock-payoff-take01.mp4` does not exist; the previs is a previs.
 
 ### P2.6 — the palm is not a finger (`a5571d6`)
@@ -105,7 +105,7 @@ complete**. Fixed, guarded and logged.
 | `bandReleaseDeg` | 2° (+150 ms) | flicker at the band edge | `band_sim.py` |
 | `holdSeconds` | 0.7 s | long enough to be deliberate, short enough to feel immediate | `hold_sim.py` |
 | freeze grace / decay / forget | 0.2 s / 0.5 per s / 0.5 s | a dropped frame must not restart the hold | `hold_sim.py` |
-| payoff total | 0.99 s of 1.20 s | 82% of budget, after 3 locks 0.54 s | `payoff_previs.py` |
+| payoff total | 1.04 s of 1.20 s | 87% of budget, after 3 locks 0.57 s | `payoff_previs.py` |
 | `orientationSlackDeg` | 15° | ~10σ of a correct hand's wrist jitter (sd 1.41°, p99 6.43°) | `palm_sim.py` |
 | `orientationWeightK` | 1.0 | smallest weight that keeps a 30° mis-face out of the lock band | `palm_sim.py` |
 | weights | 0.40 / 0.40 / 0.70 / 1.00 / 1.00 / 0.00 | data-driven asset, never hardcoded | `tune_match.py` |
@@ -173,8 +173,8 @@ work.
 ## 7. Limitations — stated, not smoothed over
 
 **Unverified by construction**
-- **Compiled, never executed.** All 56 files compile (16 Nov 2026, 0 errors) but no scene has been
-  played on a headset, so nothing here is verified at runtime. The most likely first-run failures are ordinary: a missing `.meta`, a prefab reference that resolves to null, a
+- **No C# has ever been compiled.** 56 files, ~7 tasks of code, zero editor runs. The most likely
+  first-run failures are ordinary: a missing `.meta`, a prefab reference that resolves to null, a
   namespace slip in the two newest files, `LockPayoff.prefab` opening with a missing mesh.
 - **No device measurement exists for anything.** Every "measured" number in this report comes from a
   simulator that models the hand and a 2°/joint noise floor. The simulators are good — they have already
@@ -182,12 +182,9 @@ work.
 - **`LockPayoff.prefab` is hand-authored YAML.** Guid-matched and brace-checked; never imported.
 
 **Known content gaps**
-- ~~**No two shapes differ in palm facing**, so the app cannot yet distinguish two signs that differ
-  *only* in orientation.~~ **Closed 16 Nov:** K and P are authored in
-  `StreamingAssets/Facing/` (probe-only, not shipped) — identical fingers, 90° of pronation. Measured by
-  `scripts/facing_pair_sim.py`: finger distance **0.00°**, palm error **90.00°**, total **75.00°**; with the
-  palm term removed they would lock. The term now has content and is load-bearing. Whether K/P *ship* is
-  a P5 content decision, because it changes the six-shape commitment.
+- **No two shapes differ in palm facing**, so the app cannot yet distinguish two signs that differ *only*
+  in orientation — even though the machinery that would is built and measured (P2.6). P3 should author
+  **K vs P**.
 - **The near-miss compares finger distances only**, so a mis-faced hand can be near-missed as a different
   shape. Defensible (it answers "what shape are your fingers making"), but it can fire alongside a palm
   verdict; P2.6 §5 records the fix if playtesting hates it.
@@ -202,11 +199,9 @@ work.
 - A 45° mis-face reads **warming**, not close, because the palm term is additive and uncapped. Capping was
   tried on paper and rejected: any cap at the lock edge makes a 30° mis-face land at exactly 12.0° and
   lock (P2.6 §5).
-- ~~The reference hand's joints carry **no lateral offsets** (`HandVisual` never sets `localPosition`), so
-  fingers radiate from one origin.~~ **Fixed 16 Nov:** each metacarpal now sits at its knuckle and every
-  other joint at the tip of its parent bone (`HandVisual.RestOffsets`). `HandRigCheck` measures base
-  spread **45 mm**, proximal spread **17 mm**, closest tips **18 mm**, wrist-to-middle-tip **192 mm** —
-  previously the first three were **0**. The metric reads rotations, so no measured degree changed.
+- The reference hand's joints carry **no lateral offsets** (`HandVisual` never sets `localPosition`), so
+  fingers radiate from one origin. Invisible to the metric — it is rotation-only — and the first thing to
+  fix if the hand reads as a starfish on device.
 
 ---
 

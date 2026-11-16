@@ -133,29 +133,6 @@ namespace Signspace.Matching
         }
 
         /// <summary>
-        /// Loads one pose by id from any folder under StreamingAssets. The honest mirror needs the
-        /// excluded shapes, which live in Probe/ precisely because they are NOT part of the shipped
-        /// set, so this is a public entry point instead of a second loader component that would
-        /// duplicate the Android-safe read path.
-        /// </summary>
-        public IEnumerator LoadPose(string dir, string id, Action<HandPose> done)
-        {
-            string json = null;
-            yield return ReadText(Combine(dir, id + ".json"), result => json = result);
-            if (string.IsNullOrEmpty(json))
-            {
-                Debug.LogWarning("[SignSetLoader] no pose at " + Combine(dir, id + ".json"));
-                done(null);
-                yield break;
-            }
-
-            var pose = HandPose.FromJson(json, out string error);
-            if (pose == null)
-                Debug.LogWarning("[SignSetLoader] " + id + ": " + error);
-            done(pose);
-        }
-
-        /// <summary>
         /// Turns a StreamingAssets-relative path into a URL UnityWebRequest accepts.
         /// Desktop: C:/.../StreamingAssets/Signs/B.json -> file:///C:/...
         /// Android: jar:file:///data/app/.../assets/Signs/B.json (already a URL).

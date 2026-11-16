@@ -27,10 +27,12 @@ USER_FACING = [
     "UI/NearMissDisplay.cs",
     "UI/HonestMirror.cs",
     "UI/BandFeedback.cs",
+    "UI/TrackingConfidence.cs",
     "UI/BandAudio.cs",
     "Core/AppState.cs",
     "Core/LockPayoff.cs",
     "Hands/ReferenceHand.cs",
+    "Matching/Trackability.cs",   # the honest mirror's count line is copy, so it is checked as copy
 ]
 
 #: Banned in user-facing copy. Word-boundary matched, case-insensitive.
@@ -116,7 +118,10 @@ def main():
                                "contains verdict-shaped text but has no DevOnly guard"))
 
     print("=" * 78)
-    print(f"copy lint: {total} user-facing strings in {len(USER_FACING)} files, "
+    # "literals", not "strings": the scan is deliberately generous and takes in status keys, file names
+    # and format fragments alongside real copy. The number is an upper bound on copy, and saying so is
+    # cheaper than a classifier nobody trusts.
+    print(f"copy lint: {total} literals in {len(USER_FACING)} files, "
           f"{len(GATED_DEV)} dev views checked for a release-build gate")
     if violations:
         for rel, lineno, literal, why in violations:

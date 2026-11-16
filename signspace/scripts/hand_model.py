@@ -384,17 +384,10 @@ def _joint_delta(spec):
     flex = spec.get("flex", 0.0)
     abd = spec.get("abd", 0.0)
     opp = spec.get("opp", 0.0)
-    twist = spec.get("twist", 0.0)
 
     q = IDENTITY
     if abs(abd) > 1e-9:
         q = q_mul(q, q_from_axis_angle((0.0, 0.0, 1.0), abd))
-    # twist: rotation about the bone's own long axis. Only the wrist uses it in practice -
-    # it is pronation, which is the whole difference between a palm-forward K and a
-    # palm-down P. Without it Wrist and Palm were hard-coded to identity and no authored
-    # pair could differ in facing at all (P2.6's content gap).
-    if abs(twist) > 1e-9:
-        q = q_mul(q, q_from_axis_angle((0.0, 1.0, 0.0), twist))
     if abs(opp) > 1e-9:
         q = q_mul(q, q_from_axis_angle((0.0, 1.0, 0.0), opp))
     if abs(flex) > 1e-9:
@@ -430,11 +423,6 @@ def shape_deltas(shape_id):
     for joint, role in zip(FINGERS["thumb"], thumb_roles):
         deltas[joint] = _joint_delta(thumb_spec[role])
 
-    # Optional wrist pose. Absent means identity, which is what every earlier shape assumes.
-    wrist_spec = shape.get("wrist")
-    if wrist_spec:
-        deltas["Wrist"] = _joint_delta(wrist_spec)
-
     return deltas
 
 
@@ -454,12 +442,8 @@ def local_rotations_from_deltas(deltas, neutral=None):
 
     rotations = {}
     for name in JOINT_NAMES:
-        if name == "Palm":
-            # The palm inherits the wrist; its own local rotation is identity.
+        if name in ("Wrist", "Palm"):
             rotations[name] = IDENTITY
-            continue
-        if name == "Wrist":
-            rotations[name] = deltas.get("Wrist", IDENTITY)
             continue
         own = deltas[name]
         if neutral is not None:

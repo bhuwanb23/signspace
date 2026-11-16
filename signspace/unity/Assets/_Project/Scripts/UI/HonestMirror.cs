@@ -1,241 +1,213 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
 using Signspace.Matching;
 
 namespace Signspace.UI
 {
     /// <summary>
-    /// The panel that publishes what the sensor cannot see (NOVELTY-AND-PRIOR-ART.md N2).
+    /// The panel that publishes what the sensor cannot see (P3.4).
     ///
     /// Nobody in a field of 650 submissions advertises their platform's limits. This does, with the
-    /// reasons, and it is a never-cut item: it is the cheapest trust-building object in the product
-    /// and the one thing a Deaf judge is most likely to respect.
+    /// reasons. It is a never-cut item: the cheapest trust-building object in the product and the one
+    /// thing a Deaf judge is most likely to respect.
     ///
-    /// Rules it must obey:
-    ///   - numbers come from measurement (TRACKABILITY.md), never from rounding up to look better;
-    ///   - every excluded shape is rendered CORRECTLY — an excluded shape shown wrong is worse
-    ///     than not showing it;
-    ///   - it is reached from inside the space (a shelf object), not a settings menu.
+    /// THE THREE RULES IT OBEYS
+    /// ------------------------
+    ///   1. **Every excluded shape is drawn CORRECTLY.** The hands below are built by the same HandVisual
+    ///      and posed with the same authored capture the rest of the app uses - a shape shown wrong
+    ///      because "it is excluded anyway" would discredit the whole panel. Their pose files pass the
+    ///      same validator as the shipped set.
+    ///   2. **No number appears without a measurement.** The count line comes from
+    ///      StreamingAssets/trackability.json and only mentions tracking when that file says it was
+    ///      measured, on a named device, on a named date. Until then it states what is true by design -
+    ///      how many shapes stay out - and says plainly that tracking is not yet measured on every hand.
+    ///   3. **It is a demonstration of rigour, not an apology.** No "sorry", no red, no hedge: what is
+    ///      out, why, and what would change it.
+    ///
+    /// It is reached from a physical object in the space (PanelOpener on the plinth), never from a
+    /// settings menu. P4 re-homes that object onto the shelf.
     /// </summary>
     public class HonestMirror : MonoBehaviour
     {
+        [Header("Data")]
+        [Tooltip("Folder the excluded shapes' pose files are read from, relative to StreamingAssets.")]
+        public string poseFolder = "Probe";
+        [Tooltip("The trackability file. Read, never typed: see Signspace.Matching.Trackability.")]
+        public string trackabilityFile = Trackability.Url;
+
         [Header("Content")]
-        [Tooltip("Shapes the harness cannot resolve. Rendered greyed, with a reason each.")]
-        public string[] excludedShapes = { "M", "N", "T", "R" };
-        public string excludedReason =
-            "The cameras cannot see a finger that is behind another finger.";
-
-        [Header("Hands (P2.7)")]
-        [Tooltip("Which hand this build reads. Comes from HandSupport, so the panel cannot promise a " +
-                 "hand the build does not read. Empty hides the line.")]
-        public string handLimitation = HandSupport.OneLineExplanation;
-
-        [Header("Measured numbers — from TRACKABILITY.md, never invented")]
-        [Tooltip("Off until P3.6 has run on a device. A panel that prints '0 of 0' is worse than one " +
-                 "that says the measurement has not happened yet.")]
-        public bool numbersMeasured;
-        public int robustVariants;
-        public int totalVariants;
-        public string measuredOn = "";
-        public string device = "Quest 3S";
-
-        [Header("Authorship — mirrors set-meta.json (ADR-007)")]
-        public SetMeta meta;
-        [Tooltip("Read at Open() so the panel shows the credit line actually shipped in set-meta.json.")]
-        public SignSetLoader loader;
-
-        [Header("Shape renders (P3.4)")]
-        [Tooltip("Where the excluded shapes' pose files live. Probe/, because they are not shipped.")]
-        public string probeFolder = "Probe";
-        [Tooltip("One slot per excluded shape, in the same order. Filled from the real pose files.")]
-        public RawImage[] thumbnails;
+        // Hidden until Open(), so the panel is something you find. The component itself must stay on an
+        // active object or the load coroutine never runs.
+        [Tooltip("Everything the panel shows; hidden until Open().")]
+        public GameObject content;
 
         [Header("View")]
-        public GameObject root;
         public Text header;
         public Text body;
         public Text credit;
 
-        readonly List<RenderTexture> _rendered = new List<RenderTexture>();
-        Material _thumbMaterial;
+        [Header("The greyed hands")]
+        // World-space, one per excluded shape, in the order the trackability file lists them. NOT canvas
+        // children: a hand is built in metres and the canvas scale (0.0007) would shrink it to nothing.
+        [Tooltip("One world-space slot per excluded shape.")]
+        public Transform[] handSlots;
+        [Tooltip("Material for the excluded hands. Grey and unlit - a specimen, not a target.")]
+        public Material excludedMaterial;
+        [Tooltip("Scale of each drawn hand. Under 1: they are specimens, not shapes to copy.")]
+        public float handScale = 0.85f;
+
+        [Header("Authorship - mirrors set-meta.json (ADR-007)")]
+        public SetMeta meta;
+
+        public TrackabilityData Data { get; private set; }
+
+        /// <summary>Shapes currently drawn, in slot order. Empty until the load finishes.</summary>
+        public readonly List<string> Drawn = new List<string>();
+
+        readonly List<HandVisual> _hands = new List<HandVisual>();
+        bool _loaded;
 
         void Start()
         {
-            if (root != null) root.SetActive(false);
-            Build();
-            StartCoroutine(RenderExcludedShapes());
-        }
-
-        /// <summary>
-        /// Renders each excluded shape from its actual pose file into a texture for the panel.
-        ///
-        /// WHY RENDER INSTEAD OF DRAWING ICONS
-        /// -----------------------------------
-        /// The panel's own rule is that an excluded shape shown wrong is worse than not showing it.
-        /// An icon is a drawing of an opinion; this is the same HandVisual and the same pose data the
-        /// matcher uses, so the picture cannot disagree with the build. It is also why the shapes are
-        /// read from Probe/ rather than invented here.
-        ///
-        /// One camera and one hand are reused for all four, rendered once at start into small
-        /// textures and then destroyed. Nothing here runs per frame.
-        /// </summary>
-        IEnumerator RenderExcludedShapes()
-        {
-            if (thumbnails == null || thumbnails.Length == 0 || excludedShapes == null ||
-                excludedShapes.Length == 0 || loader == null)
-                yield break;
-
-            _thumbMaterial = ThumbnailMaterial();
-
-            var camGo = new GameObject("HonestMirrorThumbCamera");
-            camGo.transform.SetParent(transform, false);
-            camGo.layer = ThumbLayer;
-            var cam = camGo.AddComponent<Camera>();
-            cam.enabled = false;
-            cam.orthographic = true;
-            cam.orthographicSize = 0.105f;
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.05f, 0.06f, 0.08f, 1f);
-            cam.cullingMask = 1 << ThumbLayer;
-            cam.transform.position = new Vector3(0f, 0.085f, -0.35f);
-            cam.transform.LookAt(new Vector3(0f, 0.085f, 0f));
-
-            for (int i = 0; i < thumbnails.Length && i < excludedShapes.Length; i++)
-            {
-                var slot = thumbnails[i];
-                if (slot == null) continue;
-
-                HandPose pose = null;
-                yield return loader.LoadPose(probeFolder, excludedShapes[i], p => pose = p);
-                if (pose == null)
-                {
-                    // Leave the slot empty rather than draw a shape we could not load. An empty
-                    // rectangle is honest; a guessed handshape is not.
-                    slot.color = new Color(1f, 1f, 1f, 0.12f);
-                    continue;
-                }
-
-                var handGo = new GameObject("Thumb_" + excludedShapes[i]);
-                handGo.transform.SetParent(camGo.transform, false);
-                handGo.transform.localPosition = Vector3.zero;
-                handGo.transform.localRotation = Quaternion.identity;
-                handGo.layer = ThumbLayer;
-
-                var visual = handGo.AddComponent<HandVisual>();
-                visual.material = _thumbMaterial;
-                visual.scale = 1f;
-                visual.Build();
-                visual.ApplyPose(pose.LocalRotations);
-
-                // HandVisual builds its bones as new GameObjects, which default to layer 0. The
-                // camera only sees ThumbLayer, so the whole tree has to be moved onto it or the
-                // render comes back empty.
-                foreach (var t in handGo.GetComponentsInChildren<Transform>(true))
-                    t.gameObject.layer = ThumbLayer;
-
-                var rt = new RenderTexture(256, 256, 16, RenderTextureFormat.ARGB32);
-                rt.Create();
-                _rendered.Add(rt);
-
-                cam.targetTexture = rt;
-                cam.Render();
-                cam.targetTexture = null;
-
-                slot.texture = rt;
-                slot.color = Color.white;
-
-                Destroy(handGo);
-            }
-
-            Destroy(camGo);
-        }
-
-        const int ThumbLayer = 31;
-
-        static Material ThumbnailMaterial()
-        {
-            var shader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (shader == null) shader = Shader.Find("Unlit/Color");
-            if (shader == null) shader = Shader.Find("Sprites/Default");
-            if (shader == null)
-            {
-                Debug.LogWarning("[HonestMirror] no unlit shader found; shape renders will be magenta.");
-                return null;
-            }
-
-            var material = new Material(shader);
-            var tint = new Color(0.93f, 0.91f, 0.86f, 1f);
-            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", tint);
-            if (material.HasProperty("_Color")) material.SetColor("_Color", tint);
-            return material;
-        }
-
-        void OnDestroy()
-        {
-            for (int i = 0; i < _rendered.Count; i++)
-            {
-                if (_rendered[i] == null) continue;
-                _rendered[i].Release();
-                Destroy(_rendered[i]);
-            }
-            _rendered.Clear();
-            if (_thumbMaterial != null) Destroy(_thumbMaterial);
+            if (content != null) content.SetActive(false);
+            StartCoroutine(Load());
         }
 
         public void Open()
         {
             Build();
-            if (root != null) root.SetActive(true);
+            if (content != null) content.SetActive(true);
         }
 
         public void Close()
         {
-            if (root != null) root.SetActive(false);
+            if (content != null) content.SetActive(false);
         }
 
         public void Toggle()
         {
-            if (root == null) return;
-            if (root.activeSelf) Close(); else Open();
+            if (content == null) return;
+            if (content.activeSelf) Close(); else Open();
         }
+
+        // ------------------------------------------------------------------ loading
+
+        IEnumerator Load()
+        {
+            string json = null;
+            yield return ReadText(trackabilityFile, r => json = r);
+
+            Data = Trackability.Parse(json);
+
+            // No count is better than an invented one: with no file the panel shows no number at all.
+            if (Data == null)
+                Debug.LogError("[HonestMirror] no readable " + trackabilityFile + "; the panel will show no count.");
+
+            List<string> ids = Trackability.ExcludedIds(Data);
+            for (int i = 0; i < ids.Count && i < handSlots.Length; i++)
+            {
+                string poseJson = null;
+                yield return ReadText(poseFolder + "/" + ids[i] + ".json", r => poseJson = r);
+
+                // A blank slot is better than a made-up hand - this panel exists to not do that.
+                if (string.IsNullOrEmpty(poseJson))
+                {
+                    Debug.LogError("[HonestMirror] no pose file for excluded shape " + ids[i] + ". Not drawn.");
+                    continue;
+                }
+
+                string error;
+                HandPose pose = HandPose.FromJson(poseJson, out error);
+                if (pose == null)
+                {
+                    Debug.LogError("[HonestMirror] " + ids[i] + " pose unreadable (" + error + "). Not drawn.");
+                    continue;
+                }
+
+                DrawHand(ids[i], pose, handSlots[i]);
+            }
+
+            _loaded = true;
+            Build();
+        }
+
+        void DrawHand(string id, HandPose pose, Transform slot)
+        {
+            if (slot == null || excludedMaterial == null) return;
+
+            var go = new GameObject("Excluded_" + id);
+            go.transform.SetParent(slot, false);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;   // HandVisual.scale carries the size
+
+            var visual = go.AddComponent<HandVisual>();
+            visual.material = excludedMaterial;
+            visual.highlightMaterial = null;
+            visual.scale = handScale;
+            visual.Build();
+            visual.ApplyPose(pose.LocalRotations);
+
+            _hands.Add(visual);
+            Drawn.Add(id);
+        }
+
+        IEnumerator ReadText(string relativePath, System.Action<string> done)
+        {
+            using (UnityWebRequest request = UnityWebRequest.Get(SignSetLoader.ToUrl(relativePath)))
+            {
+                yield return request.SendWebRequest();
+                done(request.result == UnityWebRequest.Result.Success ? request.downloadHandler.text : null);
+            }
+        }
+
+        // ------------------------------------------------------------------ the text
 
         void Build()
         {
-            SetMeta shipped = loader != null ? loader.Meta : meta;
-
-            if (header != null)
-            {
-                header.text = numbersMeasured
-                    ? $"{robustVariants} of {totalVariants} handshape variants are robustly trackable today"
-                    : "Trackability review pending — no device measurement yet";
-            }
+            if (header != null) header.text = Trackability.CountLine(Data);
 
             if (body != null)
             {
                 var sb = new System.Text.StringBuilder();
-                sb.AppendLine(excludedReason);
-                sb.AppendLine();
-                sb.Append("Not taught here: ");
-                sb.AppendLine(string.Join(", ", excludedShapes));
-                if (!string.IsNullOrEmpty(handLimitation))
+
+                string provenance = Trackability.ProvenanceLine(Data);
+                if (!string.IsNullOrEmpty(provenance)) sb.AppendLine(provenance).AppendLine();
+
+                List<string> ids = Trackability.ExcludedIds(Data);
+                if (ids.Count == 0)
                 {
-                    sb.AppendLine();
-                    sb.AppendLine(handLimitation);
+                    sb.AppendLine("Every shape in this build has a reason to be here.");
                 }
-                if (!string.IsNullOrEmpty(measuredOn))
-                    sb.Append($"Measured on {device}, {measuredOn}.");
+                else
+                {
+                    // One line per shape, from the file's own note. A shape with a reason is a decision, and
+                    // a decision is worth reading; a general "the cameras are limited" is worth nothing.
+                    for (int i = 0; i < ids.Count; i++)
+                        sb.AppendLine(ids[i] + "   " + Trackability.ReasonFor(Data, ids[i]));
+                }
+
+                if (!_loaded) sb.AppendLine().Append("Reading the shapes...");
                 body.text = sb.ToString();
             }
 
             if (credit != null)
             {
-                // The authorship line is data, never copy (ADR-007). Whatever ships, ships truthfully.
-                credit.text = shipped != null && !string.IsNullOrEmpty(shipped.creditLine)
-                    ? shipped.creditLine
-                    : "Handshapes authored against published ASL references. Deaf signer review in progress.";
+                // Authorship is data, never copy (ADR-007): whatever set-meta.json says ships verbatim.
+                credit.text = meta != null && !string.IsNullOrEmpty(meta.creditLine)
+                    ? meta.creditLine
+                    : "Handshapes authored against published ASL references. Signer review in progress.";
             }
+        }
+
+        /// <summary>Dev check: what the panel is actually showing, for the overlay and the log.</summary>
+        public string Report()
+        {
+            return "honest mirror: " + Drawn.Count + " hands drawn (" + string.Join(",", Drawn) + "), "
+                   + Trackability.Total(Data) + " variants in the file, measured=" +
+                   (Data != null && Data.measured);
         }
     }
 }

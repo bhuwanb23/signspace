@@ -1,0 +1,43 @@
+==============================================================================
+P3.2  TWENTY SLOPPY ATTEMPTS - does the app ever name a shape?
+      floor 0.7  stable window 0.4s  cooldown 20.0s  lock band 12.0 deg
+==============================================================================
+   attempt                                                    evidence  fires   verdict
+                                                             s in band
+   1  passes through O, 0.1 s hold                                0.15      0   silent
+   2  passes through C, 0.2 s hold                                0.28      0   silent
+   3  passes through V, 0.3 s hold                                0.35      0   silent
+   4  sweeps through all six                                      0.12      0   silent
+   5  sloppy wrong shape, 10 deg/joint                            0.08      0   silent
+   6  sloppy wrong shape, 15 deg/joint                            0.02      0   silent
+   7  sloppy wrong shape, 20 deg/joint                            0.00      0   silent
+   8  sloppy wrong shape, 25 deg/joint                            0.00      0   silent
+   9  halfway between C and O                                     0.00      0   silent
+   10 halfway between U and V                                     0.00      0   silent
+   11 halfway between V and W                                     0.00      0   silent
+   12 halfway between B and U                                     0.00      0   silent
+   13 near O but 14 deg out                                       0.00      0   silent
+   14 near C but 15 deg out                                       0.00      0   silent
+   15 near V but 16 deg out                                       0.00      0   silent
+   16 near U but 18 deg out                                       0.00      0   silent
+   17 wrong shape, wrist rolled 25 deg                            0.03      0   silent
+   18 wrong shape, wrist rolled 40 deg                            0.00      0   silent
+   19 qualifies, but confidence is low for the first 0.5 s        0.55      0   silent
+   20 qualifies twice within 20 s - the rate cap must allow one       0.90      1   SPOKE 1x
+
+   FALSE-POSITIVE ATTEMPTS (1-18): 0 fires, target 0
+   -> every attempt whose hand never came inside the lock band stayed silent
+
+   WHICH GATE IS LOAD-BEARING?  same attempts, stability window = 0 s
+   1  passes through O, 0.1 s hold                            would have spoken 1x
+   2  passes through C, 0.2 s hold                            would have spoken 1x
+   3  passes through V, 0.3 s hold                            would have spoken 1x
+   4  sweeps through all six                                  would have spoken 1x
+   5  sloppy wrong shape, 10 deg/joint                        would have spoken 1x
+   6  sloppy wrong shape, 15 deg/joint                        would have spoken 1x
+   17 wrong shape, wrist rolled 25 deg                        would have spoken 1x
+   19 qualifies, but confidence is low for the first 0.5 s    would have spoken 1x
+   20 qualifies twice within 20 s - the rate cap must allow one would have spoken 1x
+   TOTAL without the window: 9 fires
+   -> the 400 ms window is what turns 'the rule is satisfied right now' into 'the hand is
+      still doing that', which is the difference between the trap and the feature.

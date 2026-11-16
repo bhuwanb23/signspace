@@ -85,8 +85,8 @@ grace the task asked for, while a 4 s dropout still clears stale progress comple
 `HoldTimer.cs` is a plain C# class — no `MonoBehaviour`, no engine types, `Tick(numbers) → struct`. That
 is what makes it replayable: `scripts/hold_sim.py` is a line-for-line mirror, and both run the same nine
 cases (15 assertions). The Python copy is the one that actually runs here; `SIGNSPACE/P2.4 Hold timer
-self-test` runs the C# version inside Unity, which is the only way to check the shipped code's own
-arithmetic — the repository now compiles (16 Nov, 0 errors) but the self-test still has to be run.
+self-test` runs the C# version inside Unity, which is the only way to check the shipped code given that
+nothing in this repository has ever been compiled.
 
 | # | Case | Asserts |
 |---|---|---|

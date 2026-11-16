@@ -5,11 +5,11 @@ Two jobs, both of them things that can be done before a headset exists:
 
 1. **The timing check.** The payoff must complete in under 1.2 s, or it becomes a cutscene that the
    third repetition skips. The timeline is mirrored from `LockPayoff.cs`, every phase is printed with
-   its window, and the script fails if the total is over budget - so "0.99 s" is arithmetic that CI can
+   its window, and the script fails if the total is over budget - so "1.04 s" is arithmetic that CI can
    check rather than a number in a document.
 
 2. **A previs.** A frame-accurate render of what the timeline does - hand brightening as it shrinks,
-   object forming inside it, arcing to the anchor - so the 0:45 shot can be planned, and so the edit
+   object forming inside it, arcing to its shelf slot - so the 0:45 shot can be planned, and so the edit
    points are known before anyone stands in a room waving.
 
    This is **not** footage. It is a diagram of the timing, it goes to `lock-payoff-previs.mp4`, and it
@@ -34,7 +34,7 @@ DOCS = ROOT / "phases" / "p2-core-loop"
 DISSOLVE = 0.40
 FORM_START = 0.30
 FORM = 0.22
-ARC = 0.45
+ARC = 0.50   # P4.2: the arc reaches a real shelf slot
 SETTLE = 0.12
 HAND_RETURN = 0.12
 BUDGET = 1.20
@@ -49,7 +49,7 @@ def timing():
     rows = [
         ("hand dissolves (scale + fade + brighten)", 0.00, DISSOLVE),
         ("object starts forming inside the hand", FORM_START, FORM_START + FORM),
-        ("object arcs to the anchor", FORM_START, FORM_START + ARC),
+        ("object arcs to its shelf slot", FORM_START, FORM_START + ARC),
         ("overshoot and settle", FORM_START + ARC, FORM_START + ARC + SETTLE),
         ("reference hand returns", FORM_START + ARC + SETTLE, TOTAL),
     ]

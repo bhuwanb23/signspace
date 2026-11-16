@@ -16,8 +16,8 @@ without hardware.
       *Device:* the 30 s edge flicker test
 - [ ] 20/20 intentional locks and 0/20 false locks — **20/20 and 0/20 simulated** (`hold-log`), not on
       hardware. The criterion is the hardware run
-- [ ] Lock payoff completes in under 1.2 s and has been filmed — **0.99 s measured of a 1.20 s budget**
-      (82%), but `lock-payoff-take01.mp4` does not exist. Half the criterion
+- [ ] Lock payoff completes in under 1.2 s and has been filmed — **1.04 s calculated against a 1.20 s budget**
+      (87%), but `lock-payoff-take01.mp4` does not exist. Half the criterion
 - [x] Palm orientation contributes independently and a mis-facing hand fails — basis comparison (no
       Euler), `D_total = D_fingers + k·max(0, O − 15)`, k = 1.0; 0.0% lock from 30° mis-faced, 100% up
       to 20°. *Device:* the wrist-roll test

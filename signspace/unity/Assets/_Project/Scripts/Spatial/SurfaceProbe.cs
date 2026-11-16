@@ -181,8 +181,6 @@ namespace Signspace.Spatial
             _querySeconds = Time.realtimeSinceStartup - queryStart;
             _rejects = finder != null ? finder.LastRejectionSummary : "no finder";
 
-            // `default` is not cosmetic: the short-circuit below leaves `best` unassigned when finder
-            // is null, and the compiler cannot infer that `!ok` implies it was written.
             SurfaceCandidate best = default;
             bool ok = finder != null && finder.TryGetPrimary(out best);
             if (!ok)

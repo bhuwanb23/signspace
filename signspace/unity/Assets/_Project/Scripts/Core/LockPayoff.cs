@@ -10,9 +10,9 @@ namespace Signspace.Core
     /// The first reward, and it happens inside 75 seconds (P2.5).
     ///
     /// On lock, the reference hand **becomes** an object: it brightens and shrinks, an object forms
-    /// *inside where it was*, and that object arcs to a temporary anchor on the shelf. Whole sequence
-    /// 0.99 s, because from the fourth repetition onwards anything longer is skipped - and a reward that
-    /// gets skipped is not a reward.
+    /// *inside where it was*, and that object arcs **500 ms** to its own slot on the shelf (P4.2) before
+    /// the shelf adopts it. Whole sequence 1.04 s, because from the fourth repetition onwards anything
+    /// longer is skipped - and a reward that gets skipped is not a reward.
     ///
     /// **Transformation, not deletion.** Three things do this work, and all three are timing decisions:
     ///
@@ -41,7 +41,8 @@ namespace Signspace.Core
         public GameObject referenceHandVisual;
         [Tooltip("Inactive prototype of the object the hand turns into. Pooled, one per lock.")]
         public GameObject objectPrototype;
-        [Tooltip("Where the object comes to rest. The shelf proper arrives in P4; this is a temp anchor.")]
+        [Tooltip("Where the object comes to rest when there is no shelf to give it a slot. Keep it wired: " +
+                 "a payoff with no shelf is still a payoff, and the P2 rig is still the rig.")]
         public Transform restAnchor;
         [Tooltip("Optional: the controller-free 'haptic' - a pulse in the tracked hand.")]
         public HandPulse handPulse;
@@ -53,8 +54,9 @@ namespace Signspace.Core
         public float objectFormStart = 0.30f;
         [Tooltip("How long the object takes to reach full size.")]
         public float objectFormSeconds = 0.22f;
-        [Tooltip("Flight time to the anchor.")]
-        public float arcSeconds = 0.45f;
+        [Tooltip("Flight time to the shelf slot. 500 ms: long enough to read as travel, short enough that " +
+                 "the whole payoff stays inside 1.2 s.")]
+        public float arcSeconds = 0.50f;
         [Tooltip("Overshoot settle once it arrives.")]
         public float settleSeconds = 0.12f;
         [Tooltip("The reference hand comes back for the next attempt.")]
@@ -148,9 +150,9 @@ namespace Signspace.Core
                 : new Renderer[0];
             var handStart = referenceHandVisual != null ? referenceHandVisual.transform.localScale : Vector3.one;
 
-            // Only the last few objects stay in the room: this anchor is temporary until the shelf
-            // arrives in P4, and an unbounded pile at one point is not a shelf.
-            while (_spawned.Count >= maxObjectsOnAnchor)
+            // Only the last few objects stay in the room - but ONLY while there is no shelf. With a shelf
+            // (P4) each object has its own slot and nothing is thrown away: the shelf is the record.
+            while (shelf == null && _spawned.Count >= Mathf.Max(1, maxObjectsOnAnchor))
             {
                 var old = _spawned[0];
                 _spawned.RemoveAt(0);
@@ -160,6 +162,10 @@ namespace Signspace.Core
             GameObject obj = null;
             Vector3 objFrom = Vector3.zero, objTo = Vector3.zero;
             Transform objTr = null;
+
+            // With a shelf, the object is at its final size from the start of the flight: a shelf object
+            // is a real 10 cm silhouette at scale 1, not the 16 cm prototype block of the P2 rig.
+            float objScale = shelf != null ? 1f : 0.16f;
 
             if (save != null) save.Unlock(shapeId);      // bank it immediately: the reward is not the animation
 
@@ -186,10 +192,31 @@ namespace Signspace.Core
                 // ---- 2. the object forms where the hand was, and starts flying while it grows
                 if (obj == null && elapsed >= formStart)
                 {
-                    obj = Spawn(flyFrom != null ? flyFrom.position : transform.position);
+                    // With a shelf, the thing that flies is a SHELF object - the shelf's own prefab, so it
+                    // already has the silhouette and the view, and Adopt() can re-parent it without a pop.
+                    var prototype = shelf != null && shelf.objectPrefab != null
+                        ? shelf.objectPrefab
+                        : objectPrototype;
+                    obj = Spawn(prototype, flyFrom != null ? flyFrom.position : transform.position);
                     objTr = obj.transform;
                     objFrom = objTr.position;
-                    objTo = restAnchor != null ? restAnchor.position : objFrom + Vector3.up * 0.2f;
+
+                    // P4.2: with a shelf, the object flies to ITS slot rather than to a temporary anchor.
+                    // Resolved here rather than at Start because the slot depends on what was unlocked
+                    // before this lock - and Unlock() has just run, one line above.
+                    Transform slot = null;
+                    if (shelf != null) shelf.TryGetSlotFor(shapeId, out slot);
+                    if (slot != null) objTo = slot.TransformPoint(Vector3.up * shelf.ObjectLift(shapeId));
+                    else objTo = restAnchor != null ? restAnchor.position : objFrom + Vector3.up * 0.2f;
+
+                    var view = obj.GetComponent<ShelfObjectView>();
+                    if (view != null)
+                    {
+                        if (shelf != null && shelf.objectMaterial != null)
+                            view.objectMaterial = shelf.objectMaterial;
+                        view.SetShape(shapeId);
+                    }
+
                     _spawned.Add(obj);
 
                     if (handPulse != null) handPulse.Pulse();   // the controller-free "haptic"
@@ -198,7 +225,7 @@ namespace Signspace.Core
                 if (objTr != null)
                 {
                     float f = Mathf.Clamp01((elapsed - formStart) / Mathf.Max(0.01f, formSeconds));
-                    objTr.localScale = Vector3.one * FormEase(f) * 0.16f;
+                    objTr.localScale = Vector3.one * FormEase(f) * objScale;
 
                     float a = Mathf.Clamp01((elapsed - formStart - arcStartFraction * arc) / Mathf.Max(0.01f, arc));
                     if (a > 0f)
@@ -215,7 +242,7 @@ namespace Signspace.Core
                     if (s > 0f)
                     {
                         float overshoot = Mathf.Sin(s * Mathf.PI) * 0.06f;
-                        objTr.localScale = Vector3.one * 0.16f * (1f + overshoot);
+                        objTr.localScale = Vector3.one * objScale * (1f + overshoot);
                     }
                 }
 
@@ -225,8 +252,26 @@ namespace Signspace.Core
             // ---- 4. leave the world in a clean state for the next attempt
             if (obj != null)
             {
-                obj.transform.position = objTo;
-                obj.transform.localScale = Vector3.one * 0.16f;
+                obj.transform.localScale = Vector3.one * objScale;
+                if (shelf != null)
+                {
+                    // The object has landed on its slot. Hand ownership to the shelf: from here on it is
+                    // one of the objects that survives a relaunch, breathes, and occupies that slot.
+                    // Without this the payoff's object would sit in the room as a second, untracked copy
+                    // and the next restore would duplicate it.
+                    if (shelf.TryGetSlotFor(shapeId, out var destination) && destination != null)
+                    {
+                        var adopted = shelf.Adopt(obj, shapeId);
+                        _spawned.Remove(obj);
+                        _spawned.Remove(adopted);
+                        obj = adopted;
+                    }
+                    else obj.transform.position = objTo;
+                }
+                else
+                {
+                    obj.transform.position = objTo;
+                }
             }
             if (referenceHandVisual != null)
             {
@@ -251,12 +296,12 @@ namespace Signspace.Core
             chime.PlayOneShot(lockChime);
         }
 
-        GameObject Spawn(Vector3 at)
+        GameObject Spawn(GameObject prototype, Vector3 at)
         {
             GameObject obj;
-            if (objectPrototype != null)
+            if (prototype != null)
             {
-                obj = Instantiate(objectPrototype, transform);
+                obj = Instantiate(prototype, transform);
                 obj.SetActive(true);
                 obj.transform.localScale = Vector3.zero;
             }

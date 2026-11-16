@@ -135,7 +135,12 @@ namespace Signspace.Matching
               .Append("  ").Append(matcher.HoldProgress01.ToString("0.00"))
               .Append("   changes/").Append(bandWindowSeconds.ToString("0")).Append("s ")
               .Append(_bandChanges.Count).Append('\n');
+            // P3.2: the floor is shown next to the reading, because a confidence number with no floor
+            // beside it cannot be judged - and "is this frame trustworthy" is the question the whole
+            // silence discipline rests on.
             sb.Append("conf   ").Append(matcher.LastConfidence.ToString("0.00"))
+              .Append("  floor ").Append(matcher.confidenceFloor.ToString("0.00"))
+              .Append(matcher.LastConfidence >= matcher.confidenceFloor ? "  trusted" : "  BELOW FLOOR")
               .Append(matcher.IsPaused ? "   PAUSED" : "").Append('\n');
 
             sb.Append("fingers ");
@@ -181,7 +186,10 @@ namespace Signspace.Matching
             sb.Append("lockedDeg ").Append(matcher.lockedDeg.ToString("0.0"))
               .Append("  closeDeg ").Append(matcher.closeDeg.ToString("0.0"))
               .Append("  release ").Append(matcher.bandReleaseDeg.ToString("0.0"))
-              .Append("  nearMiss ").Append(matcher.nearMissMaxDeg.ToString("0.0"));
+              .Append("  nearMiss ").Append(matcher.NearMissState.Explain())
+              .Append("  held ").Append(matcher.NearMissCandidateSeconds.ToString("0.00"))
+              .Append('/').Append(matcher.nearMissStableSeconds.ToString("0.00")).Append('s')
+              .Append("  session ").Append(matcher.NearMissesThisSession).Append('\n');
 
             _text.text = sb.ToString();
         }

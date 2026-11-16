@@ -45,7 +45,7 @@ Then a half-second of the room, and we are in.
 | 8 | 1:22–1:34 | **Gaze.** Look at a finger → it highlights, with its position named. No hands used. | Device (Quest) **and** the VR Glasses simulator profile | Technical · gaze · "both hands are busy, you cannot point" | 0:12 |
 | 9 | **1:34–1:52** | **Passthrough comparison.** The same view with passthrough **on**, then **off**. The shelf loses its ground; the objects float. | Device, two clips | Technical · passthrough · *"the room is the level"* | 0:18 |
 | 10 | 1:52–2:08 | The **C → O** pair, side by side. Nearly identical from the front. Obviously different in depth. | Device | Innovation · the depth argument | 0:16 |
-| 11 | 2:08–2:22 | **The honest mirror.** The panel: the shapes today's cameras cannot see, greyed, with the reason. The number. | Device | Innovation · "we publish our blind spots" | 0:14 |
+| 11 | 2:08–2:22 | **The honest mirror.** The panel: the shapes today's cameras cannot see, greyed, with the reason. The number. *Copy and count line: `SUBMISSION-COPY.md` §7.2; the reasoning behind them: `TRACKABILITY.md` §2.4 and §4.* | Device | Innovation · "we publish our blind spots" | 0:14 |
 | 12 | 2:22–2:34 | **FoV split-screen.** The same frame at Quest's ~110°×96° and at the VR Glasses' ~70°×66°. The shelf reflows to a tray in the narrow one. | Simulator + device | Technical · FoV-aware · VR Glasses | 0:12 |
 | 13 | 2:34–2:42 | **The credits.** The signer's name and city, or the state-B line. *"This is practice software, not a replacement for a Deaf teacher."* | Screen capture | Innovation · integrity · the rule that never ships | 0:08 |
 | 14 | 2:42–2:45 | End card: **SIGNSPACE**, the tagline, and the install link. | Graphic | — | 0:03 |

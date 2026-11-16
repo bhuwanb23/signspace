@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "measured": false,
+  "measuredUtc": "",
+  "device": "Quest 3S",
+  "conditions": "normal light",
+  "note": "The shipped numbers for the honest mirror. 'measured' flips to true only when P1.5's probe has run and every 'status' below is a real lock rate - never before. 'expected' is the design decision from SIGNSET.md section 6 and is what the panel shows while the probe is out.",
+  "variants": [
+    { "id": "B", "expected": "fine",           "status": "unmeasured", "lockRate": -1, "note": "baseline" },
+    { "id": "U", "expected": "fine",           "status": "unmeasured", "lockRate": -1, "note": "watch finger separation" },
+    { "id": "V", "expected": "fine",           "status": "unmeasured", "lockRate": -1, "note": "" },
+    { "id": "W", "expected": "fine",           "status": "unmeasured", "lockRate": -1, "note": "ring-finger tracking is the weak link" },
+    { "id": "C", "expected": "fine",           "status": "unmeasured", "lockRate": -1, "note": "curvature without contact is the risk case" },
+    { "id": "O", "expected": "fine",           "status": "unmeasured", "lockRate": -1, "note": "contact may help the tracker" },
+    { "id": "A", "expected": "may-resolve",    "status": "unmeasured", "lockRate": -1, "note": "thumb alongside vs across is the ambiguity" },
+    { "id": "D", "expected": "may-resolve",    "status": "unmeasured", "lockRate": -1, "note": "ring and little meet the thumb" },
+    { "id": "F", "expected": "may-resolve",    "status": "unmeasured", "lockRate": -1, "note": "index tip meets thumb tip; hardest in the set, first candidate for the cut ladder" },
+    { "id": "I", "expected": "may-resolve",    "status": "unmeasured", "lockRate": -1, "note": "isolated little finger is the weakest joint" },
+    { "id": "L", "expected": "may-resolve",    "status": "unmeasured", "lockRate": -1, "note": "" },
+    { "id": "M", "expected": "not-resolvable", "status": "unmeasured", "lockRate": -1, "note": "three fingertips sit on the thumb: a finger hides behind a finger" },
+    { "id": "N", "expected": "not-resolvable", "status": "unmeasured", "lockRate": -1, "note": "two fingertips on the thumb; differs from M by one stacked finger" },
+    { "id": "R", "expected": "not-resolvable", "status": "unmeasured", "lockRate": -1, "note": "crossing is not a joint angle the tracker reports" },
+    { "id": "S", "expected": "may-resolve",    "status": "unmeasured", "lockRate": -1, "note": "thumb across the front of the fist; competes with A" },
+    { "id": "T", "expected": "not-resolvable", "status": "unmeasured", "lockRate": -1, "note": "the thumb is between two fingers: hidden, not bent" },
+    { "id": "X", "expected": "may-resolve",    "status": "unmeasured", "lockRate": -1, "note": "hooked index; deferred to v2 in any case" },
+    { "id": "Y", "expected": "may-resolve",    "status": "unmeasured", "lockRate": -1, "note": "" },
+    { "id": "E", "expected": "may-resolve",    "status": "unmeasured", "lockRate": -1, "note": "every tip at the same point" },
+    { "id": "G", "expected": "out-of-scope",   "status": "unmeasured", "lockRate": -1, "note": "orientation-dependent direction, not a handshape" }
+  ]
+}

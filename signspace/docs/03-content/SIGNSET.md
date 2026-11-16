@@ -137,6 +137,16 @@ Ordered by how good they'll look in the submission video. `Δ` = the feature tha
 
 **Decision rule after P1.5:** any shape below ~70% lock rate in normal light is **removed from the set and moved to the honest mirror**. The set is allowed to shrink to 6; it is not allowed to include a shape that fails.
 
+**Where this table lives now.** The `Expected` column above is the design decision; the machine-readable
+copy is `unity/Assets/StreamingAssets/trackability.json` (`expected` per shape), and the reasoning per
+class — with one real example each — is `TRACKABILITY.md` §2.4. The shipped set, the excluded set and the
+count the panel prints are derived from that file, not from this table, so **this table is not the place
+to change a decision**: change the file, and this table is updated to match.
+
+Two rows above have already moved from the pre-probe expectation: **F is `may-resolve`, not failing**
+(its contact survives with fewer fingers) and **E is `may-resolve`**, so the by-design exclusion is
+**M, N, R, T** — see `TRACKABILITY.md` §2.1's revision note and §3.3.
+
 ---
 
 ## 8. CAPTURE REQUIREMENTS *(detail in `CAPTURE-PROTOCOL.md`)*

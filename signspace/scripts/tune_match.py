@@ -17,10 +17,10 @@ WHAT IT ANSWERS
 
 THE PROBLEM THIS EXISTS TO SOLVE
 -------------------------------
-The v1 metric -- retired 15 Nov 2026 -- was a weighted mean of per-joint
-angles over every joint in the hand. U and V differ in ONE joint: how far the
-index is abducted. Divided by the weight of all 25 other joints, an 18 degree
-spread contributed well under a degree to the score, so the near-miss for U/V
+The v1 metric (PoseMath.Distance) is a weighted mean of per-joint angles over
+every joint in the hand. U and V differ in ONE joint -- how far the index is
+abducted. Divided by the weight of all 25 other joints, an 18 degree spread
+contributes well under a degree to the score. The near-miss for U/V therefore
 could never fire.
 
 The fix is to measure the difference PER FINGER: the accumulated rotation of
@@ -44,13 +44,6 @@ import sys
 import hand_model as hm
 
 SHAPE_IDS = list(hm.SHAPES.keys())
-
-#: The values the app ships, mirrored from Matcher.Tuned* in C#. Kept in one place here so the report
-#: cannot print a threshold the build does not use (it printed closeDeg 20 for a day after shipping 24).
-SHIPPED_LOCKED_DEG = 12.0
-SHIPPED_CLOSE_DEG = 24.0
-SHIPPED_NEAR_MISS_DEG = 26.0
-SHIPPED_ORIENTATION_SLACK_DEG = 15.0
 
 WEIGHTS_ASSET = pathlib.Path(__file__).resolve().parent.parent / \
     "unity" / "Assets" / "_Project" / "Matching" / "Weights.asset"
@@ -305,14 +298,9 @@ def report_v3(poses, sigma=2.0):
     print("\n  v3 noise percentiles (sigma = "
           f"{sigma} deg/joint): p50 {noise['d_p50']:.1f}  p95 {noise['d_p95']:.1f}  "
           f"p99 {noise['d_p99']:.1f}  max {noise['d_max']:.1f}")
-    print(f"  shipped thresholds lockedDeg {SHIPPED_LOCKED_DEG:.0f} / closeDeg {SHIPPED_CLOSE_DEG:.0f} "
-          f"/ nearMissMaxDeg {SHIPPED_NEAR_MISS_DEG:.0f}:")
-    print(f"    lock sits {SHIPPED_LOCKED_DEG / noise['d_p95']:.1f}x above the noise p95 "
-          f"and {nearest / SHIPPED_LOCKED_DEG:.1f}x below the nearest pair")
-    print(f"    close leaves {nearest - SHIPPED_CLOSE_DEG:.1f} deg to the nearest pair; "
-          f"a wrong shape at 26 deg reads as warming, which is the honest display")
-    print(f"    palm slack {SHIPPED_ORIENTATION_SLACK_DEG:.0f} deg is separate from the band edges "
-          f"(D_total = D_fingers + k*max(0, O - slack), k = 1)")
+    print(f"  shipped thresholds lockedDeg {12.0:.0f} / closeDeg {20.0:.0f} / nearMissMaxDeg {26.0:.0f}: "
+          f"lock sits {12.0 / noise['d_p95']:.1f}x above the noise p95 "
+          f"and {nearest / 12.0:.1f}x below the nearest pair")
     return weights, nearest, noise
 
 
@@ -455,7 +443,7 @@ def main():
     check_chain_identity(poses)
 
     v1 = pairwise_v1(poses)
-    print_matrix(v1, "v1 metric -- weighted mean over every joint (retired 15 Nov 2026)")
+    print_matrix(v1, "v1 metric -- weighted mean over every joint (what ships today)")
     summarise(v1, "v1 intended near-miss pairs")
     print("\n  ^ if the intended pairs sit near 0-2 degrees, the near-miss can never fire.")
 
@@ -490,46 +478,56 @@ def main():
         floors[label] = (p50, p95, p99, mx)
         print(f"{label:<18} {p50:>7.1f} {p95:>7.1f} {p99:>7.1f} {mx:>7.1f}")
 
-    weights, nearest, v3_noise = report_v3(poses, args.sigma)
-
     print("\n" + "=" * 78)
-    print("decision -- the shipped metric, and what moves it")
+    print("recommendation -- the metric that separates the pairs from the noise")
     print("=" * 78)
     print("  a lock threshold must sit ABOVE the noise and BELOW the nearest pair.")
     print("  score = (nearest pair) / (noise p95).  higher is better.\n")
-    min_accidental = min(
-        metric_v3_weighted(poses[a], poses[b], weights)[0]
-        for a in SHAPE_IDS for b in SHAPE_IDS
-        if a != b and tuple(sorted((a, b))) not in hm.NEAR_MISS_PAIRS)
-    print(f"  SHIPPING: max of weighted finger means")
-    print(f"    nearest intended pair : {nearest:6.1f} deg (U-V)")
-    print(f"    nearest accidental pair: {min_accidental:6.1f} deg")
-    print(f"    noise p50 / p95        : {v3_noise['d_p50']:6.1f} / {v3_noise['d_p95']:6.1f} deg "
-          f"at sigma {args.sigma:.1f}")
-    print(f"    -> lockedDeg   {SHIPPED_LOCKED_DEG:5.1f}  "
-          f"({SHIPPED_LOCKED_DEG / v3_noise['d_p95']:.1f}x the noise p95, "
-          f"{nearest / SHIPPED_LOCKED_DEG:.1f}x inside the nearest pair)")
-    print(f"    -> closeDeg    {SHIPPED_CLOSE_DEG:5.1f}  "
-          f"({nearest - SHIPPED_CLOSE_DEG:.1f} deg of separation from the nearest pair)")
-    print(f"    -> nearMissDeg {SHIPPED_NEAR_MISS_DEG:5.1f}  (exactly the nearest intended pair)")
-    print(f"    -> lock clears the noise floor : "
-          f"{'YES' if SHIPPED_LOCKED_DEG > v3_noise['d_p95'] else 'NO'}")
-    print(f"    -> lock clears the nearest pair: "
-          f"{'YES' if SHIPPED_LOCKED_DEG < nearest else 'NO'}")
+    rows = []
+    for label, mode, include_tip in variants:
+        m = results[label]
+        intended = [d for (a, b), d in m.items()
+                    if a != b and tuple(sorted((a, b))) in hm.NEAR_MISS_PAIRS]
+        accidental = [d for (a, b), d in m.items()
+                      if a != b and tuple(sorted((a, b))) not in hm.NEAR_MISS_PAIRS]
+        min_intended = min(intended)
+        min_accidental = min(accidental)
+        p50, p95, p99, _ = floors[label]
+        rows.append((min_intended / p95, label, min_intended, min_accidental, p50, p95))
+    rows.sort(reverse=True)
+    for score, label, mi, ma, p50, p95 in rows:
+        print(f"  {label:<18} pair {mi:6.1f}  accidental {ma:6.1f}  "
+              f"noise p50 {p50:5.1f} p95 {p95:5.1f}   score {score:5.2f}")
+
+    best = rows[0]
+    _score, label, mi, _ma, p50, p95 = best
+    _mode_of = {lbl: (md, tp) for lbl, md, tp in variants}
+    _tip_of = {lbl: (md, tp) for lbl, md, tp in variants}
+    suggested_lock = max(p95 * 1.35, p50 + 3.0)
+    suggested_lock = min(suggested_lock, mi * 0.72)
+    suggested_close = suggested_lock * 2.4
+    suggested_near = min(max(mi * 1.3, suggested_close * 0.85), 26.0)
+    print(f"\n  WINNER: {label}")
+    print(f"    nearest intended pair : {mi:6.1f} deg")
+    print(f"    noise p50 / p95        : {p50:6.1f} / {p95:6.1f} deg")
+    print(f"    -> lockedDeg   ~ {suggested_lock:5.1f}")
+    print(f"    -> closeDeg    ~ {suggested_close:5.1f}")
+    print(f"    -> nearMissDeg ~ {suggested_near:5.1f}")
+    print(f"    -> lock clears the noise floor : {'YES' if suggested_lock > p95 else 'NO'}")
+    print(f"    -> lock clears the nearest pair: {'YES' if suggested_lock < mi else 'NO'}")
 
     print("\n" + "=" * 78)
     print("sensitivity -- what happens if real tracking is noisier than assumed")
     print("=" * 78)
-    print("  v3 re-measured at several per-joint noise levels.")
-    print("  Use this to decide whether the thresholds must move after the P1.5 probe.\n")
+    print("  The winning metric, re-measured at several per-joint noise levels.")
+    print("  Use this to decide whether lockedDeg must move after the P1.5 probe.\n")
+    mode, tip = _mode_of[label]
     print(f"  {'sigma':>6} {'noise p50':>10} {'noise p95':>10} {'lock needed':>12} {'vs pair 26.0':>14}")
     for sigma in (0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0):
-        n = noise_floor_v3(poses, weights, sigma)
-        needed = max(n["d_p95"] * 1.35, n["d_p50"] + 3.0)
-        verdict = "OK" if needed < nearest else "PAIRS AT RISK"
-        print(f"  {sigma:>6.1f} {n['d_p50']:>10.1f} {n['d_p95']:>10.1f} {needed:>12.1f} {verdict:>14}")
-    print("\n  The tripwire (BUILD-LOG section 4.1): if measured noise exceeds ~1.4x the model,")
-    print("  closeDeg comes down to 20. The threshold is a measurement, not a taste.")
+        n50, n95, _n99, _mx = noise_floor(poses, mode, sigma, include_tip=tip)
+        needed = max(n95 * 1.35, n50 + 3.0)
+        verdict = "OK" if needed < mi else "PAIRS AT RISK"
+        print(f"  {sigma:>6.1f} {n50:>10.1f} {n95:>10.1f} {needed:>12.1f} {verdict:>14}")
     return 0
 
 

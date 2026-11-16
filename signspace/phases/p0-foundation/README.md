@@ -1,7 +1,7 @@
 # P0 — Foundation & compliance
 
 **Day 1 (Sat 7 Nov) · Budget 5 h · Gate:** G0 — Does an empty build install from the `Competition` channel, and does the invite URL work for a stranger?
-**Status:** 🔄 In progress — **5 of 9 gate criteria met · 2 partial · 2 open, both open boxes waiting on the headset** · P0.1 ✅ · P0.6 ✅ · P0.7 🟡 (devices.md written, no headset in hand) · P0.8 🟡 (DoD written, unsigned) · **toolchain installed on E:, SDK v207.0.0 pinned, six shapes authored, metric redesigned and measured** · **app id 1444571625411296 · package `com.signspace.signspace` · channels created** · **licence + EULA cleared 15 Nov** · **devpost draft, app + channel + upload, invite URL all confirmed 15 Nov** · blocked on **the headset arriving** (2 gate boxes) and **a signer reply** · open items itemised in [`P0-AUDIT.md`](P0-AUDIT.md)
+**Status:** 🔄 In progress — **6 of 9 gate criteria met · 1 partial · 2 open, both waiting on the headset** · P0.1 ✅ · P0.6 ✅ · P0.7 🟡 (devices.md written, no headset in hand) · P0.8 🟡 (DoD written, unsigned) · **toolchain installed on E:, SDK v207.0.0 pinned, six shapes authored, metric redesigned and measured** · **app id 1444571625411296 · package `com.signspace.signspace` · channels created** · **licence + EULA cleared 15 Nov** · **devpost draft, app + channel + upload, invite URL all confirmed 15 Nov** · blocked on **the headset arriving** (2 gate boxes) and **a signer reply** · open items itemised in [`P0-AUDIT.md`](P0-AUDIT.md)
 
 ## Objective
 Get from "nothing" to "a stranger can install our build and open our entry form". No product work happens in this phase, and no product work may start until this phase's gate is green.
@@ -37,7 +37,7 @@ account, a headset, or another person's calendar, with the URLs and the exact st
 ## Outputs — the phase is done when all of these are true
 - [~] A build on the primary device, installed from the competition channel — **an upload exists; an install does not yet**
 - [x] A documented, screenshot-backed invite flow *(path verified; screenshot to file)*
-- [x] A verified toolchain with every version pinned — `ProjectVersion.txt` = 6000.3.28f1, `manifest.json` = Meta XR 207.0.0, pins listed in [`toolchain.md`](toolchain.md) §5; the last `[VERIFY]` in `TECH-STACK.md` was cleared 16 Nov
+- [ ] A verified toolchain with every version pinned
 - [x] A signer brief in three inboxes *(sent 15 Nov, no reply yet)*
 
 ## Working artefacts

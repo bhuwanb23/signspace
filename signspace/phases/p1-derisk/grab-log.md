@@ -1,7 +1,7 @@
 # P1.2 — grab log
 
 **Task:** P1.2 · grab a free-floating object with hands only · **Gate fed:** G1
-**Started:** 15 Nov 2026 · **Status:** 🟡 code complete, **compiled 16 Nov** (0 errors); the 20-trial run needs the headset
+**Started:** 15 Nov 2026 · **Status:** 🟡 code complete, **never compiled**; the 20-trial run needs the headset
 
 > The artefact P1.2 names is this file with the 20-trial result in it. The trial result cannot exist
 > without a hand and a headset. Everything that *can* be established without one is below, and the

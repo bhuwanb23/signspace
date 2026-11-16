@@ -23,8 +23,8 @@ namespace Signspace.Matching
     ///     closeDeg       24   measured in P2.3, not rounded to 25: a wrong shape
     ///                         at 26 deg reads as "warming", which is the honest display
     ///     bandReleaseDeg  2   hysteresis, 150 ms - without it the band chatters on noise
-    ///     nearMissDeg    26   the nearest intentional pair, so a deliberate
-    ///                         wrong shape can always be named
+    ///     nearMiss      band-based since P3.1: exactly one OTHER shape inside the lock band,
+    ///                   and the target outside it. Not a 26 deg window - see NearMiss.cs
     ///     holdSeconds   0.7   P2.4: with a 200 ms freeze grace, so one dropped frame
     ///                         does not restart the hold
     ///
@@ -36,21 +36,6 @@ namespace Signspace.Matching
     /// </summary>
     public class Matcher : MonoBehaviour
     {
-        // ---- the tuned values: ONE source of truth ------------------------------------
-        //
-        // A serialised field in Main.unity beats a code default without a word of warning, so a
-        // threshold changed here alone changes nothing in the built app. SceneBuilder writes these
-        // constants onto the component explicitly, and BuildScript.VerifySceneTuning() fails the build
-        // when the scene's serialised copy disagrees. Change a number HERE, regenerate the scene, and
-        // let the build prove it stuck.
-        public const float TunedLockedDeg = 12f;
-        public const float TunedCloseDeg = 24f;
-        public const float TunedBandReleaseDeg = 2f;
-        public const float TunedHoldSeconds = 0.7f;
-        public const float TunedOrientationSlackDeg = 15f;
-        public const float TunedOrientationWeightK = 1f;
-        public const float TunedNearMissMaxDeg = 26f;
-
         [Header("Shape set")]
         [Tooltip("Shapes available this session. Order does not matter.")]
         public List<HandPose> shapes = new List<HandPose>();
@@ -64,20 +49,20 @@ namespace Signspace.Matching
 
         [Header("Bands (degrees)")]
         [Tooltip("Locked: this close to the target shape.")]
-        public float lockedDeg = TunedLockedDeg;
+        public float lockedDeg = 12f;
         [Tooltip("Close: recognisably near the target shape. Measured in band_sim.py: 24 leaves 2.0 deg "
                + "to the nearest accidental pair (U-V, 26.0), and a hand making that pair is told "
                + "'close' on 0.0% of frames.")]
-        public float closeDeg = TunedCloseDeg;
+        public float closeDeg = 24f;
         [Tooltip("Degrees of hysteresis on the way OUT of a band. Entering uses the plain edge. "
                + "2 deg removes the last of the edge flicker (band_sim.py: 4 changes/30 s -> 0).")]
-        public float bandReleaseDeg = TunedBandReleaseDeg;
+        public float bandReleaseDeg = 2f;
         [Tooltip("Band changes only after this long in the new state, so the meter never strobes.")]
         public float bandHysteresisSeconds = 0.15f;
 
         [Header("Hold")]
         [Tooltip("How long the shape must stay inside the locked band before it counts.")]
-        public float holdSeconds = TunedHoldSeconds;
+        public float holdSeconds = 0.7f;
         [Tooltip("Tracking below this confidence pauses the timer instead of resetting it.")]
         public float confidenceFloor = 0.7f;
         [Tooltip("A tracking dip shorter than this is FROZEN, not reset. Measured in hold_sim.py.")]
@@ -94,27 +79,28 @@ namespace Signspace.Matching
         [Tooltip("Palm facing error ignored up to this angle, so a naturally different resting wrist is " +
                  "not punished. Measured: wrist jitter for a correctly-facing hand has sd 1.4 deg and " +
                  "p99 6.4 deg (palm_sim.py), so 15 deg is ~10 sigma of noise.")]
-        public float orientationSlackDeg = TunedOrientationSlackDeg;
+        public float orientationSlackDeg = 15f;
         [Tooltip("k: how much a degree of palm error costs, beyond the slack. 1.0 = a degree of facing " +
                  "error costs exactly a degree of match, which is the smallest weight that stops a 30 deg " +
                  "mis-face from locking (palm_sim.py section 4).")]
-        public float orientationWeightK = TunedOrientationWeightK;
+        public float orientationWeightK = 1f;
         [Tooltip("Clamp on the orientation penalty. 0 = uncapped. See palm-tuning.md section 5 for why " +
                  "the shipped value is uncapped.")]
         public float orientationPenaltyCapDeg = 0f;
 
         [Header("Near-miss (the product's signature behaviour)")]
         public bool nearMissEnabled = true;
-        [Tooltip("Fire only when the wrong shape is at least this close, in degrees.")]
-        public float nearMissMaxDeg = TunedNearMissMaxDeg;
-        [Tooltip("Minimum seconds between two near-miss messages.")]
+        [Tooltip("Minimum seconds between two near-miss messages. It has to stay rare to stay valuable.")]
         public float nearMissCooldownSeconds = 20f;
-        [Tooltip("Most near-miss messages in one session. After this the matcher stays silent, because " +
-                 "a hint that keeps arriving stops being a hint and becomes noise. 0 = no cap.")]
-        public int nearMissSessionCap = 3;
-        [Tooltip("Confidence required for the preceding window before we are allowed to name a shape.")]
-        public float nearMissConfidenceWindowSeconds = 0.4f;
-        [Tooltip("How much closer the wrong shape must be than the target before we name it.")]
+        [Tooltip("The stable window (P3.2): BOTH conditions must hold for this long before the app may " +
+                 "name a shape - the confidence above the floor, AND the same shape being the one it " +
+                 "would name. 400 ms is the task's figure and it is the difference between 'the rule is " +
+                 "satisfied right now' and 'the hand is still doing that'.")]
+        public float nearMissStableSeconds = 0.4f;
+        [Tooltip("How much closer the wrong shape must be than the target before we name it. The rule " +
+                 "itself is band-based (NearMiss.cs): exactly one other shape inside the lock band, " +
+                 "the target outside it. This margin only rejects a near-tie, which the shipped set " +
+                 "cannot produce - every pair is at least 26 deg apart.")]
         public float nearMissMarginDeg = 2f;
 
         // ---- events ----
@@ -131,39 +117,16 @@ namespace Signspace.Matching
         float[] _jointAngles = new float[JointNames.Canonical.Length];   // P2.2: per-joint, for the overlay
         readonly HoldTimer _hold = new HoldTimer();
         float _hysteresisTimer, _nearMissCooldown, _goodConfidenceTimer;
-        int _nearMissCount;
+        string _nearMissCandidateId;
+        float _nearMissCandidateSeconds;
+        string[] _shapeIds;
+        float[] _shapeDegrees;
         Band _band = Band.Warming, _pendingBand = Band.Warming;
         bool _locked, _paused;
         float _lastConfidence = 1f;
         HandPose _target;
 
         public Band CurrentBand => _band;
-
-        /// <summary>How many near-miss messages this session has produced. The cap is visible so the
-        /// off switch and the cap can be checked by a test rather than by memory.</summary>
-        public int NearMissesThisSession => _nearMissCount;
-
-        /// <summary>
-        /// Runtime off switch (G3). Setting this false silences the naming immediately; setting it
-        /// true does NOT restore the session's spent budget - the cap is per session, so a user cannot
-        /// flip it off and on to farm hints. Use ResetNearMissSession() to start a genuinely new
-        /// session (a new play space), never to make a test pass.
-        /// </summary>
-        public bool NearMissEnabled
-        {
-            get { return nearMissEnabled; }
-            set
-            {
-                nearMissEnabled = value;
-                if (!value) _nearMissCooldown = 0f;
-            }
-        }
-
-        public void ResetNearMissSession()
-        {
-            _nearMissCount = 0;
-            _nearMissCooldown = 0f;
-        }
 
         /// <summary>What the hold is doing right now: Idle, Holding, Coasting, Stalled, Locked.
         /// Named Phase rather than State so it cannot be confused with the type in expressions.</summary>
@@ -212,6 +175,45 @@ namespace Signspace.Matching
         /// <summary>What the palm term added to the distance this frame: `k * max(0, O - slack)`.</summary>
         public float OrientationPenaltyDegrees { get; private set; }
 
+        /// <summary>How long the current candidate shape has held. The second half of the stable window.</summary>
+        public float NearMissCandidateSeconds => _nearMissCandidateSeconds;
+
+        /// <summary>Near-misses delivered this session. The rate cap keeps it low; this proves it.</summary>
+        public int NearMissesThisSession { get; private set; }
+
+        /// <summary>
+        /// Whether the app may name shapes at all. Persistent: this is the switch P6.5 surfaces as the
+        /// sixth accessibility toggle, so it is stored with the save data and not just on the component.
+        /// </summary>
+        public void SetNearMissEnabled(bool enabled)
+        {
+            nearMissEnabled = enabled;
+            if (save != null)
+            {
+                save.Data.nearMissEnabled = enabled;
+                save.Save();
+            }
+        }
+
+        /// <summary>
+        /// The off switch as a property. Assigning goes through <see cref="SetNearMissEnabled"/> so a
+        /// toggle written by the in-space switch (P3.2/P6.5) is persisted, not just held in memory.
+        /// </summary>
+        public bool NearMissEnabled
+        {
+            get => nearMissEnabled;
+            set => SetNearMissEnabled(value);
+        }
+
+        /// <summary>Optional. When assigned, the off switch survives a relaunch (P3.2, used by P6.5).</summary>
+        public SaveSystem save;
+
+        /// <summary>
+        /// This frame's near-miss verdict, including the reason when it stays silent. Exposed so the
+        /// overlay and the tests can tell "nothing to say" from "we chose not to speak".
+        /// </summary>
+        public NearMissDecision NearMissState { get; private set; }
+
         /// <summary>Palm tilt and roll, for the overlay. Diagnostics only - never part of the distance.</summary>
         public float PalmSwingDegrees { get; private set; }
         public float PalmTwistDegrees { get; private set; }
@@ -243,6 +245,15 @@ namespace Signspace.Matching
             if (!string.IsNullOrEmpty(problem))
                 Debug.LogError("[Matcher] JointWeights are unusable (" + problem + "); every distance " +
                                "will be wrong, and probably zero.");
+        }
+
+        void Start()
+        {
+            // P3.2: the near-miss off switch is a setting, not a session whim. Read in Start, not Awake,
+            // because SaveSystem loads its file in Awake and the order between two components is not
+            // guaranteed - reading first would silently restore the default over the user's choice.
+            // P6.5 surfaces this switch in-space as the sixth accessibility toggle.
+            if (save != null && save.Data != null) nearMissEnabled = save.Data.nearMissEnabled;
         }
 
         /// <summary>Push the inspector values onto the state machine. Called in Awake and on validate.</summary>
@@ -277,10 +288,6 @@ namespace Signspace.Matching
             float d = PoseMath.Distance(weights, _target.LocalRotations, localRotations,
                                         _fingerAngles, _jointAngles,
                                         out float wristAngle, out float flatDegrees);
-            // The finger term alone. The near-miss must diagnose the SHAPE, so it compares this and not
-            // the palm-inclusive total below: a correct handshape with a twisted wrist must never be
-            // renamed as a different sign (MATCH-ALGORITHM.md section 6).
-            float fingerDistance = d;
             DistanceDegrees = d;
             FlatDegrees = flatDegrees;
             UpdateWorstJoints();
@@ -297,8 +304,7 @@ namespace Signspace.Matching
             // behaviour the task wants: the facing error is added to the shape error, weighted, so the
             // two contribute independently and neither can hide the other.
             float orientation = PalmOrientation.ErrorDegrees(_target.LocalRotations, localRotations);
-            PalmOrientation.TryBasis(localRotations, out _, out PalmBasisSource basisSource,
-                                     out string basisNote);
+            PalmOrientation.TryBasis(localRotations, out _, out PalmBasisSource basisSource, out string basisNote);
             BasisNote = basisNote;
             PalmOrientation.Components(_target.LocalRotations, localRotations,
                                        out float palmSwing, out float palmTwist);
@@ -313,27 +319,29 @@ namespace Signspace.Matching
             OrientationPenaltyDegrees = orientationPenalty;
             d += orientationPenalty;
 
-            // best OTHER shape -- this is what makes the near-miss possible
-            float bestOther = float.PositiveInfinity;
-            float secondBestOther = float.PositiveInfinity;
-            string bestOtherId = null;
-
+            // Distance to EVERY shape, not "the target and then a guess at the nearest". 12 shapes x 26
+            // joints is nothing, and it is what makes the near-miss able to say which shape the hand
+            // actually made (P3.1).
+            if (_shapeIds == null || _shapeIds.Length != shapes.Count)
+            {
+                _shapeIds = new string[shapes.Count];
+                _shapeDegrees = new float[shapes.Count];
+            }
             for (int i = 0; i < shapes.Count; i++)
             {
                 var s = shapes[i];
-                if (s.Id == _target.Id || s.JointCount != _target.JointCount) continue;
-                float od = PoseMath.Distance(weights, s.LocalRotations, localRotations,
-                                             null, null, out _, out _);
-                if (od < bestOther)
-                {
-                    secondBestOther = bestOther;
-                    bestOther = od;
-                    bestOtherId = s.Id;
-                }
-                else if (od < secondBestOther)
-                {
-                    secondBestOther = od;
-                }
+                _shapeIds[i] = s.Id;
+                _shapeDegrees[i] = (s.Id == _target.Id || s.JointCount != _target.JointCount)
+                    ? float.PositiveInfinity
+                    : PoseMath.Distance(weights, s.LocalRotations, localRotations, null, null, out _, out _);
+            }
+
+            float bestOther = float.PositiveInfinity;
+            string bestOtherId = null;
+            for (int i = 0; i < shapes.Count; i++)
+            {
+                if (_shapeIds[i] == _target.Id) continue;
+                if (_shapeDegrees[i] < bestOther) { bestOther = _shapeDegrees[i]; bestOtherId = _shapeIds[i]; }
             }
             BestOtherId = bestOtherId;
             BestOtherDegrees = bestOther;
@@ -388,30 +396,34 @@ namespace Signspace.Matching
             _goodConfidenceTimer = trustworthy ? _goodConfidenceTimer + dt : 0f;
             _nearMissCooldown = Mathf.Max(0f, _nearMissCooldown - dt);
 
-            // Ambiguity is not a diagnosis. Two conditions, both required:
-            //   1. the winner must be strictly closer than the runner-up, so a
-            //      hand sitting between two shapes never gets a verdict;
-            //   2. the winner must beat the TARGET by a margin, so being
-            //      marginally closer to the wrong shape is not a diagnosis.
-            // Note this is NOT "how many shapes fall inside the window": with
-            // U and V exactly 26 deg apart, a perfect U is inside the window
-            // twice, and counting qualifiers would silence a correct call.
-            bool unambiguous = bestOther < secondBestOther;
-            bool clearlyCloser = bestOther < fingerDistance - nearMissMarginDeg;
+            // The rule lives in NearMiss.cs; this decides only whether the app is allowed to speak yet.
+            var nearMiss = NearMiss.Evaluate(d, _target.Id, _shapeIds, _shapeDegrees, shapes.Count,
+                                             lockedDeg, nearMissMarginDeg);
+            NearMissState = nearMiss;
 
-            if (nearMissEnabled && !_locked && bestOtherId != null
+            // Stability of the DECISION, not just of the tracking (P3.2's trap). A hand sweeping through
+            // the set satisfies the rule for a frame or two on every shape it passes; requiring the same
+            // shape to hold for the stable window is what stops that from becoming a stream of names.
+            if (nearMiss.Fires && nearMiss.ShapeId == _nearMissCandidateId)
+            {
+                _nearMissCandidateSeconds += dt;
+            }
+            else
+            {
+                _nearMissCandidateId = nearMiss.Fires ? nearMiss.ShapeId : null;
+                _nearMissCandidateSeconds = nearMiss.Fires ? dt : 0f;
+            }
+
+            if (nearMissEnabled && !_locked
                 && _band != Band.Locked
-                && bestOther <= nearMissMaxDeg
-                && bestOther < fingerDistance
-                && unambiguous
-                && clearlyCloser
-                && _goodConfidenceTimer >= nearMissConfidenceWindowSeconds
-                && _nearMissCooldown <= 0f
-                && (nearMissSessionCap <= 0 || _nearMissCount < nearMissSessionCap))
+                && nearMiss.Fires
+                && _goodConfidenceTimer >= nearMissStableSeconds
+                && _nearMissCandidateSeconds >= nearMissStableSeconds
+                && _nearMissCooldown <= 0f)
             {
                 _nearMissCooldown = nearMissCooldownSeconds;
-                _nearMissCount++;
-                OnNearMiss?.Invoke(bestOtherId, bestOther);
+                NearMissesThisSession++;
+                OnNearMiss?.Invoke(nearMiss.ShapeId, nearMiss.Degrees);
             }
         }
 

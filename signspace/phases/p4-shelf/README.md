@@ -1,7 +1,7 @@
 # P4 — Spatial shelf
 
 **Day 5 (Wed 11 Nov) · Budget 8 h · Gate:** G4 — Kill the app, relaunch — is the shelf still on the same real surface, with the same objects?
-**Status:** ⬜ Not started
+**Status:** 🔄 **P4.1 complete; P4.2 implemented, verification pending** — the selection rule and its two corrections, the launch log, and objects that fly to their own slots; P4.2–P4.3 verification and 3 further tasks to go
 
 ## Objective
 Make the room hold the user's progress: anchor a shelf to real furniture, let mastered shapes accumulate on it, and make it survive everything a judge can do to it.
@@ -13,9 +13,9 @@ The shelf is the only part of the product that survives the session, which makes
 
 | # | Task | Est | Workstream | Status |
 |---|---|---|---|---|
-| [P4.1](tasks/p4.1-shelf-anchor.md) | Anchor the shelf to a real surface | 2 h | W2 | ⬜ |
-| [P4.2](tasks/p4.2-objects.md) | Mastered shapes become shelf objects | 2 h | W1 | ⬜ |
-| [P4.3](tasks/p4.3-persistence.md) | Persistence across relaunch, reboot and room | 1.5 h | W2 | ⬜ |
+| [P4.1](tasks/p4.1-shelf-anchor.md) | Anchor the shelf to a real surface | 2 h | W2 | ✅ band + 60° yaw cone + capped area, seven rooms in `shelf_sim.py`; launch log per relaunch |
+| [P4.2](tasks/p4.2-objects.md) | Mastered shapes become shelf objects | 2 h | W1 | 🔄 Implemented: 4 families / 6 shapes, 12 slots, one idle Update; Unity and device verification pending |
+| [P4.3](tasks/p4.3-persistence.md) | Persistence across relaunch, reboot and room | 1.5 h | W2 | 🔄 Schema 3 and non-destructive room policy implemented; Unity/device matrix not run |
 | [P4.4](tasks/p4.4-plinth-fallback.md) | The plinth: never show an error, never depend on a surface | 1 h | W2 | ⬜ |
 | [P4.5](tasks/p4.5-passthrough-toggle.md) | Passthrough on/off comparison, built for the video | 45 min | W4 | ⬜ |
 | [P4.6](tasks/p4.6-fov-reflow.md) | Shelf reflow for narrow field of view | 1 h | W2 | ⬜ |
@@ -25,11 +25,11 @@ The shelf is the only part of the product that survives the session, which makes
 ## Inputs required before starting
 - MRUK proven (P1.6, P1.7)
 - Working lock event (P2.5)
-- Twelve placeholder object models
+- Twelve placeholder object models — *narrowed in P4.2 to four family silhouettes, because six shapes read as silhouettes and twelve unique models was three hours that bought nothing*
 - XR Simulator with the VR Glasses profile
 
 ## Outputs — the phase is done when all of these are true
-- [ ] A persistent, anchored shelf
+- [ ] A persistent, anchored shelf *(selection implemented; object verification pending; relaunch is P4.3)*
 - [ ] A plinth fallback that can never fail
 - [ ] Passthrough and FoV footage for the video
 
