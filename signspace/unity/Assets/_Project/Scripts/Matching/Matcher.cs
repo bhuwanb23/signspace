@@ -36,6 +36,21 @@ namespace Signspace.Matching
     /// </summary>
     public class Matcher : MonoBehaviour
     {
+        // ---- the tuned values: ONE source of truth ------------------------------------
+        //
+        // A serialised field in Main.unity beats a code default without a word of warning, so a
+        // threshold changed here alone changes nothing in the built app. SceneBuilder writes these
+        // constants onto the component explicitly, and BuildScript.VerifySceneTuning() fails the build
+        // when the scene's serialised copy disagrees. Change a number HERE, regenerate the scene, and
+        // let the build prove it stuck.
+        public const float TunedLockedDeg = 12f;
+        public const float TunedCloseDeg = 24f;
+        public const float TunedBandReleaseDeg = 2f;
+        public const float TunedHoldSeconds = 0.7f;
+        public const float TunedOrientationSlackDeg = 15f;
+        public const float TunedOrientationWeightK = 1f;
+        public const float TunedNearMissMaxDeg = 26f;
+
         [Header("Shape set")]
         [Tooltip("Shapes available this session. Order does not matter.")]
         public List<HandPose> shapes = new List<HandPose>();
@@ -49,20 +64,20 @@ namespace Signspace.Matching
 
         [Header("Bands (degrees)")]
         [Tooltip("Locked: this close to the target shape.")]
-        public float lockedDeg = 12f;
+        public float lockedDeg = TunedLockedDeg;
         [Tooltip("Close: recognisably near the target shape. Measured in band_sim.py: 24 leaves 2.0 deg "
                + "to the nearest accidental pair (U-V, 26.0), and a hand making that pair is told "
                + "'close' on 0.0% of frames.")]
-        public float closeDeg = 24f;
+        public float closeDeg = TunedCloseDeg;
         [Tooltip("Degrees of hysteresis on the way OUT of a band. Entering uses the plain edge. "
                + "2 deg removes the last of the edge flicker (band_sim.py: 4 changes/30 s -> 0).")]
-        public float bandReleaseDeg = 2f;
+        public float bandReleaseDeg = TunedBandReleaseDeg;
         [Tooltip("Band changes only after this long in the new state, so the meter never strobes.")]
         public float bandHysteresisSeconds = 0.15f;
 
         [Header("Hold")]
         [Tooltip("How long the shape must stay inside the locked band before it counts.")]
-        public float holdSeconds = 0.7f;
+        public float holdSeconds = TunedHoldSeconds;
         [Tooltip("Tracking below this confidence pauses the timer instead of resetting it.")]
         public float confidenceFloor = 0.7f;
         [Tooltip("A tracking dip shorter than this is FROZEN, not reset. Measured in hold_sim.py.")]
@@ -79,11 +94,11 @@ namespace Signspace.Matching
         [Tooltip("Palm facing error ignored up to this angle, so a naturally different resting wrist is " +
                  "not punished. Measured: wrist jitter for a correctly-facing hand has sd 1.4 deg and " +
                  "p99 6.4 deg (palm_sim.py), so 15 deg is ~10 sigma of noise.")]
-        public float orientationSlackDeg = 15f;
+        public float orientationSlackDeg = TunedOrientationSlackDeg;
         [Tooltip("k: how much a degree of palm error costs, beyond the slack. 1.0 = a degree of facing " +
                  "error costs exactly a degree of match, which is the smallest weight that stops a 30 deg " +
                  "mis-face from locking (palm_sim.py section 4).")]
-        public float orientationWeightK = 1f;
+        public float orientationWeightK = TunedOrientationWeightK;
         [Tooltip("Clamp on the orientation penalty. 0 = uncapped. See palm-tuning.md section 5 for why " +
                  "the shipped value is uncapped.")]
         public float orientationPenaltyCapDeg = 0f;
@@ -91,7 +106,7 @@ namespace Signspace.Matching
         [Header("Near-miss (the product's signature behaviour)")]
         public bool nearMissEnabled = true;
         [Tooltip("Fire only when the wrong shape is at least this close, in degrees.")]
-        public float nearMissMaxDeg = 26f;
+        public float nearMissMaxDeg = TunedNearMissMaxDeg;
         [Tooltip("Minimum seconds between two near-miss messages.")]
         public float nearMissCooldownSeconds = 20f;
         [Tooltip("Confidence required for the preceding window before we are allowed to name a shape.")]
@@ -177,9 +192,6 @@ namespace Signspace.Matching
         /// <summary>Why the knuckle plane was or was not used. Overlay only.</summary>
         public string BasisNote { get; private set; } = "not evaluated";
 
-        /// <summary>How much the orientation gate added to the distance this frame (0 when it agrees).</summary>
-        public float OrientationPenaltyDegrees { get; private set; }
-
         public string BestOtherId { get; private set; }
 
         /// <summary>Distance in degrees to <see cref="BestOtherId"/>.</summary>
@@ -251,7 +263,9 @@ namespace Signspace.Matching
             // behaviour the task wants: the facing error is added to the shape error, weighted, so the
             // two contribute independently and neither can hide the other.
             float orientation = PalmOrientation.ErrorDegrees(_target.LocalRotations, localRotations);
-            PalmOrientation.TryBasis(localRotations, out _, out PalmBasisSource basisSource, out BasisNote);
+            PalmOrientation.TryBasis(localRotations, out _, out PalmBasisSource basisSource,
+                                     out string basisNote);
+            BasisNote = basisNote;
             PalmOrientation.Components(_target.LocalRotations, localRotations,
                                        out float palmSwing, out float palmTwist);
             PalmSwingDegrees = palmSwing;

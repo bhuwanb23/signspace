@@ -161,7 +161,7 @@ namespace Signspace.UI
                 if (halo.sharedMaterial != null && halo.sharedMaterial.HasProperty(ColorId))
                     _block.SetColor(ColorId, _current);
                 if (halo.sharedMaterial != null && halo.sharedMaterial.HasProperty(EmissionId))
-                    _block.SetColor(EmissionId, _current * glow);
+                    _block.SetColor(EmissionId, _current * glowRatio);
                 halo.SetPropertyBlock(_block);
             }
 

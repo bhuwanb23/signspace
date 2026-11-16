@@ -39,6 +39,11 @@ namespace Signspace.Editor
         {
             Directory.CreateDirectory(ScenesFolder);
 
+            // Import anything that arrived with this checkout BEFORE the loads below. A batch build
+            // starts with a cold asset database, and a committed prefab that has not been imported yet
+            // loads as null - which silently omitted the lock payoff from the scene once already.
+            AssetDatabase.Refresh();
+
             var scene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(
                 UnityEditor.SceneManagement.NewSceneSetup.EmptyScene,
                 UnityEditor.SceneManagement.NewSceneMode.Single);
@@ -89,6 +94,24 @@ namespace Signspace.Editor
                 Debug.LogWarning("[SceneBuilder] Matching/Weights.asset not found; the matcher will use " +
                                  "its runtime defaults. Run SIGNSPACE/P2.2 Write weights asset from defaults.");
             }
+
+            // P2.3/P2.6: write the tuned thresholds EXPLICITLY. A serialised value in the scene beats the
+            // code default silently, so this scene once shipped closeDeg 20 and slack 20 while the code
+            // said 24 and 15 - a 4 deg band error that nothing reported. Writing every tuned number here
+            // (rather than trusting a default) plus BuildScript.VerifySceneTuning() is the fix.
+            matcher.lockedDeg = Signspace.Matching.Matcher.TunedLockedDeg;
+            matcher.closeDeg = Signspace.Matching.Matcher.TunedCloseDeg;
+            matcher.bandReleaseDeg = Signspace.Matching.Matcher.TunedBandReleaseDeg;
+            matcher.holdSeconds = Signspace.Matching.Matcher.TunedHoldSeconds;
+            matcher.orientationSlackDeg = Signspace.Matching.Matcher.TunedOrientationSlackDeg;
+            matcher.orientationWeightK = Signspace.Matching.Matcher.TunedOrientationWeightK;
+            matcher.nearMissMaxDeg = Signspace.Matching.Matcher.TunedNearMissMaxDeg;
+            matcher.SyncHoldTimer();
+            Debug.Log("[SceneBuilder] matcher tuning <- locked " + matcher.lockedDeg.ToString("0.#") +
+                      " / close " + matcher.closeDeg.ToString("0.#") +
+                      " / release " + matcher.bandReleaseDeg.ToString("0.#") +
+                      " / slack " + matcher.orientationSlackDeg.ToString("0.#") +
+                      " / hold " + matcher.holdSeconds.ToString("0.00") + " s");
             // The overlay lives on its OWN child object, not on the matcher's object: DevOnly removes
             // the object it is attached to from a release build, and attaching it to the Matcher would
             // delete the matcher from the submission build - a spectacularly quiet way to ship nothing.
@@ -147,6 +170,14 @@ namespace Signspace.Editor
             // Instantiated from the committed prefab so the timing lives in one place (the prefab) and
             // the scene only wires what it alone can know: the matcher, the tracked hand, the shelf.
             var payoffPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/LockPayoff.prefab");
+            if (payoffPrefab == null)
+            {
+                // The prefab is committed, but a cold import can still miss it. Regenerate rather than
+                // build a scene with no payoff: the payoff is half of G2 criterion 5.
+                Debug.LogWarning("[SceneBuilder] LockPayoff.prefab did not load; regenerating it.");
+                LockPayoffBuilder.Build();
+                payoffPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/LockPayoff.prefab");
+            }
             Signspace.Core.LockPayoff payoff = null;
             if (payoffPrefab != null)
             {
@@ -154,7 +185,7 @@ namespace Signspace.Editor
                 payoff = payoffGo.GetComponent<Signspace.Core.LockPayoff>();
                 payoff.matcher = matcher;
                 payoff.save = saveGo.GetComponent<Signspace.Matching.SaveSystem>();
-                payoff.shelf = Object.FindFirstObjectByType<Signspace.Spatial.ShelfAnchor>();
+                payoff.shelf = UnityEngine.Object.FindFirstObjectByType<Signspace.Spatial.ShelfAnchor>();
                 payoff.referenceHand = refGo.transform;
                 payoff.referenceHandVisual = visualGo;
                 if (payoff.flyFrom == null) payoff.flyFrom = refGo.transform;

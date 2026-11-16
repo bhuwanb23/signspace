@@ -259,7 +259,9 @@ namespace Signspace.Spatial
         /// </summary>
         public void Place(bool offerOnly)
         {
-            SurfaceCandidate surface;
+            // `default`: the short-circuit leaves `surface` unassigned when _finder is null, which the
+            // compiler correctly refuses to let us read after the `found` check.
+            SurfaceCandidate surface = default;
             bool found = _finder != null && _finder.TryGetPrimary(out surface);
 
             if (!found)
