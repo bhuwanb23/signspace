@@ -13,8 +13,8 @@ The legitimacy phase, and the mitigation for the only fatal risk in the project.
 
 | # | Task | Est | Workstream | Status |
 |---|---|---|---|---|
-| [P5.1](tasks/p5.1-recruit-and-consent.md) | Recruit the signer and get consent signed | 2 h | W3 | ⬜ |
-| [P5.2](tasks/p5.2-protocol.md) | Write the capture protocol before the session | 1.5 h | W3 | ⬜ |
+| [P5.1](tasks/p5.1-recruit-and-consent.md) | Recruit the signer and get consent signed | 2 h | W3 | 🟡 artefacts prepared; human steps remain |
+| [P5.2](tasks/p5.2-protocol.md) | Write the capture protocol before the session | 1.5 h | W3 | ✅ |
 | [P5.3](tasks/p5.3-capture-session.md) | Run the capture session | 3 h | W3 | ⬜ |
 | [P5.4](tasks/p5.4-retarget-clean.md) | Retarget and clean the takes into shipped poses | 3 h | W2 | ⬜ |
 | [P5.5](tasks/p5.5-credits.md) | Put the signer in the product, not in the small print | 1 h | W4 | ⬜ |
