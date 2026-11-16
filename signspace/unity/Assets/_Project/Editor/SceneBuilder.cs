@@ -244,6 +244,17 @@ namespace Signspace.Editor
             // re-homes the plinth onto the shelf.
             HonestMirrorBuilder.BuildHonestMirror();
 
+            // ---- P4.5: the passthrough comparison switch ----------------------------------
+            // One key, and only in a development build: the pair of clips has to be the same scene
+            // with one variable changed, not two staged shots. DevOnly removes it from a release
+            // build, so a judge never finds a debug key in the product.
+            var toggleGo = GameObject.Find("PassthroughToggle");
+            if (toggleGo == null) toggleGo = new GameObject("PassthroughToggle");
+            if (toggleGo.GetComponent<Signspace.UI.PassthroughToggle>() == null)
+                toggleGo.AddComponent<Signspace.UI.PassthroughToggle>();
+            if (toggleGo.GetComponent<Signspace.Core.DevOnly>() == null)
+                toggleGo.AddComponent<Signspace.Core.DevOnly>();
+
             // ---- P1.2: the grab test rig ---------------------------------------------------
             // One floating cube, a PinchGrabber per hand, the trial logger and the no-fallback guard.
             // This is a SPIKE rig, not content: P2 replaces the cube with the first real shape. It

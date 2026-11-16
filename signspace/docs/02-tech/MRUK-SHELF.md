@@ -192,7 +192,7 @@ cost remains unmeasured.
 dropped** — is measured on a device and has not been measured yet. If the capture says no, the switch
 goes off and the shelf is still, which is a worse-looking shelf and an unchanged product.
 
-## 5. Persistence (P4.3 — implemented, not device verified)
+## 5. Persistence (P4.3 — desk-verified, not device verified)
 
 `SaveSystem` schema 3 stores `roomId` (room UUID), `anchorId` (surface GUID), the shelf's
 **anchor-local** `localPos` and `localRot`, `layoutVariant` (`grid-6x2-v1`), ordered `unlocked`
@@ -213,6 +213,18 @@ A temporary file and backup are used for writes, but kill/power-loss behaviour o
 verified. `phases/p4-shelf/persistence-matrix.md` specifies the device tests. Static source checks are
 not proof of actual serialisation, MRUK room changes, physical position, or a headset reboot.
 
+**What has actually been run (16 Nov 2026, Unity 6000.3.28f1).** `SIGNSPACE/P4.3 Check persistence`
+passes: schema 1/2/3 migration, idempotent unlocks, rejected replacement, all four room branches, and
+the refusal to overwrite a corrupt or future file. `PersistenceRelaunch` then loads the same file in
+**five separate Unity processes**: each restores `U,B,C` in order at the same anchor-local position,
+three objects and no duplicates. `LeaveRoom` reports `DifferentRoom` with the plinth, keeps the home
+UUIDs and saves a fourth shape unlocked away from home; `ReturnRoom` restores the home anchor with
+`U,B,C,W` and four objects. That probe found a real defect — a second restore in one frame duplicated
+objects because `Destroy` is deferred — now fixed by deactivating before destroying.
+
+It is still not a device pass: the finder is fake, the UUIDs are fixed, and no Android process, MRUK
+localisation, physical surface or reboot took part.
+
 ## 6. The plinth — the fallback that never shows an error
 
 `P4.4`: *"Fallback: no surface found → virtual plinth that reads as anchored. Never shows an error,
@@ -223,11 +235,19 @@ never crashes."*
 | A horizontal surface is found | the shelf, on it |
 | No horizontal surface, but there is room | a **virtual plinth**: a soft, shadow-catching platform at hip height, in the same position the shelf would have been |
 | No surface and no room | the plinth, smaller, closer |
-| MRUK is still scanning | the plinth, fading in — **the shelf fades in over it when a surface appears** |
+| MRUK is still scanning | the plinth, immediately; if a surface appears later, a small bead **offers** it and the shelf does not move until the bead is pinched |
 
-**The plinth is not a degraded mode. It is a designed object.** It has a gradient that catches light
-so it reads as *placed*, and it sits in the identical position the shelf would. The user never sees
-a message, never sees a spinner, never sees "no surface detected".
+**The plinth is not a degraded mode. It is a designed object.** `Prefabs/Plinth.prefab` (built by
+`PlinthBuilder`) has four parts: a top carrying a generated front-to-back gradient, a darker lip for
+thickness, a soft transparent shadow (queue 3000, ZWrite off) and a thin seam that catches light. The
+prefab's local Y=0 is its top, it is instantiated 1 cm under the plate so the plate sits on it with
+no gap, and it is tilted 4°: a perfectly level slab reads as UI, a slightly tilted one reads as an
+object somebody put there. The user never sees a message, a spinner or "no surface detected".
+
+**A surface that appears later is offered, never applied.** A small bead on the plate's right edge
+(`SurfaceOffer`) is hidden until there is an offer; only a pinch inside 14 cm accepts it. The offer
+is raised only when there is no saved home, so a surface in another room cannot capture the home
+placement — the same non-destructive rule as §5.
 
 **The plinth keeps the same anchor identity as the shelf** — if MRUK later finds a surface, the
 objects move onto it rather than being re-earned.
@@ -239,10 +259,23 @@ against Quest's ~110°×96°.
 
 | | Quest | VR Glasses |
 |---|---|---|
-| Shelf layout | a **row** along the surface, six slots | a **tray**: one row, pulled closer, tilted up ~20° |
-| Slot spacing | generous | tight |
-| Labels | floating labels under each slot | labels suppressed below a threshold — at this FoV a label is unreadable and in the way |
+| Shelf layout | **6 columns × 2 rows** on the surface | **4 columns × 3 rows**, pulled 4 cm closer, tilted up 20° |
+| Grid angular width | 51.6° at 0.45 m | 35.1° |
+| Widest object edge | 27.5° (at the 55° cone edge) | **22.2°** (5.3° spare) |
+| Object size | unchanged | **unchanged** — narrowing the grid, never scaling the objects |
 | Everything else | unchanged | unchanged |
+
+`ShelfReflow` measures the display rather than guessing: horizontal FoV from the eye camera's
+vertical FoV and aspect, distance from the head in the shelf's own frame, width as
+`2·atan(halfWidth / distance)`. Below **85°** horizontal FoV it folds into the tray. The threshold is
+FoV, not a fixed 50°: the same 51.6° grid is comfortable at 110° and cramped at 70°, so the display
+is the honest variable. The 50° cap from P4.6 is still enforced as an assertion on the tray's width.
+`ShelfAnchor.SetLayout` carries the objects in world space, rebuilds the slots, tilts and pulls the
+tray, and narrows the plate. The layout is not persisted — `layoutVariant` records the grid the save
+was written against, and the display decides how it is presented today.
+
+`showSafeCone` draws the 55° cone for the video and is off in the scene. The transition is eased over
+0.35 s.
 
 **Reflow, not crop.** The shelf becomes a tray. Nothing is cut off, because cropping the shelf is
 cropping the reward.
@@ -289,9 +322,11 @@ Every row must behave. No row may show an error.
 ## 11. Output / done when
 - [x] which MRUK APIs, and what triggers detection
 - [x] behaviour on a lap, a bed, a tray table, an unmade room
-- [ ] anchor persistence across sessions and room transitions verified on device
-- [x] the fallback that never shows an error
-- [x] the FoV reflow at 70°×66°
+- [ ] anchor persistence across sessions and room transitions verified on device *(desk: 5/5
+  relaunches and leave/return pass; headset rows open)*
+- [x] the fallback that never shows an error *(prefab + silent routing + pinch-only offer, editor check
+  PASS; dark room open)*
+- [x] the FoV reflow at 70°×66° *(measured geometry, editor check PASS; visual legibility open)*
 - [x] the test matrix
 - [x] **the selection contract, with weights** (§3.1) and the two corrections P4.1 found
 - [x] **the launch log** (§3.3) — every launch, one line, one writer

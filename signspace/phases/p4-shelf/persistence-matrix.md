@@ -1,8 +1,11 @@
 # P4.3 — persistence test matrix
 
-**Status: NOT RUN on a headset. G4 remains open.** No Unity editor or Quest was available in this
-workspace. Rows below are a procedure and evidence sheet, not results. Do not infer a pass from
-source checks or from a JSONL line alone.
+**Status: desk rows RUN and PASS; every headset row NOT RUN. G4 remains open.**
+
+Unity 6000.3.28f1 was available and ran the editor check and a cross-process relaunch probe on
+16 Nov 2026. That proves the save file, schema and room policy across process boundaries; it does
+not prove an Android launch, MRUK, a physical anchor or a reboot. The device rows below stay NOT RUN
+and must not be inferred from the desk rows.
 
 ## Contract under test
 
@@ -44,6 +47,30 @@ source checks or from a JSONL line alone.
 5. A failed or ambiguous row stays FAIL/BLOCKED, with evidence and diagnosis. Do not clear app data
    between the five relaunches. A force-stop or remove-from-recents counts as kill; record which.
 
+## Desk evidence — 16 Nov 2026 (editor, not a headset)
+
+Commands, all `-batchmode -quit`, each `Verify`/`Leave`/`Return` a **separate Unity process**:
+
+```
+Unity -executeMethod Signspace.Editor.PersistenceRelaunch.Init
+Unity -executeMethod Signspace.Editor.PersistenceRelaunch.Verify      # ×5, one process each
+Unity -executeMethod Signspace.Editor.PersistenceRelaunch.LeaveRoom
+Unity -executeMethod Signspace.Editor.PersistenceRelaunch.ReturnRoom
+```
+
+| ID | What the probe does | Result | Measured output |
+|---|---|---|---|
+| desk-A0 | Write placement (room UUID, anchor GUID, anchor-local pos/rot), unlock U, B, C | **PASS** | `schema 3, unlock order U,B,C`; file written to `%TEMP%/signspace-p43-relaunch/save.json` |
+| desk-A1–A5 | Load that file in a fresh process, resolve through the real `ResolveForCurrentRoom`, restore | **PASS 5/5** | `restore 1..5, order U,B,C, objects 3, localPos (0.120, -0.030, 0.210)`; `restoreCount` advanced once per process |
+| desk-B1 | Launch in a different room UUID | **PASS** | `DifferentRoom`, not on a surface, no anchor claimed, 3 objects kept, home room/anchor unchanged, `restoreCount` not advanced |
+| desk-B2 | Unlock `W` away from home, then reload the file | **PASS** | order `U,B,C,W`, 4 timestamps, home room/anchor still `1111…`/`3333…` |
+| desk-B4 | Launch back in the home room, fresh process | **PASS** | `Restored`, parented to the home anchor, local pos/rot unchanged, order `U,B,C,W`, 4 objects, no duplicates |
+| desk-C4/C5 | Schema 1/2 migration, unknown/newer schema, corrupt JSON | **PASS** | via `SIGNSPACE/P4.3 Check persistence`; order retained, historic timestamps empty, placement untrusted for schema 1, future/corrupt files never overwritten |
+| desk-fix | Second restore in one frame | **PASS after fix** | was `6` objects for 3 shapes; now `3`. Cause: deferred `Destroy`; fix: deactivate before destroy, used by restore, slot replacement and adoption |
+
+**These rows are not a device pass.** The finder is fake, the UUIDs are fixed, and no Android process,
+MRUK localisation, physical surface or reboot took part. A1–A6 on a headset are still what G4 asks for.
+
 ## Device matrix
 
 | ID | Action | Expected | Result | Evidence / observed offset, IDs, order, notes |
@@ -70,11 +97,13 @@ source checks or from a JSONL line alone.
 exercise the defined global-progress policy. C rows expose degraded-case risks and should be run
 before claiming robustness. Fill actual evidence before changing the task's acceptance boxes.
 
-## Non-device checks available now
+## Non-device checks, as actually run
 
-- `python3 scripts/test_persistence_contract.py`: 4 static source contract checks passed; not a
-  substitute for invoking C# or testing MRUK. The four changed C# files also parsed without syntax
-  errors using tree-sitter; this is not a Unity compilation or API compatibility test.
-- `SIGNSPACE/P4.3 Check persistence`: editor integration check for the actual save code and fake
-  room finder; **not run here**. It cannot verify MRUK, OS file replacement, tracking or a reboot.
-- Prior P4.2 static wiring/budget checks and P4.1 selection simulator can be rerun separately.
+- `python3 scripts/test_persistence_contract.py` — **PASS** (4 static source checks; not C# execution).
+- `SIGNSPACE/P4.3 Check persistence` — **PASS** in Unity 6000.3.28f1, 16 Nov 2026. Cannot verify MRUK,
+  OS file replacement, tracking or a reboot.
+- `PersistenceRelaunch` — **PASS** for Init, Verify ×5, LeaveRoom, ReturnRoom (details above). Each run
+  is a separate Unity process, so statics and loaded assemblies cannot carry state between them.
+- `python3 scripts/shelf_sim.py`, `scripts/shelf_budget.py`, `scripts/test_shelf_wiring.py` — **PASS**
+  (P4.1/P4.2, rerun unchanged by this task).
+- APK **v13** built from this tree (`sha256 0445267f…`); no device launch was performed with it.

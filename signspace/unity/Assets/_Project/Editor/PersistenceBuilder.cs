@@ -107,11 +107,30 @@ namespace Signspace.Editor
 
             }
 
-            var plinth = FindOrMake(shelfGo.transform, "Plinth", PrimitiveType.Cube);
-            plinth.transform.localScale = new Vector3(0.46f, 0.02f, 0.14f);
-            plinth.transform.localPosition = new Vector3(0f, -0.03f, 0f);
-            Tint(plinth, new Color(0.28f, 0.26f, 0.24f));
-            plinth.SetActive(false);   // ShelfAnchor turns it on when there is no surface
+            // ---- 4a. the plinth, as a designed object (P4.4) --------------------------------
+            // A cube with a tint was enough to prove the fallback path in P1.7. It is not enough to
+            // hand a judge: the plinth has to look like something the room could contain. The
+            // prefab owns its gradient, its lip and its shadow, and its local y=0 is its top.
+            var oldPlinth = shelfGo.transform.Find("Plinth");
+            if (oldPlinth != null) Object.DestroyImmediate(oldPlinth.gameObject);
+
+            var plinthPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlinthBuilder.PrefabPath);
+            if (plinthPrefab == null) plinthPrefab = PlinthBuilder.Build();
+            GameObject plinth = null;
+            if (plinthPrefab != null)
+            {
+                plinth = (GameObject)PrefabUtility.InstantiatePrefab(plinthPrefab, shelfGo.transform);
+                plinth.name = "Plinth";
+                plinth.transform.localRotation = Quaternion.Euler(4f, 0f, 0f);
+                // The plate's underside is at -0.01; the prefab's top is at 0. Contact, no gap.
+                plinth.transform.localPosition = new Vector3(0f, -0.01f, 0f);
+                plinth.SetActive(false);   // ShelfAnchor turns it on when there is no surface
+            }
+            else
+            {
+                Debug.LogWarning("[PersistenceBuilder] could not build the plinth prefab; the fallback " +
+                                 "will be the bare shelf with no platform.");
+            }
 
             var anchor = shelfGo.GetComponent<ShelfAnchor>();
             if (anchor == null) anchor = shelfGo.AddComponent<ShelfAnchor>();
@@ -121,6 +140,7 @@ namespace Signspace.Editor
             anchor.userHead = head;
             anchor.shelfRoot = shelfGo.transform;
             anchor.plinthRoot = plinth;
+            anchor.plateRoot = plate.transform;
 
             // ---- 4b. the shelf's objects and its breathing (P4.2) ---------------------------
             // One owner for the idle: twelve objects each with their own Update is the trap the task
@@ -150,6 +170,46 @@ namespace Signspace.Editor
             if (idle == null) idle = shelfGo.AddComponent<ShelfIdle>();
             anchor.idle = idle;
             anchor.RefreshSlots();
+
+            // ---- 4c. the quiet surface offer (P4.4 step 3) ---------------------------------
+            // A bead on the plate's right edge, hidden until a surface appears after launch. It is
+            // the only thing that can accept the offer, so nothing ever migrates on its own.
+            var offerGo = shelfGo.transform.Find("SurfaceOffer");
+            Transform offerRoot = offerGo;
+            if (offerRoot == null)
+            {
+                var beadRoot = new GameObject("SurfaceOffer");
+                beadRoot.transform.SetParent(shelfGo.transform, false);
+                beadRoot.transform.localPosition = new Vector3(0.15f, 0.035f, 0.02f);
+
+                var bead = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                bead.name = "Bead";
+                bead.transform.SetParent(beadRoot.transform, false);
+                bead.transform.localScale = Vector3.one * 0.018f;
+                var beadCollider = bead.GetComponent<Collider>();
+                if (beadCollider != null) Object.DestroyImmediate(beadCollider);
+                var beadRenderer = bead.GetComponent<Renderer>();
+                if (beadRenderer != null)
+                    beadRenderer.sharedMaterial = BuildMaterials.Get(
+                        BuildMaterials.Folder + "/SurfaceOffer.mat", new Color(0.55f, 0.85f, 0.95f));
+
+                var offer = beadRoot.AddComponent<SurfaceOffer>();
+                offer.shelf = anchor;
+                offer.visual = bead;
+                offerRoot = beadRoot.transform;
+            }
+            else
+            {
+                var offer = offerRoot.GetComponent<SurfaceOffer>();
+                if (offer != null) offer.shelf = anchor;
+            }
+
+            // ---- 4d. measured FoV reflow (P4.6) --------------------------------------------
+            var reflow = shelfGo.GetComponent<ShelfReflow>();
+            if (reflow == null) reflow = shelfGo.AddComponent<ShelfReflow>();
+            reflow.shelf = anchor;
+            reflow.head = head;
+            reflow.showSafeCone = false;      // P4.6 turns this on for the video, then removes it
 
             if (includeProbe)
             {

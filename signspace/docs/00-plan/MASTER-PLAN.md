@@ -322,7 +322,7 @@ Update this table at the end of every working day. It is the only place progress
 | P1 De-risk spike | ⬜ Not started | | | P1.5 needs a headset in hand. Everything else can be rehearsed in Meta XR Simulator |
 | P2 Core loop | 🟡 Built, not yet on a device | 15 Nov | — | Matcher, pose format, loader and shapes exist and are measured offline. **The metric had to change — v1 could not see finger spread** |
 | P3 Feedback layer | 🟡 Rule implemented | 15 Nov | — | The near-miss now enforces "ambiguity is not a diagnosis" (strictly closer than the runner-up, and by a margin) — the v1 code did not |
-| P4 Spatial shelf | ⬜ Not started | | | Save system written; MRUK binding still to do |
+| P4 Spatial shelf | 🟡 Built and desk-verified — **P4.1–P4.6**, G4 open | 16 Nov | — | Save schema 3 restores across five processes and survives a leave/return; plinth + pinch-only surface offer; dev-only passthrough switch; measured FoV reflow. **Owed: headset relaunch/reboot, real MRUK rooms, the two clips, the FoV capture** |
 | P5 Content & capture | 🔄 Re-scoped | 14 Nov | — | **Poses authored from published references today, so the signer call is ONE call, not two** (ADR-007) |
 | P6 Gaze & accessibility | ⬜ Not started | | | **No eye tracking on Quest 3/3S** — gaze is evidenced through the VR Glasses simulator profile |
 | P7 Polish | ⬜ Not started | | | |

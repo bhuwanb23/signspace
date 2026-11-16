@@ -257,6 +257,7 @@ honours a clear, specific disclosure far more than a vague one.
 | 16 Nov 2026 | P2 integrated: the v3 metric, the palm term, the bands, the hold timer, the left-hand policy, the schema v2, and ~20 new C# files — none of which had ever been compiled. Restored the Unity engine modules that had been dropped from `manifest.json` (144 compile errors). | agent |
 | 16 Nov 2026 | **Integration pass.** The merged tree compiled (8 errors fixed), the scene was regenerated with explicit tuning, the build now asserts it, the silently-missing payoff was restored, the APK was rebuilt at version code 10, `MATCH-ALGORITHM.md` moved to v3, the tuning raw output was regenerated, and the P3 feedback layer was wired into the scene. Details in §8. | agent |
 | 16 Nov 2026 | **P3/P4 re-integration.** A rewrite replaced the tree and reverted the integration fixes. Restored the package manifest, fixed 10 project errors, deleted the orphaned panel builder, restored the payoff and the missing K/P authoring path, fixed the budget script's encoding. P4.2's three open boxes measured by `ShelfCheck`; P3's evidence re-run unchanged. APK v13. Details in §8.10. | agent |
+| 16 Nov 2026 | **Phase 4 completed at the desk.** P4.3: five cross-process relaunches and leave/return pass, and the probe found a duplicate-object bug in `RestoreUnlocked`. P4.4: the plinth is a four-part prefab with generated gradient/shadow and a pinch-only surface offer. P4.5: a dev-only passthrough switch. P4.6: measured FoV reflow (110° → 6 columns, 70° → 4, no scaling). APK rebuilt. Device rows, clips and captures remain. Details in §8.11. | agent |
 
 ---
 
@@ -440,6 +441,54 @@ and `trackability.json`.
 firing the near-miss, the non-signer read, a stranger, and a signer's eye on the four excluded shapes.
 G3 and G4 remain open for those reasons, not for missing code.
 
+### 8.11 Phase 4 finished as work — P4.3 to P4.6 ✅ DESK-VERIFIED, DEVICE OWED
+
+**16 Nov 2026, third pass.** P4.1/P4.2 were already closed at the desk (§8.10). This pass finished the
+other four tasks and found two real defects while doing it.
+
+| Task | What was missing | What was built | Evidence |
+|---|---|---|---|
+| **P4.3** | The editor check had never been run; the relaunch claim had only source checks | `Editor/PersistenceRelaunch.cs`: `Init`, `Verify` ×5 (each a **separate Unity process**), `LeaveRoom`, `ReturnRoom` | `P4.3 Check persistence` **PASS**; relaunches **5/5** `restore 1..5, order U,B,C, objects 3`; `leave` → `DifferentRoom`, plinth, home kept, `W` saved; `return` → `Restored`, `U,B,C,W`, 4 objects |
+| **P4.3 defect** | `RestoreUnlocked` called `Destroy`, which is deferred; a second restore in the same frame left the old objects beside the new | deactivate before destroy (`DestroyObject`), used by restore, slot replacement and adoption | probe went from `RestoredUnlocked duplicated objects: 6` to `objects 3` |
+| **P4.4** | The "plinth" was a tinted cube, and the mid-session surface offer existed only as a private flag nobody could raise | `Editor/PlinthBuilder.cs` builds a 4-part prefab (gradient top, lip, transparent shadow, seam) with its top at local y=0 and a 4° tilt; `Scripts/Spatial/SurfaceOffer.cs` is a hidden bead whose pinch is the only way to accept; `ShelfAnchor.PollSurfaceOffer` raises the offer only when there is no home | `P4.4 Check plinth` **PASS**: parts, queue 3000 shadow, top y=0, tilt, no Canvas, no error copy, offer does not move the shelf, accepting saves the anchor, a second surface cannot replace the home |
+| **P4.4 defect** | Accepting the offer after a fallback left `Result == Plinth`, so the launch log reported the wrong state | a resolved placement now reports `PlacedFresh` when the previous state was `Plinth` | check asserts `PlacedFresh` after `AcceptSurfaceOffer` |
+| **P4.5** | No passthrough switch existed at all | `Scripts/UI/PassthroughToggle.cs`: `P` in development builds flips `OVRPassthroughLayer.hidden` by reflection; shares a GameObject with `DevOnly` so a release build removes it | `P4.5 Check passthrough toggle` **PASS**: off/on flip one sink, two changes → two writes, a missing layer reports failure without writing |
+| **P4.6** | No FoV awareness; the shelf was whatever width 6 columns produced | `Scripts/Spatial/ShelfReflow.cs` measures horizontal FoV and the grid's angular width; below 85° it folds to a 4×3 tray, tilts it 20°, pulls it 4 cm and narrows the plate; `ShelfAnchor.SetLayout` moves objects in world space and eases them over 0.35 s. Objects are never scaled | `P4.6 Check FoV reflow` **PASS**: 110° → 6 cols / **51.6°** grid, widest object edge 27.5°; 70° → 4 cols / **35.1°** grid, widest object edge **22.2°** inside the 27.5° half-cone; 12 slots, 4 objects, no scale change, idempotent, reversible |
+
+**Why the reflow triggers on FoV and not on a fixed 50°.** The same 51.6° grid is comfortable at 110°
+and cramped at 70°; the display is the variable that changed between the two products. The task's 50°
+cap is still enforced, as an assertion that the *tray* is under 50° wide (it is 35.1°). The table in
+`MRUK-SHELF.md` §7 was rewritten to the measured numbers.
+
+**Full check set run after the change** (all `-batchmode`, Unity 6000.3.28f1):
+
+```text
+P4.3 Check persistence        PASS    schema 1/2/3, room branches, write protection
+PersistenceRelaunch Init      PASS    schema 3, order U,B,C
+PersistenceRelaunch Verify×5  PASS    restore 1..5, objects 3, localPos (0.120, -0.030, 0.210)
+PersistenceRelaunch Leave     PASS    DifferentRoom, plinth, home kept, W saved
+PersistenceRelaunch Return    PASS    Restored, order U,B,C,W, objects 4
+P4.4 Check plinth             PASS    4 parts, y=0 top, 4° tilt, silent, offer gated
+P4.5 Check passthrough toggle PASS    off/on, missing layer reported
+P4.6 Check FoV reflow         PASS    51.6° wide, 35.1° tray, 22.2° widest object
+ShelfCheck                    PASS    12 objects, 26 draw calls, 0/66 overlaps
+HandRigCheck                  PASS    base 0.045 / proximal 0.020 / tips 0.019 / wrist-tip 0.215 m
+```
+
+Python, unchanged and re-run: `validate_poses` 28/0, `nearmiss_sim`, `false_positive_sim`, `pause_sim`,
+`facing_pair_sim`, `shelf_sim`, `shelf_budget` PASS, `test_shelf_wiring` OK,
+`test_persistence_contract` OK, `check_trackability`, `lint_copy` 0 violations.
+
+**Build:** APK **v13**, versionCode **13**, 64,438,133 bytes,
+`sha256 d8ce961bd6e810d42720f52b188773824f28fb859811efb142685fc95505b06c`. The scene contains the
+plinth prefab instance (inactive until a fallback), `SurfaceOffer`, `ShelfReflow` and
+`PassthroughToggle` + `DevOnly`.
+
+**Still not run, and not implied by any of the above:** an Android launch or force-stop, a headset
+reboot, real MRUK room/anchor UUIDs, physical position against a reference, walking between real
+rooms, the two passthrough clips, the safe-cone capture, the XR Simulator's VR Glasses profile, the
+dark-room plinth, and visual legibility of the tray. G4 does not close on desk evidence.
+
 ---
 
 ## 9. What is next
@@ -448,8 +497,10 @@ G3 and G4 remain open for those reasons, not for missing code.
    --sigma <measured>` and move the thresholds only if the tripwire fires. This is still item 1.
 2. **P3 people/device checks** — 20 sloppy attempts for false positives, the three degradation
    scenarios, one stranger for the near-miss, the copy read to a non-signer.
-3. **P4 shelf** — replace the provisional `HonestMirrorHandle` placement with the real shelf object;
-   the binding is one event, so the panel does not change.
+3. **P4 shelf** — code-complete and desk-verified (§8.11). What remains is device evidence: five
+   relaunches + reboot, a real room walk, the passthrough pair, and the FoV capture. The panel is
+   still opened by the provisional `HonestMirrorPlinth`; re-homing it onto the shelf is intentionally
+   not half-built — the binding is one event, so the panel does not change when it moves.
 4. **Decide whether K/P ship** (`StreamingAssets/Facing/` → `Signs/`). The measurement says they are a
    clean facing-only pair; the cost is a seven-shape set, a new pair in the demo and a capture-plan edit.
 4. **POSE-FORMAT §4.3** — the left-hand frame test; until it runs, `HandSupport.LeftHandSupported`

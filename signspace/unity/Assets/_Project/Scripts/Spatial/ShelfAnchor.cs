@@ -107,6 +107,15 @@ namespace Signspace.Spatial
         [Header("Plinth fallback")]
         [Tooltip("Shown when no surface is found. Same screen position as the shelf would occupy.")]
         public GameObject plinthRoot;
+        [Tooltip("The plate the slots sit on. Optional: found by name. Reflow reshapes it, never the " +
+                 "objects, because a scaled object is a smaller tap target.")]
+        public Transform plateRoot;
+
+        [Header("Reflow (P4.6)")]
+        [Tooltip("Seconds to ease objects from the old arrangement into the new one. A pop at launch " +
+                 "is the one moment the user is looking straight at the shelf.")]
+        public float reflowSeconds = 0.35f;
+        public float slotBaseHeight = 0.012f;
 
         /// <summary>true = on a real surface, false = plinth.</summary>
         public event Action<bool> OnModeChanged;
@@ -300,9 +309,30 @@ namespace Signspace.Spatial
 
         void Update()
         {
-            if (!_begun || _finder == null || save == null || !save.HasPlacement || save.WritesBlocked ||
-                !restoreOnStart || Time.unscaledTime < _nextRoomCheck) return;
+            if (!_begun || Time.unscaledTime < _nextRoomCheck) return;
             _nextRoomCheck = Time.unscaledTime + 1f;
+            PollNow();
+        }
+
+        /// <summary>
+        /// The once-a-second poll. Public so a headless check can drive the real path instead of
+        /// calling its pieces directly.
+        ///
+        /// A surface can arrive after launch (the lights came on, MRUK finished scanning). That is
+        /// the FIRST-RUN case, where there is no placement yet — which is exactly why the offer is
+        /// polled before the `HasPlacement` guard. Putting it after the guard meant the runtime never
+        /// offered anything, while the check (which called `PollSurfaceOffer` itself) still passed.
+        /// </summary>
+        public void PollNow()
+        {
+            if (_finder == null || save == null || save.WritesBlocked) return;
+
+            if (!OnSurface) PollSurfaceOffer();
+
+            // Everything below is about keeping a saved home resolved; without one there is no room
+            // transition to detect yet.
+            if (!save.HasPlacement || !restoreOnStart) return;
+
             string room;
             bool known = _finder.TryGetCurrentRoomId(out room);
             bool changed = known != _lastRoomKnown ||
@@ -456,7 +486,10 @@ namespace Signspace.Spatial
             SetMode(true);
             RestoreUnlocked();
 
-            if (Result == Outcome.NotStarted || Result == Outcome.SaveTooOld)
+            // A shelf that was on the plinth and has now been accepted onto a surface is a fresh
+            // placement, not still a fallback. Leaving `Plinth` here would report the wrong state
+            // in the launch log and to anything reading `Result` after the offer was accepted.
+            if (Result == Outcome.NotStarted || Result == Outcome.SaveTooOld || Result == Outcome.Plinth)
             {
                 Result = Outcome.PlacedFresh;
                 OutcomeDetail = "placed fresh on " + surface.Label + " (" + Shorten(surface.AnchorId) +
@@ -514,7 +547,11 @@ namespace Signspace.Spatial
             {
                 if (go == null) continue;
                 if (idle != null) idle.Unregister(go.transform);
-                Destroy(go);
+                // Destroy is deferred to the end of the frame. Restoring twice in one frame (a room
+                // transition during launch, or a relaunch test) would otherwise leave the old objects
+                // in the hierarchy beside the new ones - six objects for three shapes until the frame
+                // ends, and permanently in the editor. Deactivate now, destroy properly.
+                DestroyObject(go);
             }
             _spawned.Clear();
             if (save == null || objectPrefab == null) return;
@@ -524,6 +561,130 @@ namespace Signspace.Spatial
                 RegisterIdle(go);       // restored objects are already at rest: no settle to wait for
             }
             RefreshSlots();
+        }
+
+        /// <summary>
+        /// Re-arrange the slots without touching the objects' size or the saved transform. Used by
+        /// the FoV reflow: on a narrow display the grid narrows and the tray tilts, but every object
+        /// keeps its scale, so it remains the same tap target.
+        ///
+        /// This is deliberately NOT persisted. The layout variant records which grid the save was
+        /// written against (`grid-6x2-v1`); the display decides how that grid is presented today.
+        /// </summary>
+        public void SetLayout(int columns, float tiltDegrees, float pullInMeters, bool animate = true)
+        {
+            slotColumns = Mathf.Clamp(columns, 1, slotCount);
+
+            if (plateRoot == null)
+            {
+                var plate = transform.Find("ShelfPlate");
+                if (plate != null) plateRoot = plate;
+            }
+
+            // Objects are children of slots. Detach them first, in world space, so rebuilding the
+            // slots does not delete the progress being re-arranged.
+            var carried = new List<GameObject>();
+            var from = new List<Vector3>();
+            for (int i = 0; i < _spawned.Count; i++)
+            {
+                var go = _spawned[i];
+                if (go == null) continue;
+                carried.Add(go);
+                from.Add(go.transform.position);
+                go.transform.SetParent(transform, true);
+            }
+
+            if (slotRoot != null)
+            {
+                slotRoot.localPosition = new Vector3(0f, slotBaseHeight, pullInMeters);
+                slotRoot.localRotation = Quaternion.Euler(tiltDegrees, 0f, 0f);
+                for (int i = slotRoot.childCount - 1; i >= 0; i--)
+                {
+                    var child = slotRoot.GetChild(i);
+                    if (!child.name.StartsWith("Slot_")) continue;
+                    // Destroy is deferred, and SlotTransform finds slots by name. Retire the old
+                    // ones under a name Find cannot return, or the rebuilt shelf would adopt the
+                    // transform that is about to be destroyed.
+                    child.name = "Slot_retired";
+                    DestroyObject(child.gameObject);
+                }
+            }
+
+            if (plateRoot != null)
+            {
+                float width = Mathf.Max(0f, (slotColumns - 1) * slotSpacing) + 0.12f;
+                var scale = plateRoot.localScale;
+                plateRoot.localScale = new Vector3(width, scale.y, scale.z);
+                var euler = plateRoot.localEulerAngles;
+                plateRoot.localRotation = Quaternion.Euler(tiltDegrees, euler.y, euler.z);
+            }
+
+            for (int i = 0; i < slotCount; i++) SlotTransform(i);
+
+            for (int i = 0; i < carried.Count; i++)
+            {
+                var slot = SlotTransform(i);
+                if (slot == null) continue;
+                carried[i].transform.SetParent(slot, true);
+                if (animate && Application.isPlaying)
+                    StartCoroutine(EaseIntoSlot(carried[i], from[i], slot));
+                else
+                    SnapIntoSlot(carried[i], slot);
+            }
+            RefreshSlots();
+        }
+
+        void SnapIntoSlot(GameObject go, Transform slot)
+        {
+            if (go == null || slot == null) return;
+            var view = go.GetComponent<ShelfObjectView>();
+            go.transform.localPosition = Vector3.up * ObjectLift(view != null ? view.shapeId : "");
+            go.transform.localRotation = Quaternion.identity;
+        }
+
+        IEnumerator EaseIntoSlot(GameObject go, Vector3 worldFrom, Transform slot)
+        {
+            if (go == null || slot == null) yield break;
+            Vector3 target = slot.TransformPoint(Vector3.up * ObjectLift(
+                go.GetComponent<ShelfObjectView>() != null ? go.GetComponent<ShelfObjectView>().shapeId : ""));
+            float k = 0f;
+            while (k < 1f)
+            {
+                if (go == null) yield break;
+                k += Time.deltaTime / Mathf.Max(0.01f, reflowSeconds);
+                go.transform.position = Vector3.Lerp(worldFrom, target, Mathf.SmoothStep(0f, 1f, k));
+                yield return null;
+            }
+            if (go == null) yield break;
+            SnapIntoSlot(go, slot);
+            RegisterIdle(go);
+        }
+
+        /// <summary>
+        /// Notice a surface that appeared after launch and OFFER it. Called from Update once a second
+        /// while the shelf is on the plinth. It never moves anything: `AcceptSurfaceOffer` is the only
+        /// path, and it is only reachable by a pinch on the quiet affordance (P4.4 step 3).
+        ///
+        /// Only a user with no home placement is offered: once a home exists, a surface in another
+        /// room must not be able to capture it, and `Place` refuses to replace a saved home.
+        /// </summary>
+        public void PollSurfaceOffer()
+        {
+            if (_finder == null || save == null || save.WritesBlocked) return;
+            if (OnSurface || !string.IsNullOrEmpty(save.Data.anchorId)) return;
+            SurfaceCandidate surface;
+            if (!_finder.TryGetPrimary(out surface)) return;
+            Guid room, anchor;
+            if (!Guid.TryParse(surface.RoomId, out room) || room == Guid.Empty) return;
+            if (!Guid.TryParse(surface.AnchorId, out anchor) || anchor == Guid.Empty) return;
+            _pendingSurfaceOffer = true;
+        }
+
+        static void DestroyObject(GameObject go)
+        {
+            if (go == null) return;
+            go.SetActive(false);
+            if (Application.isPlaying) Destroy(go); else DestroyImmediate(go);
         }
 
         /// <summary>Called by the lock payoff. Places one object with a settle animation.</summary>
@@ -682,7 +843,7 @@ namespace Signspace.Spatial
                 if (other == except || other.transform.parent != target) continue;
                 _spawned.RemoveAt(i);
                 if (idle != null) idle.Unregister(other.transform);
-                Destroy(other);
+                DestroyObject(other);
             }
         }
 
@@ -714,7 +875,7 @@ namespace Signspace.Spatial
             {
                 // The payoff's prototype is not a shelf object (a plain cube from the P2 rig). Replace it
                 // with the shelf's own, so what stays in the room is one kind of thing, not two.
-                Destroy(go);
+                DestroyObject(go);
                 var replacement = SpawnAt(index, shapeId);
                 if (replacement != null) StartCoroutine(Settle(replacement));
                 return replacement;
