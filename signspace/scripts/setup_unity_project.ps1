@@ -1,45 +1,69 @@
 ﻿#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Creates the Unity project for SIGNSPACE and compiles it headlessly.
+    Resolves packages, configures the XR project, and compiles it. Headless.
 
 .DESCRIPTION
-    The repository deliberately does NOT commit ProjectSettings/ -- it is
-    machine-generated and churns. This script produces it.
+    This script is the single entry point for "make the Unity project correct".
+    It is idempotent: run it as often as you like, it converges on the same state.
 
-    Steps
-      1. Create a scratch project from the URP 3D template (Unity 6.3 LTS).
-      2. Copy ProjectSettings/ into unity/, leaving the existing Assets/ alone.
-      3. Merge the template's package list into unity/Packages/manifest.json,
-         keeping the pinned XR packages this repo owns.
-      4. Run a headless compile and report every error.
+    What it does, in order, and why each step exists:
 
-    REQUIREMENTS
-      - Unity 6000.3.28f1 installed (scripts/setup_toolchain.ps1 does this)
-      - an ACTIVATED Unity licence. Batch mode refuses to run without one:
-        "[Licensing::Module] Error: 'com.unity.editor.headless' was not found."
-        Activate with:  unity auth login   (or sign in to Unity Hub)
+      1. GUARD THE MANIFEST. Unity engine MODULES are easy to lose by hand-editing
+         Packages/manifest.json, and losing them is not a warning - it is 144
+         compile errors in the Meta SDK's own code, because the SDK uses
+         UnityEngine.AnimationModule (HumanBodyBones) and UnityEngine.TerrainModule.
+         This step puts back anything missing and says so.
 
-    .PARAMETER EditorVersion
-    .PARAMETER SkipCompile
-    .PARAMETER Template
+      2. RESOLVE PACKAGES AND COMPILE. The Meta XR SDK is fetched and every
+         script in the project is compiled. This is the step that proves anything.
+
+      3. PATCH THE SETTINGS UNITY 6 HAS NO API FOR. The active input handling
+         lives in ProjectSettings.asset as activeInputHandler and there is no
+         public property for it. The template ships 0 (the old input manager)
+         and the Meta XR Interaction SDK drives pinch through the new one, so
+         nothing would respond to a pinch.
+
+      4. CREATE AND ASSIGN THE RENDER PIPELINE. Unity 6's URP template is a
+         Package Manager package that -createProject cannot resolve, so the
+         default project is Built-in RP. An unassigned pipeline renders magenta
+         on the headset.
+
+      5. CONFIGURE XR FOR ANDROID. The XR Plug-in Management window does not
+         exist in batch mode, so a build would ship with no XR loader at all:
+         it installs, it launches, and it shows a black screen.
+
+      6. COMPILE AGAIN AND REPORT.
+
+    ProjectSettings/ IS COMMITTED, so a clean rebuild is:
+        git checkout -- unity/ProjectSettings
+    and there is no scratch template involved any more.
+
+.PARAMETER EditorVersion
+.PARAMETER SkipCompile
+.PARAMETER SkipRenderPipeline
+.PARAMETER SkipXR
+
+.EXAMPLE
+    pwsh -File scripts/setup_unity_project.ps1
 #>
 [CmdletBinding()]
 param(
     [string]$EditorVersion = '6000.3.28f1',
-    [string]$Template = 'com.unity.template.urp-blank',
-    [switch]$SkipCompile
+    [switch]$SkipCompile,
+    [switch]$SkipRenderPipeline,
+    [switch]$SkipXR
 )
 
 $ErrorActionPreference = 'Continue'
-
-$RepoRoot = Split-Path -Parent $PSScriptRoot
+$here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+$RepoRoot = Split-Path -Parent $here
 $UnityDir = Join-Path $RepoRoot 'unity'
-$Scratch  = Join-Path ([System.IO.Path]::GetTempPath()) "signspace-template-$EditorVersion"
 $EditorExe = "E:\unity\Editors\$EditorVersion\Editor\Unity.exe"
-$Manifest  = Join-Path $UnityDir 'Packages\manifest.json'
+$Manifest = Join-Path $UnityDir 'Packages\manifest.json'
+$compileLog = Join-Path $UnityDir 'compile.log'
 
-function Say($m) { Write-Host $m; Write-Host $m }
+function Say($m) { Write-Host $m }
 
 if (-not (Test-Path $EditorExe)) {
     Say "FATAL: Unity $EditorVersion not found at $EditorExe"
@@ -47,82 +71,98 @@ if (-not (Test-Path $EditorExe)) {
     exit 1
 }
 
-# ---------------------------------------------------------------- 1. scratch
-if (Test-Path $Scratch) { Remove-Item -Recurse -Force $Scratch }
-New-Item -ItemType Directory -Force -Path $Scratch | Out-Null
-Say "creating scratch project from template $Template ..."
-& $EditorExe -createProject $Scratch -cloneFromTemplate $Template -quit -batchmode -nographics -logFile "$Scratch\create.log"
-if (-not (Test-Path "$Scratch\ProjectSettings")) {
-    Say "FATAL: template project was not created. Check $Scratch\create.log"
-    Say "If the log mentions com.unity.editor.headless, your Unity licence is not activated."
-    Get-Content "$Scratch\create.log" -Tail 20 | ForEach-Object { Say "  $_" }
-    exit 2
+function Invoke-Unity([string]$label, [string[]]$extra) {
+    Say "$label ..."
+    $unityArgs = @("-batchmode", "-quit", "-projectPath", $UnityDir, "-logFile", $compileLog) + $extra
+    # Start-Process -Wait, not the call operator: Unity.exe returns as soon as the
+    # editor has launched, and reading the log before the compile has finished is
+    # how you end up believing a build succeeded because the log was empty.
+    $proc = Start-Process -FilePath $EditorExe -ArgumentList $unityArgs -Wait -PassThru -WindowStyle Hidden
+    return $proc.ExitCode
 }
 
-# -------------------------------------------------- 2. ProjectSettings only
-Say "copying ProjectSettings into unity\ ..."
-$src = Join-Path $Scratch 'ProjectSettings'
-$dst = Join-Path $UnityDir 'ProjectSettings'
-if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
-Copy-Item -Recurse $src $dst
-
-# the project path is machine specific and must not be committed
-$vs = Join-Path $dst 'ProjectSettings.asset'
-if (Test-Path $vs) {
-    (Get-Content $vs -Raw) -replace 'm_EditorVersionWithRevision: .*', 'm_EditorVersionWithRevision: ' | Set-Content $vs -NoNewline
+# ------------------------------------------------------- 1. guard the manifest
+# These four are load-bearing. The engine modules are needed by Meta's own code;
+# URP and ugui are needed by this project.
+$required = @{
+    'com.unity.render-pipelines.universal' = '17.3.0'
+    'com.unity.ugui'                      = '2.0.0'
+    'com.unity.modules.animation'          = '1.0.0'
+    'com.unity.modules.terrain'            = '1.0.0'
+    'com.unity.modules.physics'            = '1.0.0'
+    'com.unity.modules.ui'                 = '1.0.0'
+    'com.unity.modules.unitywebrequest'    = '1.0.0'
+    'com.unity.modules.xr'                 = '1.0.0'
+    'com.unity.modules.jsonserialize'      = '1.0.0'
 }
 
-# ------------------------------------------------------ 3. merge the manifest
-Say "merging template packages into the pinned manifest ..."
-$templateManifest = Join-Path $Scratch 'Packages\manifest.json'
-if (Test-Path $templateManifest) {
-    $template = Get-Content $templateManifest -Raw | ConvertFrom-Json
-    $mine = Get-Content $Manifest -Raw | ConvertFrom-Json
-
-    foreach ($p in $template.dependencies.PSObject.Properties) {
-        if (-not $mine.dependencies.PSObject.Properties[$p.Name]) {
-            Say "  + $($p.Name) = $($p.Value)"
-            $mine.dependencies | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value
-        }
+Say "1. guarding Packages/manifest.json ..."
+$manifestText = [System.IO.File]::ReadAllText($Manifest)
+$manifest = $manifestText | ConvertFrom-Json
+$added = 0
+foreach ($name in $required.Keys) {
+    if (-not $manifest.dependencies.PSObject.Properties[$name]) {
+        $manifest.dependencies | Add-Member -NotePropertyName $name -NotePropertyValue $required[$name]
+        Say "   + $name = $($required[$name])"
+        $added++
     }
-    # URP is required by TECH-STACK.md; make sure it is present
-    if (-not $mine.dependencies.PSObject.Properties['com.unity.render-pipelines.universal']) {
-        Say "  + com.unity.render-pipelines.universal = 17.1.0  (from the template's own pin)"
-        $mine.dependencies | Add-Member -NotePropertyName 'com.unity.render-pipelines.universal' -NotePropertyValue '17.1.0'
-    }
-    $mine | ConvertTo-Json -Depth 10 | Set-Content $Manifest
 }
-Say "manifest now contains:"
-(Get-Content $Manifest -Raw | ConvertFrom-Json).dependencies.PSObject.Properties |
-    ForEach-Object { Say ("  {0} = {1}" -f $_.Name, $_.Value) }
+if ($added -gt 0) {
+    $manifest | ConvertTo-Json -Depth 10 | Set-Content $Manifest
+    Say "   ($added restored. Losing these is not a warning - it is 144 compile errors in Meta's own code.)"
+} else {
+    Say "   manifest is complete."
+}
 
-# ------------------------------------------------------------- 4. compile
-if ($SkipCompile) { Say "skipping compile (-SkipCompile)"; exit 0 }
+# ------------------------------------------------ 2. resolve and compile once
+Say "2. resolving packages and compiling ..."
+$code = Invoke-Unity "resolve + compile" @()
+$errors = @(Select-String -Path $compileLog -Pattern 'error CS\d+:' -ErrorAction SilentlyContinue)
+Say "   exit code : $code"
+Say "   errors    : $($errors.Count)"
+if ($errors.Count -gt 0) {
+    Say ""
+    Say "--- errors ---"
+    $errors | ForEach-Object { Say "  $(($_.Line -replace '^.*?Assets','Assets') -replace '\s+',' ')" } |
+        Select-Object -First 30 | ForEach-Object { Say $_ }
+    exit 3
+}
 
-$compileLog = Join-Path $UnityDir 'compile.log'
-Say "compiling headlessly (this resolves packages and can take several minutes) ..."
-& $EditorExe -projectPath $UnityDir -quit -batchmode -nographics -logFile $compileLog
-$code = $LASTEXITCODE
+# ------------------------------ 3. the settings Unity 6 has no public API for
+Say "3. patching the player settings that have no public API ..."
+$patchScript = Join-Path $here 'patch_player_settings.ps1'
+if (Test-Path $patchScript) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $patchScript | ForEach-Object { Say "  $_" }
+}
 
-$errors = Select-String -Path $compileLog -Pattern '^.*error CS\d+:' -ErrorAction SilentlyContinue
-$warnings = Select-String -Path $compileLog -Pattern 'warning CS\d+:' -ErrorAction SilentlyContinue
-$licenseErrors = Select-String -Path $compileLog -Pattern "com.unity.editor.headless|License.*not found|No valid Unity Editor license" -ErrorAction SilentlyContinue
+# ------------------------------------------------- 4 and 5. pipeline and XR
+if (-not $SkipRenderPipeline) {
+    Say "4. creating and assigning the render pipeline ..."
+    Invoke-Unity "render pipeline" @("-executeMethod", "Signspace.Editor.SetupRenderPipeline.Run") | Out-Null
+}
+
+if (-not $SkipXR) {
+    Say "5. configuring XR for Android ..."
+    Invoke-Unity "XR" @("-executeMethod", "Signspace.Editor.SetupXR.Run") | Out-Null
+}
+
+# ------------------------------------------------------------ 6. final compile
+Say "6. final compile ..."
+$code = Invoke-Unity "final compile" @()
+
+$errors = @(Select-String -Path $compileLog -Pattern 'error CS\d+:' -ErrorAction SilentlyContinue)
+$warnings = @(Select-String -Path $compileLog -Pattern 'warning CS\d+:' -ErrorAction SilentlyContinue)
 
 Say ""
 Say "================ COMPILE RESULT ================"
 Say "exit code : $code"
-Say "errors    : $(@($errors).Count)"
-Say "warnings  : $(@($warnings).Count)"
-if ($licenseErrors) {
-    Say ""
-    Say "LICENCE PROBLEM -- Unity batch mode needs an activated licence:"
-    Say "    unity auth login"
-    Say "    (or sign in to Unity Hub; the Personal licence activates automatically)"
-}
-if ($errors) {
+Say "errors    : $($errors.Count)"
+Say "warnings  : $($warnings.Count)"
+if ($errors.Count -gt 0) {
     Say ""
     Say "--- errors ---"
-    $errors | Select-Object -First 40 | ForEach-Object { Say "  $($_.Line)" }
+    $errors | ForEach-Object { Say "  $(($_.Line -replace '^.*?Assets','Assets') -replace '\s+',' ')" } |
+        Select-Object -First 30 | ForEach-Object { Say $_ }
     exit 3
 }
 Say ""
