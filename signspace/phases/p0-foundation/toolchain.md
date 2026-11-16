@@ -116,11 +116,37 @@ The Meta tools are installed by `metavr tools install <name>` and are scriptable
 | Unity version (exact) | **6000.3.28f1** — `E:\unity\Editors\6000.3.28f1\Editor\Unity.exe` |
 | Meta XR SDK version (exact, all packages) | **207.0.0** — `com.meta.xr.sdk.all`, resolving core / interaction / interaction.ovr / mrutilitykit / platform / audio / voice / haptics at 207.0.0 |
 | OpenXR Plugin | **1.18.0** (Meta's floor for the XR Operator is 1.17.0; Unity's VR Glasses guidance asks for 1.18.0+) |
-| XR provider / OpenXR features enabled | ⬜ set in the editor — `XR Plug-in Management → Android`, Meta XR feature group |
+| XR provider / OpenXR features enabled | ✅ **OpenXR loader assigned for Android + Meta XR feature set enabled**, configured by `Editor/SetupXR.cs` and verified in the built APK |
 | Graphics API shipped | **Vulkan** — `BuildScript.ApplySettings()` pins it, so it cannot drift between builds |
 | Editor install path | `E:\unity\Editors` |
-| First build: result on 3S | ⬜ pass / ⬜ fail — **licence ✅ cleared 15 Nov; still blocked on the headset** |
+| Render pipeline | **URP 17.3.0**, assets created and assigned by `Editor/SetupRenderPipeline.cs` |
+| Input handling | **Both** (new input system) — Unity 6 has no public API for this, so `scripts/patch_player_settings.ps1` sets the serialized value and `BuildScript` verifies it |
+| **First build: result** | ✅ **Succeeded.** 62 MB APK, 0 compile errors, 0 warnings |
+| APK | `unity/Builds/Android/signspace.apk` · `com.signspace.signspace` · versionCode 7 · minSdk 32 · targetSdk 34 · ARM64 · label `SIGNSPACE` |
+| Passthrough | ✅ `horizonos.permission.HEADSET_CAMERA` present in the built manifest, verified with `aapt2 dump permissions` |
+| First build: on the headset | ⬜ **still blocked on the headset** — the APK has never been installed on one |
 | fps in the empty scene | ⬜ |
+
+### The four commands
+
+```powershell
+# 1. the toolchain, onto E:
+pwsh -File scripts/setup_toolchain.ps1
+
+# 2. the project: create, resolve packages, configure, compile
+pwsh -File scripts/setup_unity_project.ps1
+
+# 3. build the APK
+"E:\unity\Editors\6000.3.28f1\Editor\Unity.exe" -batchmode -quit -projectPath unity `
+  -executeMethod Signspace.Editor.BuildScript.BuildAndroid
+
+# 4. check what went into it
+& "C:\Users\Bhuwan\AppData\Local\Android\Sdk\build-tools\36.1.0-rc1\aapt2.exe" `
+  dump permissions unity/Builds/Android/signspace.apk
+```
+
+**Every one of them is repeatable and produces the same result.** That is the point: the Day 4
+submission build is produced by exactly the same command as the Day 1 test build.
 
 > **Two things are still needed before the first build can run, and neither is a code problem:**
 > 1. ~~**A Unity licence.**~~ ✅ **Cleared 15 Nov 2026.** For reference, the failure it used to produce:
@@ -137,13 +163,16 @@ The Meta tools are installed by `metavr tools install <name>` and are scriptable
 pwsh -File scripts/setup_unity_project.ps1
 
 # build the APK (needs the licence)
-"E:\unity\Editors\6000.3.28f1\Editor\Unity.exe" -batchmode -quit -projectPath unity `
+"E:\unity\Editors\6000.3.28f1\Editor\Unity.exe" -batchmode -quit -projectPath unity \
   -executeMethod Signspace.Editor.BuildScript.BuildAndroid
 ```
 
 `BuildScript` applies every Player setting in §2 as **code**, so the submission build on Day 4 is
 produced by the same command as the test build on Day 1, with the same settings and the same
-keystore. It also prints the APK's SHA-256, which is what P9.1 needs to freeze.
+keystore. It also prints the APK's SHA-256, which is what P9.1 needs to freeze, and the bundle
+version code, which **auto-increments** — Meta rejects an upload when a build with the same version
+code already exists on one of your release channels, and the error names neither the channel nor the
+conflicting build.
 
 **Three lines to send back** — see [`OWNER-TASKS.md`](OWNER-TASKS.md) §I for the full list.
 
