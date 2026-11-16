@@ -11,9 +11,9 @@ section,asked_for,made,d_target_deg,d_made_deg,strict,loose,names,note
 1_pair_distance,L,Y,,,,,,shape not in the shipped set
 1_pair_distance,B,U,117.0,,,,,shipped set
 1_pair_distance,D,F,,,,,,shape not in the shipped set
-2_pair_both_directions,C,O,65.0,2.5,100.0%,100.0%,O,
-2_pair_both_directions,O,C,65.1,2.5,100.0%,100.0%,C,
-2_pair_both_directions,U,V,26.0,2.6,100.0%,100.0%,V,
+2_pair_both_directions,C,O,65.0,2.6,100.0%,100.0%,O,
+2_pair_both_directions,O,C,65.0,2.4,100.0%,100.0%,C,
+2_pair_both_directions,U,V,26.1,2.5,100.0%,100.0%,V,
 2_pair_both_directions,V,U,26.1,2.7,100.0%,100.0%,U,
 2_pair_both_directions,V,W,118.1,2.3,100.0%,100.0%,W,
 2_pair_both_directions,W,V,118.1,2.6,100.0%,100.0%,V,

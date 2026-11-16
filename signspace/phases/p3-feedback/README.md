@@ -66,5 +66,5 @@ This phase is the submission's identity, not its polish. Two of the five novelty
 | Visible pause | 0 locks below the floor in three degradations; 1 each with the floor removed; hysteresis 20 → 1 |
 | Numbers | `fill_trackability.py` + `check_trackability.py`; four broken files each rejected |
 | Gate G3 | 3 of 8 criteria can be closed from a desk; 3 need a headset or a person; 1 is red until a stranger plays |
-| Verified 16 Nov | **compiled, 0 errors**; both prefabs import and the scene builds with the payoff and panel; 12 simulator/validator scripts re-run green; APK v13 built |
+| Verified 16 Nov | **compiled, 0 errors**; both prefabs import and the scene builds with the payoff and panel; 12 simulator/validator scripts re-run green; reference hand **45 / 20 / 19 / 215 mm** (`HandRigCheck`); APK v13 built |
 | Still not verified | every device number, the non-signer read, the signer's eye on four renders, a real hand firing a near-miss |

@@ -95,6 +95,32 @@ namespace Signspace.Matching
                 { "LittleMetacarpal", "Palm" },
             };
 
+        /// <summary>
+        /// Where each joint sits relative to its parent, in metres at scale 1.
+        ///
+        /// WHY THIS EXISTS
+        /// ---------------
+        /// Without it every joint was created at its parent's origin, so all 26 joints occupied one
+        /// point: the "hand" was a bundle of capsules radiating from the palm's centre. The metric is
+        /// rotations-only, so it never noticed, and a compile never notices. But the honest mirror
+        /// draws the excluded shapes with this rig - a specimen with no hand geometry is not a
+        /// specimen. The four knuckle offsets are what make it a hand: index to little span 45 mm,
+        /// index and middle proximal joints 17 mm apart.
+        /// </summary>
+        static readonly System.Collections.Generic.Dictionary<string, Vector3> RestOffsets =
+            new System.Collections.Generic.Dictionary<string, Vector3>
+            {
+                // wrist -> palm
+                { "Palm", new Vector3(0f, 0.040f, 0f) },
+                // knuckle line across the palm: lateral, then forward, at the palm's far edge
+                { "IndexMetacarpal",  new Vector3(-0.024f, 0.055f, 0f) },
+                { "MiddleMetacarpal", new Vector3(-0.007f, 0.060f, 0f) },
+                { "RingMetacarpal",   new Vector3(0.008f, 0.056f, 0f) },
+                { "LittleMetacarpal", new Vector3(0.021f, 0.050f, 0f) },
+                // thumb sits off the palm's radial side, slightly in front of it
+                { "ThumbMetacarpal",  new Vector3(-0.032f, 0.012f, 0.012f) },
+            };
+
         static Mesh _capsuleMesh;
         static Mesh _palmMesh;
 
@@ -138,6 +164,24 @@ namespace Signspace.Matching
                 if (parent != null) byName[name].SetParent(byName[parent], false);
             }
 
+            // rest positions: knuckles across the palm, every other joint at its parent bone's tip
+            for (int i = 0; i < JointNames.Canonical.Length; i++)
+            {
+                string name = JointNames.Canonical[i];
+                Vector3 offset;
+                if (RestOffsets.TryGetValue(name, out offset))
+                {
+                    byName[name].localPosition = offset * scale;
+                }
+                else
+                {
+                    string parent = Parents.ContainsKey(name) ? Parents[name] : PreviousInFinger(name);
+                    float parentLength = parent != null && SegmentLengths.ContainsKey(parent)
+                        ? SegmentLengths[parent] : 0f;
+                    byName[name].localPosition = new Vector3(0f, parentLength * scale, 0f);
+                }
+            }
+
             // geometry
             foreach (var pair in SegmentLengths)
             {
@@ -151,7 +195,11 @@ namespace Signspace.Matching
 
                 var bone = new GameObject(joint + "_bone");
                 bone.transform.SetParent(byName[parent].transform, false);
-                bone.transform.localPosition = new Vector3(0f, length * 0.5f, 0f);
+                // The capsule starts at this joint and extends along +Y. For the palm it spans
+                // wrist -> palm base, so its centre is half the offset, not half a bone past it.
+                bone.transform.localPosition = joint == "Palm"
+                    ? new Vector3(0f, local.y * 0.5f, local.z * 0.5f)
+                    : local + new Vector3(0f, length * 0.5f, 0f);
                 bone.transform.localRotation = Quaternion.identity;
 
                 if (joint == "Palm")
