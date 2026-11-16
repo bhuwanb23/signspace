@@ -66,6 +66,13 @@ namespace Signspace.Editor
                                  "A plain camera was created instead. Check that Meta XR All-in-One is imported.");
             }
 
+            // ---- passthrough ------------------------------------------------------
+            // "The room is the level." Passthrough is not a nice-to-have: without it the
+            // experience has no floor and the shelf has nothing to stand on. Meta's own
+            // setup task does this in the editor UI, which does not exist in batch
+            // mode, so it is done here.
+            EnablePassthrough(rigGo);
+
             // ---- the three systems that matter -----------------------------
             var matchGo = new GameObject("Matcher");
             var matcher = matchGo.AddComponent<Signspace.Matching.Matcher>();
@@ -122,6 +129,83 @@ namespace Signspace.Editor
             UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.Refresh();
             Debug.Log("[SceneBuilder] wrote " + ScenePath);
+        }
+
+        /// <summary>
+        /// Turns passthrough on: the OVRManager flag, the camera's passthrough layer,
+        /// and the project-level support setting.
+        ///
+        /// All three, because all three are separate. The OVRManager flag alone
+        /// enables the runtime feature; the layer is what actually composites the
+        /// camera feed; and the project config is what Meta's own setup task
+        /// checks before it will call the project configured.
+        /// </summary>
+        static void EnablePassthrough(GameObject rig)
+        {
+            if (rig == null) return;
+
+            // NOTE: these Meta types are in the GLOBAL namespace in Core SDK v207.
+            // They used to live under Oculus.VR, and writing Oculus.VR.OVRManager
+            // does not compile any more.
+            var manager = rig.GetComponentInChildren<OVRManager>(true);
+            if (manager != null)
+            {
+                manager.isInsightPassthroughEnabled = true;
+                Debug.Log("[SceneBuilder] OVRManager: passthrough enabled");
+            }
+            else
+            {
+                Debug.LogWarning("[SceneBuilder] no OVRManager on the rig - passthrough was not enabled.");
+            }
+
+            var camera = rig.GetComponentInChildren<Camera>(true);
+            if (camera != null && camera.GetComponent<OVRPassthroughLayer>() == null)
+            {
+                camera.gameObject.AddComponent<OVRPassthroughLayer>();
+                Debug.Log("[SceneBuilder] added the OVRPassthroughLayer to " + camera.name);
+            }
+
+            // A camera with a solid-colour background hides the room. The
+            // passthrough feed is composited UNDER the app, so the app's camera
+            // has to be transparent for the room to be visible at all.
+            if (camera != null)
+            {
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
+                Debug.Log("[SceneBuilder] camera background cleared for passthrough");
+            }
+
+            // The VR splash screen is a black overlay at launch. On an MR app it is
+            // an inconsistent experience - the room is there and the app hides it.
+            PlayerSettings.virtualRealitySplashScreen = null;
+            PlayerSettings.SplashScreen.show = false;
+            Debug.Log("[SceneBuilder] splash screens disabled");
+
+            try
+            {
+                var config = OVRProjectConfig.CachedProjectConfig;
+                if (config != null)
+                {
+                    config.insightPassthroughSupport = OVRProjectConfig.FeatureSupport.Required;
+
+                    // THIS is the flag that puts the permission in the built manifest.
+                    // Meta's own OVRManifestPreprocessor adds
+                    // com.oculus.permission.USE_PASSTHROUGH only when
+                    // isPassthroughCameraAccessEnabled is true AND the passthrough
+                    // support is not None. Without it the build SUCCEEDS, the APK
+                    // installs, and the headset shows a black screen where the room
+                    // should be - with nothing in the app to say why.
+                    config.isPassthroughCameraAccessEnabled = true;
+
+                    EditorUtility.SetDirty(config);
+                    AssetDatabase.SaveAssets();
+                    Debug.Log("[SetupRenderPipeline] passthrough: support Required, camera access enabled");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[SceneBuilder] could not set the project passthrough support: " + e.Message);
+            }
         }
 
         /// <summary>Finds a prefab anywhere in the project or in an imported package.</summary>
