@@ -43,6 +43,36 @@
 | `Paused` | App backgrounded | Freezes in place, no overlay | Foregrounded |
 | `NoEyes` | Eye tracking unavailable or declined | Dwell ring on head-gaze, slightly larger targets. One line explaining the fallback | Eye tracking returns |
 | `Credits` | Touched the credits object | Signer (or authorship state), city, date, and *"This is practice software, not a replacement for a Deaf teacher."* | Back |
+| `LeftHandOff` | The left hand is tracked and this build reads the right hand (P2.7) | **Nothing in the loop.** No message, no dimming, no change of state: 0 words | The user opens the honest mirror, or plays with the right hand |
+
+### 4.1 Handedness — right hand only, and why (P2.7)
+
+**The decision: this build reads the right hand. The left hand is switched off in one place
+(`HandSupport.LeftHandSupported`), not half-wired.**
+
+What was measured (`left-hand-decision.md`, `scripts/mirror_sim.py`):
+
+- Mirroring a pose across `x = 0` — `(x, y, z, w)` → `(x, -y, -z, w)` — is **exact** on our data: all
+  26 bones within 0.01°, and the shipped metric is mirror-invariant to the bit over all 36 ordered
+  pairs, wrist turns included. So a second hand costs the matcher nothing.
+- A left hand reaching the matcher **without** mirroring scores **97–176°** on a perfect attempt — the
+  coldest state the app has. That is what the build did before this decision, because both hands were
+  bound to one matcher (see the second bullet below).
+- Whether the mirror is the *right* transform depends on OpenXR handing out left-hand joint frames
+  that are already mirrored. No pose file can answer that; only the device test in
+  `POSE-FORMAT §4.3` can.
+
+Two consequences that are state, not copy:
+
+1. **The explanation is one line, and it lives in the honest mirror** — "This build reads your right
+   hand. Left-hand play is not in this version." Not a toast, not a first-run message: §6 gives the
+   first five minutes **3 words total**, and a limitation is something the user chooses to look up.
+2. **Only one hand feeds the matcher.** Before P2.7 both hands did, so a visible left hand overwrote
+   the right hand's matcher state every frame and the right hand could never hold a lock. Handedness
+   is therefore not only a left-handed-user problem; it was a everyone problem, silently.
+
+**Revisit when** POSE-FORMAT §4.3 has run on hardware: flip `LeftHandSupported`, run the two-hand
+check, and replace this section with the measured result.
 
 ## 5. Forbidden patterns
 

@@ -70,7 +70,7 @@ attached. So the probe now measures and asks at the same time — `ProbeControll
    lock threshold — because the references had been authored with effectively identical joint angles.
    The app could not have told them apart however well the sensor performed, and the result would have
    been filed as a sensor failure. N was re-authored; the pair now sits at 29.5° / 70.1°.
-2. **Attribution is decided in advance.** Seven candidates carry `authoringConfidence: low` because they
+2. **Attribution is decided in advance.** Seven candidates carry `confidence.authoring: low` (mirrored as `authoringConfidence` in `Probe/probe-meta.json`, which is what the probe rig reads) because they
    depend on contact or depth that a rotation-only format cannot express. A poor result on one of those
    is recorded as **"not separable by this method"**, not as "the sensor cannot see it". The greyed-out
    panel in the honest mirror can honestly say *we could not measure this reliably*.

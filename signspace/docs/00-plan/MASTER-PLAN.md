@@ -318,16 +318,16 @@ Update this table at the end of every working day. It is the only place progress
 
 | Phase | Status | Started | Completed | Notes |
 |---|---|---|---|---|
-| P0 Foundation | 🔄 **6 of 9 gate criteria met** | 14 Nov | — | **The Unity project exists, compiles with 0 errors and 0 warnings, and builds a 62 MB APK.** Licence verified. Blocked on: the headset, and the App ID |
-| P1 De-risk spike | ⬜ Rig built, **not yet run on a device** | 15 Nov | — | Every probe is instrumented. P1.5 needs a headset. **Check `OVRManager → Hand Skeleton Version = Default (OpenXR)` first** |
-| P2 Core loop | 🟡 Built, not yet on a device | 15 Nov | — | Matcher, pose format, loader and shapes exist and are **measured offline**: U-V separation 3.1° → 26.0°. The metric had to change |
-| P3 Feedback layer | 🟡 Rule implemented | 15 Nov | — | The near-miss now enforces "ambiguity is not a diagnosis" (strictly closer than the runner-up, and by a margin) — the v1 code had no such check |
-| P4 Spatial shelf | 🟡 Rig built | 15 Nov | — | MRUK boot, surface finder, anchor and the save system all compile; none has run on a device |
-| P5 Content & capture | 🔄 Re-scoped | 14 Nov | — | **The six poses are authored from published references today, so the signer call is ONE call, not two** (ADR-007) |
-| P6 Gaze & accessibility | ⬜ Code written, not run | 15 Nov | — | **No eye tracking on Quest 3/3S** — gaze is evidenced through the VR Glasses simulator profile, and the device path is an honest dwell fallback |
+| P0 Foundation | 🔄 In progress — **4 of 9 gate criteria met** | 14 Nov | — | Toolchain installed on E: · SDK v207.0.0 pinned · 6 shapes authored · metric fixed. **Blocked on: a Unity licence, the headset, the Meta dashboard.** |
+| P1 De-risk spike | ⬜ Not started | | | P1.5 needs a headset in hand. Everything else can be rehearsed in Meta XR Simulator |
+| P2 Core loop | 🟡 Built, not yet on a device | 15 Nov | — | Matcher, pose format, loader and shapes exist and are measured offline. **The metric had to change — v1 could not see finger spread** |
+| P3 Feedback layer | 🟡 Rule implemented | 15 Nov | — | The near-miss now enforces "ambiguity is not a diagnosis" (strictly closer than the runner-up, and by a margin) — the v1 code did not |
+| P4 Spatial shelf | ⬜ Not started | | | Save system written; MRUK binding still to do |
+| P5 Content & capture | 🔄 Re-scoped | 14 Nov | — | **Poses authored from published references today, so the signer call is ONE call, not two** (ADR-007) |
+| P6 Gaze & accessibility | ⬜ Not started | | | **No eye tracking on Quest 3/3S** — gaze is evidenced through the VR Glasses simulator profile |
 | P7 Polish | ⬜ Not started | | | |
 | P8 Playtest | ⬜ Not started | | | Needs a headset |
-| P9 Submission | 🟡 The build is a command | 15 Nov | — | `BuildScript.BuildAndroid` → 62 MB APK, SHA-256 logged, bundle version code auto-increments |
+| P9 Submission | ⬜ Not started | | | Build is now a command, not a checklist |
 | P10 Post | ⬜ Not started | | | |
 
 ---
@@ -386,38 +386,28 @@ in `PERFORMANCE.md` and `TRACKABILITY.md` come from the device.
 
 ### Code that exists
 
-**It compiles. 0 errors, 0 warnings, and it builds a 62 MB APK.** Everything below has been through
-the compiler, which is the first time that has been true.
-
 | File | State |
 |---|---|
 | `unity/Assets/_Project/Scripts/Matching/HandPose.cs` | ✅ JSON model + `SetMeta`, now with `family` |
 | `.../PoseMath.cs` | ✅ **v2 metric** — per-finger chain angle, max across fingers, wrist term |
 | `.../Matcher.cs` | ✅ bands · hysteresis · hold · confidence pause · near-miss · **"ambiguity is not a diagnosis"** |
-| `.../JointNames.cs` | ✅ joints matched by name, so both SDK hand layouts work |
-| `.../SignSetLoader.cs` | ✅ **rewritten** — `UnityWebRequest`, works inside the apk on Android |
-| `unity/Assets/_Project/Scripts/Hands/SkeletonPoseSource.cs` | ✅ **rewritten** — maps joints by name, reports what it could not map. One TODO: `ReadConfidence()` |
-| `.../Hands/HandVisual.cs` | ✅ the hand, generated procedurally from the same 26-joint skeleton as the data |
-| `.../Hands/ReferenceHand.cs` | ✅ the grab-and-rotate mechanic |
-| `.../Hands/MetaHandSource.cs` | ✅ reflection-based, so it compiles on any SDK version and works in the simulator |
-| `.../Hands/{Grabbable,PinchGrabber,NoFallbackGuard,ProbeController,RotationTrialController,GrabTrialLogger}.cs` | ✅ the P1 rigs |
-| `.../Spatial/{MrukBoot,SurfaceFinder,SurfaceProbe,ShelfAnchor,PersistenceProbe}.cs` | ✅ MRUK, the plinth fallback, the anchor and the save |
-| `.../Core/{AppState,SaveSystem,LockPayoff}.cs` | ✅ the 16-state machine, anchor-keyed persistence, the lock payoff |
-| `.../Gaze/{GazeHighlighter,DwellSelector,FingerTarget}.cs` | ✅ the gaze layer and the eyes-only path |
-| `.../UI/{DebugOverlay,NearMissDisplay,HonestMirror,HandConfidenceReadout}.cs` | ✅ the live numbers, the near-miss line, the blind-spot panel |
-| `.../Perf/PerfProbe.cs` | ✅ the frame sampler, the thermal timeline, and the refusal to certify an editor run |
-| `.../Editor/{SceneBuilder,BuildScript,SetupRenderPipeline,SetupXR,RestPoseDump}.cs` | ✅ the scene, the APK, the render pipeline, the XR loader, the rig rest pose |
-| `unity/Assets/_Project/Scenes/Main.unity` | ✅ built from the Meta XR camera rig by script |
+| `.../JointNames.cs` | ✅ **new** — joints matched by name, so both SDK hand layouts work |
+| `.../SignSetLoader.cs` | ✅ **rewritten** — `UnityWebRequest`; the old file could not read StreamingAssets on Android |
+| `unity/Assets/_Project/Scripts/Hands/SkeletonPoseSource.cs` | ✅ **rewritten** — maps joints by name, reports what it could not map. One TODO left: `ReadConfidence()` |
+| `.../Core/AppState.cs` | ✅ the 16-state machine, no failure state |
+| `.../Core/SaveSystem.cs` | ✅ anchor-keyed persistence |
+| `.../UI/DebugOverlay.cs` | ✅ the live numbers, in the cone |
+| `.../Editor/SceneBuilder.cs` | ✅ the scene, built by script |
+| `.../Editor/BuildScript.cs` | ✅ every Player setting as code, plus the APK hash |
+| `.../Editor/RestPoseDump.cs` | ✅ dumps the rig rest pose for pose regeneration |
 | `unity/Assets/StreamingAssets/Signs/*.json` | ✅ **the six shapes** + `index.json` |
 | `scripts/hand_model.py` | ✅ the canonical hand model and the shape definitions |
 | `scripts/make_pose.py` | ✅ writes the shapes and the index |
 | `scripts/tune_match.py` | ✅ **the offline tuner** — measures the metric without a headset |
-| `scripts/check_alias_tables.py` | ✅ proves the Python and C# joint-alias tables agree |
-| `scripts/validate_poses.py` | ✅ also checks the joint set, the schema version and the index |
+| `scripts/validate_poses.py` | ✅ now also checks the joint set and the index |
 | `scripts/setup_toolchain.ps1` | ✅ installs the whole toolchain onto E:, unattended |
-| `scripts/setup_unity_project.ps1` | ✅ creates the project, merges the manifest, configures, compiles |
-| `scripts/patch_player_settings.ps1` | ✅ the two settings Unity 6 has no API for |
-| `unity/SETUP.md` | ✅ scene assembly, the build commands and the P1 smoke test |
+| `scripts/setup_unity_project.ps1` | ✅ creates the project, merges the manifest, compiles |
+| `unity/SETUP.md` | ✅ scene assembly + the P1 smoke test — **update: joints are no longer pasted by hand** |
 
 ### The deep-dive order I propose
 

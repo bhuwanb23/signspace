@@ -94,19 +94,10 @@ Meta states plainly: **"APKs will not be considered."** A wrong or reused channe
 
 **Send back:**
 ```
-package name = com.signspace.signspace
+package name = com.____________.signspace
 app id       = ____________
-channels     = Competition
-invite url   = ____________
+channels     = Competition, Internal
 ```
-
-> **The App ID is not a blocker for the competition.** The APK installs and runs on a headset from a
-> release channel without it. It is needed for **Meta platform services** — entitlement checks, deep
-> links, anything that talks to the platform rather than to the device. Worth five minutes, not worth
-> delaying the build.
->
-> Where it goes: `Window → Meta → Platform → Edit Settings` → the **Meta Quest** row, or
-> `unity/Assets/Resources/OculusRuntimeSettings.asset`.
 
 ---
 

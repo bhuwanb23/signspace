@@ -1,0 +1,80 @@
+==============================================================================
+HoldTimer self-test (Python mirror of HoldTimer.cs): 15/15 passed
+==============================================================================
+  pass  clean hold locks once
+  pass  clean hold locks at 0.7 s
+  pass  0.62 s touch does not lock
+  pass  grace freezes progress
+  pass  hold completes after a dip inside the grace
+  pass  0.5 s dropout does not reset
+  pass  0.5 s dropout decays, does not freeze forever
+  pass  long dropout ends in Idle
+  pass  lock fires once
+  pass  a 0.42 s excursion does not release
+  pass  0.62 s out releases the latch once
+  pass  the shape can be earned again
+  pass  no lock without tracking
+  pass  a wobble out of band keeps progress
+  pass  progress resumes after the wobble
+
+  jitter of D at the hold's operating points (max of the one-finger and whole-hand cases):
+    true  6.0 deg -> measured  6.2 deg, sd 0.58
+    true  8.0 deg -> measured  8.2 deg, sd 0.60
+    true 10.0 deg -> measured 10.1 deg, sd 0.60
+    true 11.0 deg -> measured 11.1 deg, sd 0.60
+
+  EXPERIMENT - 20 intentional holds (each with a 0.5 s dropout injected)
+    locks: 20/20   lock times: 1.35, 1.35, 1.35, 1.35, 1.35, 1.35 ... s
+
+  EXPERIMENT - 20 deliberate flicks in and out of the band
+    false locks: 0/20
+      in-band 0.33 s -> no lock
+      in-band 0.37 s -> no lock
+      in-band 0.60 s -> no lock
+      in-band 0.49 s -> no lock
+      in-band 0.52 s -> no lock
+      in-band 0.37 s -> no lock
+      in-band 0.30 s -> no lock
+      in-band 0.62 s -> no lock
+      in-band 0.56 s -> no lock
+      in-band 0.59 s -> no lock
+      in-band 0.25 s -> no lock
+      in-band 0.26 s -> no lock
+      in-band 0.30 s -> no lock
+      in-band 0.46 s -> no lock
+      in-band 0.48 s -> no lock
+      in-band 0.47 s -> no lock
+      in-band 0.51 s -> no lock
+      in-band 0.30 s -> no lock
+      in-band 0.29 s -> no lock
+      in-band 0.38 s -> no lock
+
+  grace / decay, measured over 200 trials each (forgiveness vs safety):
+     grace  decay locks after 0.5 s dropout  4 s dropout clears  max survivable dropout
+       0.1    0.0                      100%                  0%                 forever
+       0.1    0.2                      100%                100%                  2.70 s
+       0.1    0.5                        0%                100%                  1.40 s
+       0.1    0.8                        0%                100%                  0.97 s
+       0.1    1.0                        0%                100%                  0.75 s
+       0.2    0.0                      100%                  0%                 forever
+       0.2    0.2                      100%                100%                  2.80 s
+       0.2    0.5                      100%                100%                  1.50 s  <- shipped
+       0.2    0.8                        0%                100%                  1.07 s
+       0.2    1.0                        0%                100%                  0.85 s
+       0.3    0.0                      100%                  0%                 forever
+       0.3    0.2                      100%                100%                  2.90 s
+       0.3    0.5                      100%                100%                  1.60 s
+       0.3    0.8                      100%                100%                  1.17 s
+       0.3    1.0                        0%                100%                  0.95 s
+       0.5    0.0                      100%                  0%                 forever
+       0.5    0.2                      100%                100%                  3.10 s
+       0.5    0.5                      100%                100%                  1.80 s
+       0.5    0.8                      100%                100%                  1.37 s
+       0.5    1.0                      100%                100%                  1.15 s
+
+  ADVERSARIAL - in the band 0.2 s, out 0.25 s, repeated (gap shorter than the 0.5 s forget)
+    locked at cycle 3 if not None: yes, after 3 cycles (1.35 s)
+    -> and that is correct: the lock band is 12 deg and the nearest other shape is 26 deg, so
+       the only way to accumulate 0.7 s is to genuinely be inside 12 deg of the target.
+
+  wrote 40 rows to phases/p2-core-loop/lock-log.csv (source=simulated; the device appends its own)

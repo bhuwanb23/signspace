@@ -28,13 +28,6 @@ sysinfo.txt
 # Unity build output from BuildScript.cs
 unity/Builds/
 unity/rest-pose.json
-unity/*.log
-unity/*.log.*
-unity/Temp/
-unity/Logs/
-unity/obj/
-unity/UserSettings/
-unity/Assets/StreamingAssets/Probe/Probe.meta
 
 # Meta XR / Android
 .utmp/
@@ -54,3 +47,4 @@ Thumbs.db
 # Media masters (too large for git — see assets/README.md)
 assets/masters/
 assets/raw/
+*.log
