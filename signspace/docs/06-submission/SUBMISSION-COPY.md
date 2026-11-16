@@ -81,6 +81,18 @@ Put #1 in the video, #2 in the description's second paragraph, #3 in the tagline
 
 ---
 
+## 5b. IN-PRODUCT COPY *(P3.3)*
+
+| Where | String |
+|---|---|
+| Near-miss line | **"That's not {target}. That's {made}."** — five words; no degree number, no "incorrect", no "error" |
+| Honest mirror header, before P1.5 | **"Trackability review pending — no device measurement yet"** (`numbersMeasured = false`; the count is withheld, not guessed) |
+| Honest mirror, left hand | **"This build reads your right hand. Left-hand play is not in this version."** (`HandSupport.OneLineExplanation`) |
+| Pause | **No words.** The panel dims and one dot breathes until tracking returns |
+
+> The near-miss line has not yet been read to a non-signer; that check is owed in
+> [`phases/p3-feedback/copy-variants.md`](../../phases/p3-feedback/copy-variants.md).
+
 ## 6. CHECKS BEFORE SUBMIT *(P9.5)*
 
 | Check | Method | Pass |
