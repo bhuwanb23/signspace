@@ -37,12 +37,16 @@ from __future__ import annotations
 import argparse
 import math
 import random
+import pathlib
 import statistics
 import sys
 
 import hand_model as hm
 
 SHAPE_IDS = list(hm.SHAPES.keys())
+
+WEIGHTS_ASSET = pathlib.Path(__file__).resolve().parent.parent / \
+    "unity" / "Assets" / "_Project" / "Matching" / "Weights.asset"
 
 # ------------------------------------------------------------- the v1 metric
 
@@ -122,6 +126,190 @@ def metric_v2_chain(target, current, combine_mode="max", include_tip=True):
     # the wrist term carries palm orientation; it is kept separate and weighted
     wrist = hm.q_angle_between(target["Wrist"], current["Wrist"])
     return finger_score, angles, wrist
+
+
+# ------------------------------------------------------------- the v3 metric (P2.2)
+
+#: Mirrors JointWeights.DefaultWeightFor() in C#. Used when the asset cannot be read, and printed
+#: so a divergence between the two is visible rather than silent.
+def default_weight(joint_name):
+    if joint_name in ("Wrist", "Palm"):
+        return 0.40
+    if joint_name.endswith("Metacarpal"):
+        return 0.40
+    if joint_name.endswith("Tip"):
+        return 0.00
+    if joint_name.endswith("Distal"):
+        return 1.00
+    if joint_name.endswith("Intermediate"):
+        return 1.00
+    if joint_name.endswith("Proximal"):
+        return 0.70
+    return 0.70
+
+
+def load_weights(path=WEIGHTS_ASSET):
+    """Read the SAME asset the matcher uses.
+
+    The weights are a product judgement that lives in a Unity asset, so the tuner must read that
+    asset rather than keep a second copy of the table - otherwise "the metric scores 7.73" and "the
+    metric on the headset" are two different claims that happen to look alike. A tiny line parser is
+    enough: the asset is `- name: X` / `weight: Y` pairs.
+    """
+    weights, source = {}, "defaults (asset not found)"
+    if path.exists():
+        current = None
+        for line in path.read_text().splitlines():
+            stripped = line.strip()
+            if stripped.startswith("- name:"):
+                current = stripped.split(":", 1)[1].strip()
+            elif stripped.startswith("weight:") and current:
+                try:
+                    weights[current] = float(stripped.split(":", 1)[1])
+                except ValueError:
+                    pass
+                current = None
+        if weights:
+            source = str(path.relative_to(path.parents[3]))
+    missing = [n for n in hm.JOINT_NAMES if n not in weights]
+    if missing:
+        print(f"WARNING: {len(missing)} joints absent from the weights source; filling from defaults: "
+              f"{', '.join(missing[:6])}{'...' if len(missing) > 6 else ''}")
+        for n in missing:
+            weights[n] = default_weight(n)
+    return weights, source
+
+
+def per_finger_weighted_means(target, current, weights, finger_order=None):
+    """P2.2: within each finger, the WEIGHTED MEAN joint angle.
+
+    Denominator is the sum of the weights of the joints included - never the count of them. That is
+    the task's second trap: with a count denominator, every distance scales by (total weight / count),
+    so editing a weight in the asset would move every distance uniformly and the thresholds would look
+    broken for no visible reason.
+    """
+    out = {}
+    for finger, chain in hm.FINGERS.items():
+        num = den = 0.0
+        for name in chain:
+            w = weights.get(name, 0.0)
+            if w <= 0.0:
+                continue
+            num += w * hm.q_angle_between(target[name], current[name])
+            den += w
+        out[finger] = num / den if den else 0.0
+    return out
+
+
+def metric_v3_weighted(target, current, weights):
+    """The shipped v3 distance: worst finger's weighted mean, plus the flat mean for reporting."""
+    fingers = per_finger_weighted_means(target, current, weights)
+    d = max(fingers.values())
+
+    num = den = 0.0
+    for name in hm.JOINT_NAMES:
+        w = weights.get(name, 0.0)
+        if w <= 0.0:
+            continue
+        num += w * hm.q_angle_between(target[name], current[name])
+        den += w
+    flat = num / den if den else 0.0
+
+    wrist = hm.q_angle_between(target["Wrist"], current["Wrist"])
+    return d, fingers, flat, wrist
+
+
+def noise_floor_v3(poses, weights, sigma_deg=2.0, trials=4000, seed=7):
+    """The same noise model as noise_floor(), measured with v3."""
+    rng = random.Random(seed)
+    samples, flat_samples = [], []
+    for _ in range(trials):
+        sid = rng.choice(SHAPE_IDS)
+        deltas = hm.shape_deltas(sid)
+        noisy = {}
+        for name, q in deltas.items():
+            if name in ("Wrist", "Palm"):
+                noisy[name] = q
+                continue
+            axis = (rng.gauss(0, 1), rng.gauss(0, 1), rng.gauss(0, 1))
+            if axis == (0.0, 0.0, 0.0):
+                axis = (1.0, 0.0, 0.0)
+            noisy[name] = hm.q_mul(q, hm.q_from_axis_angle(axis, rng.gauss(0.0, sigma_deg)))
+        current = hm.local_rotations_from_deltas(noisy)
+        d, _f, flat, _w = metric_v3_weighted(poses[sid], current, weights)
+        samples.append(d)
+        flat_samples.append(flat)
+    for series in (samples, flat_samples):
+        series.sort()
+    def pct(series, p):
+        return series[min(len(series) - 1, int(p * len(series)))]
+    return {
+        "d_p50": pct(samples, 0.50), "d_p95": pct(samples, 0.95),
+        "d_p99": pct(samples, 0.99), "d_max": samples[-1],
+        "flat_p50": pct(flat_samples, 0.50), "flat_p95": pct(flat_samples, 0.95),
+    }
+
+
+def report_v3(poses, sigma=2.0):
+    """The report P2.2's evidence comes from: v3 vs the metric it replaced, on our own content."""
+    weights, source = load_weights()
+    print("\n" + "=" * 78)
+    print("v3 metric -- per-joint weights, weighted mean WITHIN a finger, max ACROSS fingers")
+    print("=" * 78)
+    print(f"weights source: {source}")
+    zero = [n for n in hm.JOINT_NAMES if weights.get(n, 0.0) <= 0.0]
+    print(f"zero-weight joints ({len(zero)}): {', '.join(zero)}")
+    print(f"total weight: {sum(weights.values()):.2f} over {len([n for n in hm.JOINT_NAMES if weights.get(n,0)>0])} joints")
+
+    # matrix
+    n = len(SHAPE_IDS)
+    matrix = {}
+    for i in range(n):
+        for k in range(n):
+            matrix[(SHAPE_IDS[i], SHAPE_IDS[k])] = \
+                metric_v3_weighted(poses[SHAPE_IDS[i]], poses[SHAPE_IDS[k]], weights)[0]
+    print_matrix(matrix, "v3 pairwise distance (degrees)")
+
+    nearest, nearest_pair = float("inf"), None
+    for i in range(n):
+        for k in range(i + 1, n):
+            if matrix[(SHAPE_IDS[i], SHAPE_IDS[k])] < nearest:
+                nearest, nearest_pair = matrix[(SHAPE_IDS[i], SHAPE_IDS[k])], (SHAPE_IDS[i], SHAPE_IDS[k])
+    print(f"  nearest pair: {nearest_pair[0]}-{nearest_pair[1]} at {nearest:.1f} deg")
+
+    # the trap, quantified on our own shapes
+    flat_u_v = metric_v3_weighted(poses["U"], poses["V"], weights)[2]
+    v3_u_v = metric_v3_weighted(poses["U"], poses["V"], weights)[0]
+    print(f"  U-V: v3 {v3_u_v:.1f} deg, flat weighted mean {flat_u_v:.1f} deg "
+          f"({flat_u_v / v3_u_v * 100:.0f}% of it - this is the trap)")
+
+    noise = noise_floor_v3(poses, weights, sigma)
+    v2_noise = noise_floor(poses, "max", sigma, include_tip=False)
+    d2 = pairwise_v2(poses, "max", include_tip=False)
+    print("\n  noise under tracking noise, and the separability score (nearest pair / noise p95):")
+    print(f"    {'metric':34s} {'nearest pair':>12s} {'noise p95':>10s} {'score':>6s}")
+    print(f"    {'v2  max of chain angles':34s} {_nearest_v2(d2):12.1f} {v2_noise[1]:10.1f} "
+          f"{_nearest_v2(d2) / v2_noise[1]:6.2f}")
+    print(f"    {'v3  max of weighted finger means':34s} {nearest:12.1f} {noise['d_p95']:10.1f} "
+          f"{nearest / noise['d_p95']:6.2f}   <- ships")
+    print(f"    {'v3  flat weighted mean (the trap)':34s} {flat_u_v:12.1f} {noise['flat_p95']:10.1f} "
+          f"{flat_u_v / noise['flat_p95']:6.2f}")
+
+    print("\n  v3 noise percentiles (sigma = "
+          f"{sigma} deg/joint): p50 {noise['d_p50']:.1f}  p95 {noise['d_p95']:.1f}  "
+          f"p99 {noise['d_p99']:.1f}  max {noise['d_max']:.1f}")
+    print(f"  shipped thresholds lockedDeg {12.0:.0f} / closeDeg {20.0:.0f} / nearMissMaxDeg {26.0:.0f}: "
+          f"lock sits {12.0 / noise['d_p95']:.1f}x above the noise p95 "
+          f"and {nearest / 12.0:.1f}x below the nearest pair")
+    return weights, nearest, noise
+
+
+def _nearest_v2(matrix):
+    """Nearest off-diagonal distance in a {(a, b): value} matrix, whichever layout it uses."""
+    keys = [k for k in matrix.keys() if isinstance(k, tuple)]
+    if not keys:
+        return float("inf")
+    return min(matrix[(a, b)] for (a, b) in keys if a != b)
 
 
 # ------------------------------------------------------------------ reports
@@ -237,10 +425,15 @@ def noise_floor(poses, mode, sigma_deg=2.0, trials=4000, seed=7, include_tip=Tru
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--matrix", action="store_true", help="matrices only")
+    ap.add_argument("--v3-only", action="store_true", help="only the P2.2 weighted report")
     ap.add_argument("--sigma", type=float, default=2.0, help="per-joint tracking noise, degrees")
     args = ap.parse_args()
 
     poses = build_poses()
+
+    if args.v3_only:
+        report_v3(poses, args.sigma)
+        return 0
 
     print("=" * 78)
     print("SIGNSPACE matcher tuning")

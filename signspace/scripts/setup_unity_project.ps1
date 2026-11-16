@@ -22,13 +22,13 @@
 
     .PARAMETER EditorVersion
     .PARAMETER SkipCompile
-    .PARAMETER SkipRenderPipeline
+    .PARAMETER Template
 #>
 [CmdletBinding()]
 param(
     [string]$EditorVersion = '6000.3.28f1',
-    [switch]$SkipCompile,
-    [switch]$SkipRenderPipeline
+    [string]$Template = 'com.unity.template.urp-blank',
+    [switch]$SkipCompile
 )
 
 $ErrorActionPreference = 'Continue'
@@ -39,7 +39,7 @@ $Scratch  = Join-Path ([System.IO.Path]::GetTempPath()) "signspace-template-$Edi
 $EditorExe = "E:\unity\Editors\$EditorVersion\Editor\Unity.exe"
 $Manifest  = Join-Path $UnityDir 'Packages\manifest.json'
 
-function Say($m) { Write-Host $m }
+function Say($m) { Write-Host $m; Write-Host $m }
 
 if (-not (Test-Path $EditorExe)) {
     Say "FATAL: Unity $EditorVersion not found at $EditorExe"
@@ -50,26 +50,14 @@ if (-not (Test-Path $EditorExe)) {
 # ---------------------------------------------------------------- 1. scratch
 if (Test-Path $Scratch) { Remove-Item -Recurse -Force $Scratch }
 New-Item -ItemType Directory -Force -Path $Scratch | Out-Null
-Say "creating scratch project ..."
-# No -cloneFromTemplate: the URP template is a Package Manager package, not a built-in
-# one, and the editor's Package Manager cannot resolve it in a -createProject call
-# ("Package [com.unity.template.urp-blank] cannot be found"). The default 3D project
-# is created instead and the render pipeline is applied by SetupRenderPipeline.cs.
-& $EditorExe -createProject $Scratch -quit -batchmode -nographics -logFile "$Scratch\create.log"
-
-# Unity.exe returns as soon as the editor has been launched; the project is still
-# being written. Poll for it rather than checking once and declaring failure.
-$created = $false
-for ($i = 0; $i -lt 120; $i++) {
-    if (Test-Path "$Scratch\ProjectSettings") { $created = $true; break }
-    Start-Sleep -Seconds 2
-}
-if (-not $created) {
-    Say "FATAL: the scratch project was not created. Check $Scratch\create.log"
-    Get-Content "$Scratch\create.log" -Tail 25 | ForEach-Object { Say "  $_" }
+Say "creating scratch project from template $Template ..."
+& $EditorExe -createProject $Scratch -cloneFromTemplate $Template -quit -batchmode -nographics -logFile "$Scratch\create.log"
+if (-not (Test-Path "$Scratch\ProjectSettings")) {
+    Say "FATAL: template project was not created. Check $Scratch\create.log"
+    Say "If the log mentions com.unity.editor.headless, your Unity licence is not activated."
+    Get-Content "$Scratch\create.log" -Tail 20 | ForEach-Object { Say "  $_" }
     exit 2
 }
-Say "scratch project created."
 
 # -------------------------------------------------- 2. ProjectSettings only
 Say "copying ProjectSettings into unity\ ..."
@@ -78,12 +66,11 @@ $dst = Join-Path $UnityDir 'ProjectSettings'
 if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
 Copy-Item -Recurse $src $dst
 
-# NOTE: ProjectSettings is deliberately NOT stripped of the editor version.
-# Unity uses m_EditorVersionWithRevision to know which editor the project belongs to;
-# blanking it makes the project open with "created with a newer version" prompts and
-# is worse than a line of churn in a diff. ProjectSettings IS committed - it pins the
-# render pipeline asset and the graphics settings, and a build that depends on an
-# uncommitted setting is not reproducible.
+# the project path is machine specific and must not be committed
+$vs = Join-Path $dst 'ProjectSettings.asset'
+if (Test-Path $vs) {
+    (Get-Content $vs -Raw) -replace 'm_EditorVersionWithRevision: .*', 'm_EditorVersionWithRevision: ' | Set-Content $vs -NoNewline
+}
 
 # ------------------------------------------------------ 3. merge the manifest
 Say "merging template packages into the pinned manifest ..."
@@ -110,50 +97,14 @@ Say "manifest now contains:"
     ForEach-Object { Say ("  {0} = {1}" -f $_.Name, $_.Value) }
 
 # ------------------------------------------------------------- 4. compile
-# Two passes, because the render pipeline assets can only be created once the URP
-# package has been resolved and compiled. Pass 1 resolves and compiles; pass 2
-# creates the pipeline assets; pass 3 compiles again with everything in place.
+if ($SkipCompile) { Say "skipping compile (-SkipCompile)"; exit 0 }
 
 $compileLog = Join-Path $UnityDir 'compile.log'
-function Invoke-Unity([string]$label, [string[]]$extra) {
-    Say "$label ..."
-    $unityArgs = @("-batchmode", "-quit", "-projectPath", $UnityDir, "-logFile", $compileLog) + $extra
-    # Start-Process -Wait, not the call operator: Unity.exe returns as soon as the
-    # editor has launched, and reading the log before the compile has finished is
-    # how you end up believing a build succeeded because the log was empty.
-    $proc = Start-Process -FilePath $EditorExe -ArgumentList $unityArgs -Wait -PassThru -WindowStyle Hidden
-    return $proc.ExitCode
-}
+Say "compiling headlessly (this resolves packages and can take several minutes) ..."
+& $EditorExe -projectPath $UnityDir -quit -batchmode -nographics -logFile $compileLog
+$code = $LASTEXITCODE
 
-Say "pass 1: resolve packages and compile (this downloads the Meta XR SDK) ..."
-$code = Invoke-Unity "pass 1" @()
-
-$errors = Select-String -Path $compileLog -Pattern 'error CS\d+:' -ErrorAction SilentlyContinue
-Say "pass 1 exit code : $code"
-Say "pass 1 errors    : $(@($errors).Count)"
-
-# ---- the settings that have no public API in Unity 6 ----------------------
-# Must run while the editor is closed: the editor loads these values at
-# startup, so patching the file after it has closed is what makes the change
-# stick.
-Say "patching the player settings that have no public API ..."
-$patchScript = Join-Path $PSScriptRoot 'patch_player_settings.ps1'
-if (Test-Path $patchScript) {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $patchScript | ForEach-Object { Say "  $_" }
-}
-
-if (-not $SkipRenderPipeline) {
-    Say "pass 2: create and assign the render pipeline assets ..."
-    Invoke-Unity "pass 2" @("-executeMethod", "Signspace.Editor.SetupRenderPipeline.Run") | Out-Null
-
-    Say "pass 3: configure XR for Android (the OpenXR loader and Meta's feature set) ..."
-    Invoke-Unity "pass 3" @("-executeMethod", "Signspace.Editor.SetupXR.Run") | Out-Null
-}
-
-Say "pass 4: final compile ..."
-$code = Invoke-Unity "pass 4" @()
-
-$errors = Select-String -Path $compileLog -Pattern 'error CS\d+:' -ErrorAction SilentlyContinue
+$errors = Select-String -Path $compileLog -Pattern '^.*error CS\d+:' -ErrorAction SilentlyContinue
 $warnings = Select-String -Path $compileLog -Pattern 'warning CS\d+:' -ErrorAction SilentlyContinue
 $licenseErrors = Select-String -Path $compileLog -Pattern "com.unity.editor.headless|License.*not found|No valid Unity Editor license" -ErrorAction SilentlyContinue
 
@@ -176,5 +127,4 @@ if ($errors) {
 }
 Say ""
 Say "no compile errors."
-if ($SkipCompile) { Say "skipping compile (-SkipCompile)"; exit 0 }
 exit 0

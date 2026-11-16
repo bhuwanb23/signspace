@@ -36,6 +36,7 @@ import pathlib
 import sys
 
 import hand_model as hm
+import pose_schema as ps
 from hand_model import _finger, _thumb
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -253,26 +254,36 @@ def shape_for(shape_id):
 
 
 def payload_for(shape_id):
+    """A schema-2 probe pose, built through the one schema implementation (P2.1).
+
+    `probeOnly: true` is the flag that keeps these out of shipped content; validate_poses.py rejects
+    any file carrying it inside the shipped Signs folder.
+    """
     shape = shape_for(shape_id)
     rotations = hm.shape_local_rotations(shape)
     flat = []
     for name in hm.JOINT_NAMES:
         x, y, z, w = rotations[name]
         flat.extend([round(x, 4), round(y, 4), round(z, 4), round(w, 4)])
-    return {
-        "version": 1,
-        "id": shape_id,
-        "handedness": "right",
-        "jointCount": len(hm.JOINT_NAMES),
-        "neutralCaptured": AUTHORED_ON,
-        "source": "probe-reference",
-        "family": shape.get("family", "spread"),
-        "description": shape.get("description", ""),
-        "authoringConfidence": shape.get("authoringConfidence", "high"),
-        "probeOnly": True,
-        "jointNames": list(hm.JOINT_NAMES),
-        "q": flat,
-    }
+    return ps.build_payload(
+        shape_id=shape_id,
+        joints=list(hm.JOINT_NAMES),
+        rot=flat,
+        signer="synthetic-neutral-v1",
+        captured=AUTHORED_ON,
+        vantage="authored-neutral",
+        source="probe-reference",
+        confidence={
+            "authoring": shape.get("authoringConfidence", "high"),
+            # P1.5 measures this on hands; until a session runs, it stays empty on purpose
+            "measured": None,
+            "note": "probe reference, not content and not signer-reviewed",
+        },
+        family=shape.get("family", "spread"),
+        description=shape.get("description", ""),
+        notes="P1.5 probe reference. NOT SHIPPED CONTENT.",
+        probe_only=True,
+    )
 
 
 def main():
@@ -290,14 +301,8 @@ def main():
 
     for shape_id in PROBE_ORDER:
         payload = payload_for(shape_id)
-        n = payload["jointCount"]
-        if len(payload["q"]) != n * 4:
-            problems.append(f"{shape_id}: q length {len(payload['q'])} != {n * 4}")
-        for i in range(n):
-            x, y, z, w = payload["q"][i * 4:i * 4 + 4]
-            m = x * x + y * y + z * z + w * w
-            if abs(m - 1.0) > 0.01:
-                problems.append(f"{shape_id}: joint {i} |q|^2 = {m:.4f}")
+        errs, _warns = ps.validate(payload, list(hm.JOINT_NAMES), filename=f"{shape_id}.json")
+        problems += errs
 
         path = out / f"{shape_id}.json"
         if args.dry_run:
