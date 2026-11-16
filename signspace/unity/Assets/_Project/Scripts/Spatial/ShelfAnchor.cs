@@ -154,9 +154,13 @@ namespace Signspace.Spatial
             yield return WaitForRoomOrTimeout(startedAt);
 
             float t0 = Time.realtimeSinceStartup;
-            SurfaceCandidate surface;
-            Transform anchorTransform;
-            bool ok = _finder.TryResolve(SavedAnchorId, out surface, out anchorTransform);
+            // `default` matters: a struct filled by an out-parameter behind a
+            // short-circuit is not provably assigned, and the compiler refuses to
+            // let the code read a field it cannot prove was written.
+            SurfaceCandidate surface = default;
+            Transform anchorTransform = null;
+            bool ok = _finder != null &&
+                      _finder.TryResolve(SavedAnchorId, out surface, out anchorTransform);
             ResolveMilliseconds = (Time.realtimeSinceStartup - t0) * 1000f;
 
             if (!ok)
@@ -259,7 +263,7 @@ namespace Signspace.Spatial
         /// </summary>
         public void Place(bool offerOnly)
         {
-            SurfaceCandidate surface;
+            SurfaceCandidate surface = default;
             bool found = _finder != null && _finder.TryGetPrimary(out surface);
 
             if (!found)
@@ -278,8 +282,9 @@ namespace Signspace.Spatial
             // Parent BEFORE positioning, so the transform written to disk is anchor-relative and the
             // same square of furniture comes back in the next session.
             Transform anchorTransform = null;
-            SurfaceCandidate resolved;
-            if (_finder.TryResolve(surface.AnchorId, out resolved, out anchorTransform) == false)
+            SurfaceCandidate resolved = default;
+            if (_finder != null &&
+                _finder.TryResolve(surface.AnchorId, out resolved, out anchorTransform) == false)
                 anchorTransform = null;
 
             if (ParentToAnchor && anchorTransform != null)

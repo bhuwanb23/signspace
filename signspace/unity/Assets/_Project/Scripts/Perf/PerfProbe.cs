@@ -12,11 +12,12 @@ namespace Signspace.Perf
     ///
     /// This component exists because the phase has two traps and both of them are about honesty:
     ///
-    ///   trap 1 - measuring in the editor or the simulator. Neither has the XR compositor, the
-    ///            dynamic clock levels or a battery, so a number from either is not a baseline for
-    ///            Quest 3S. Nothing here can prevent that, but the summary REFUSES to certify a run
-    ///            that did not happen on a headset (see `deviceModel` / `graphicsDeviceName` and the
-    ///            validation block).
+        /// trap 1 - measuring in the editor or the simulator. Neither has the XR compositor, the
+        ///            dynamic clock levels or a battery, so a number from either is not a baseline for
+        ///            Quest 3S. Nothing here can prevent that, but the summary REFUSES to certify a run
+        ///            that did not happen on a headset: the verdict line itself says NOT ADMISSIBLE,
+        ///            before any other check, so it cannot be missed by someone reading the summary
+        ///            from the top (see deviceModel / graphicsDeviceName and the validation block).
     ///   trap 2 - measuring for 60 seconds and calling it thermal-stable. A Quest 3S is cool for the
     ///            first minutes and throttles later, so a short run cannot see the thing the run is
     ///            for. `requiredSeconds` is enforced: a run shorter than 10 minutes is written down as
@@ -297,7 +298,20 @@ namespace Signspace.Perf
             }
 
             string verdict;
-            if (runSeconds < requiredSeconds)
+            if (Application.isEditor)
+            {
+                // THE FIRST CHECK, because it is the one that must never be missed.
+                // A run in the editor or the simulator has no XR compositor, no
+                // dynamic clock levels and no battery, so it cannot be a baseline
+                // for a Quest 3S. The device block below says so too, but a reader
+                // looks at the VERDICT line first, and "PASS" on line 3 with the
+                // disqualification twelve lines down is exactly the mistake this
+                // component exists to prevent.
+                verdict = "NOT ADMISSIBLE — measured in the editor or the simulator, not on a headset. " +
+                          "Neither has the XR compositor, the dynamic clock levels or a battery, so this " +
+                          "number is not a baseline. This file is evidence of a method, not a baseline.";
+            }
+            else if (runSeconds < requiredSeconds)
                 verdict = "INVALID — ran " + runSeconds.ToString("0") + " s of the required " +
                           requiredSeconds.ToString("0") + " s. A short run is not a thermal measurement " +
                           "(trap 2); this file is evidence of a method, not a baseline.";
@@ -412,6 +426,16 @@ namespace Signspace.Perf
             text += "thermal  : " + (ThermalStatus < 0 ? "unavailable" : ThermalStatus + " " +
                     AndroidThermal.Describe(ThermalStatus)) + "\n";
             text += "hitches  : " + _hitchTimes.Count + "\n";
+            if (Finished)
+            {
+                // the verdict is the first thing anyone reads, so it is on screen too
+                string verdictLine = Summary;
+                int newline = verdictLine.IndexOf('\n');
+                if (newline > 0) verdictLine = verdictLine.Substring(0, newline);
+                int v = verdictLine.IndexOf("verdict");
+                if (v >= 0) verdictLine = verdictLine.Substring(v).Trim();
+                text += "VERDICT: " + verdictLine + "\n";
+            }
             text += Finished ? "FINISHED — summary written\n" : "keep both hands up and one object anchored\n";
             text += Application.isEditor ? "!! EDITOR — this number is not a baseline" : "player build";
 
