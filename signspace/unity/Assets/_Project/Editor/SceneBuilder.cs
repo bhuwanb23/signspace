@@ -167,7 +167,19 @@ namespace Signspace.Editor
             // ---- P2.5: the lock payoff ------------------------------------------------------
             // Instantiated from the committed prefab so the timing lives in one place (the prefab) and
             // the scene only wires what it alone can know: the matcher, the tracked hand, the shelf.
+            // In a cold batch run the asset database may not have imported a committed prefab yet, and
+            // LoadAssetAtPath then returns null - which would write a scene with no payoff and only a
+            // warning to show for it. Refresh first, and regenerate the prefab if it still will not load.
+            AssetDatabase.Refresh();
             var payoffPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/LockPayoff.prefab");
+            if (payoffPrefab == null)
+            {
+                Debug.Log("[SceneBuilder] LockPayoff.prefab did not load; regenerating it.");
+                LockPayoffBuilder.Build();
+                AssetDatabase.Refresh();
+                payoffPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/LockPayoff.prefab");
+            }
+
             Signspace.Core.LockPayoff payoff = null;
             if (payoffPrefab != null)
             {
@@ -175,7 +187,7 @@ namespace Signspace.Editor
                 payoff = payoffGo.GetComponent<Signspace.Core.LockPayoff>();
                 payoff.matcher = matcher;
                 payoff.save = saveGo.GetComponent<Signspace.Matching.SaveSystem>();
-                payoff.shelf = Object.FindFirstObjectByType<Signspace.Spatial.ShelfAnchor>();
+                payoff.shelf = UnityEngine.Object.FindFirstObjectByType<Signspace.Spatial.ShelfAnchor>();
                 payoff.referenceHand = refGo.transform;
                 payoff.referenceHandVisual = visualGo;
                 // The prefab's stand-in anchor is not the visible reference hand in this scene.

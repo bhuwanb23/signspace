@@ -238,6 +238,50 @@ PROBE_SHAPES = {
     },
 }
 
+#: The facing pair: identical fingers, 90 degrees of pronation between them.
+#:
+#: Why these two exist at all: every other authored pair differs in finger angles, and all six
+#: shipped shapes left Wrist and Palm at identity. That made the palm term in the metric
+#: unfalsifiable - no content could ever show it doing work. K and P differ in NOTHING but facing,
+#: so `facing_pair_sim.py` can measure whether the term separates them or not.
+#:
+#: They live in `Facing/`, not `Signs/`: shipping them would change the six-shape commitment (and
+#: the demo), which is a P5 content decision, not a probe's.
+FACING_SHAPES = {
+    "K": {
+        "family": "facing",
+        "authoringConfidence": "high",
+        "description": "Index and middle extended, thumb between them, palm facing the viewer.",
+        "fingers": {
+            "index":  _finger(flex_base=6.0, abd=+6.0),
+            "middle": _finger(flex_base=6.0),
+            "ring":   _finger(flex_base=86.0, flex_prox=100.0, flex_inter=68.0, flex_distal=6.0),
+            "little": _finger(flex_base=86.0, flex_prox=100.0, flex_inter=68.0, flex_distal=6.0),
+        },
+        "thumb": _thumb(flex_base=10.0, flex_prox=14.0, flex_distal=8.0, abd=+18.0, opp=10.0),
+        "wrist": {"twist": 0.0},
+    },
+    "P": {
+        "family": "facing",
+        "authoringConfidence": "high",
+        "description": "K rotated 90 degrees: the same hand, palm down instead of facing the viewer.",
+        "fingers": {
+            "index":  _finger(flex_base=6.0, abd=+6.0),
+            "middle": _finger(flex_base=6.0),
+            "ring":   _finger(flex_base=86.0, flex_prox=100.0, flex_inter=68.0, flex_distal=6.0),
+            "little": _finger(flex_base=86.0, flex_prox=100.0, flex_inter=68.0, flex_distal=6.0),
+        },
+        "thumb": _thumb(flex_base=10.0, flex_prox=14.0, flex_distal=8.0, abd=+18.0, opp=10.0),
+        "wrist": {"twist": 90.0},
+    },
+}
+PROBE_SHAPES.update(FACING_SHAPES)
+
+#: Written to their own folder, with their own index, so P1.5's session stays at twenty shapes.
+FACING_IDS = ["K", "P"]
+DEFAULT_FACING_OUT = REPO_ROOT / "unity" / "Assets" / "StreamingAssets" / "Facing"
+
+
 #: Probe order. Shipped six first (they are the ones that must survive), then the suspected
 #: blind spots, then the rest. Order matters: if the session is cut short, the most
 #: consequential shapes have already been measured.
@@ -290,9 +334,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--out", default=str(DEFAULT_OUT))
+    ap.add_argument("--facing-out", default=str(DEFAULT_FACING_OUT))
     args = ap.parse_args()
 
     out = pathlib.Path(args.out)
+    facing_out = pathlib.Path(args.facing_out)
     problems = []
     written = []
 
@@ -311,6 +357,21 @@ def main():
         else:
             path.write_text(json.dumps(payload, indent=2) + "\n")
             written.append(shape_id)
+
+    # The facing pair, in its own folder: a probe reference that must never enter Probe/index.json,
+    # or P1.5's session grows by two shapes it did not plan for.
+    if not args.dry_run:
+        facing_out.mkdir(parents=True, exist_ok=True)
+    for shape_id in FACING_IDS:
+        payload = payload_for(shape_id)
+        errs, _warns = ps.validate(payload, list(hm.JOINT_NAMES), filename=f"{shape_id}.json")
+        problems += errs
+        if not args.dry_run:
+            (facing_out / f"{shape_id}.json").write_text(json.dumps(payload, indent=2) + "\n")
+
+    if not args.dry_run:
+        (facing_out / "index.json").write_text(
+            json.dumps({"version": 1, "shapes": FACING_IDS}, indent=2) + "\n")
 
     if not args.dry_run:
         index = {"version": 1, "shapes": PROBE_ORDER}

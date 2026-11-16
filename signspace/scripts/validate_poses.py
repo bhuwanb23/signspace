@@ -37,6 +37,7 @@ SKIP = {"set-meta.json", "index.json", "probe-meta.json"}
 DEFAULT_FOLDERS = (
     REPO_ROOT / "unity" / "Assets" / "StreamingAssets" / "Signs",
     REPO_ROOT / "unity" / "Assets" / "StreamingAssets" / "Probe",
+    REPO_ROOT / "unity" / "Assets" / "StreamingAssets" / "Facing",
 )
 
 BROKEN_DIR = REPO_ROOT / "scripts" / "fixtures" / "broken"
@@ -76,7 +77,8 @@ def validate_folder(folder: pathlib.Path, canonical, *, verbose=True) -> tuple[i
     if not folder.exists():
         return 0, [f"no pose folder at {folder}"]
 
-    shipped = folder.name.lower() != "probe"
+    # `Facing/` is the K/P probe pair: reference-only, exactly like Probe, and never shipped.
+    shipped = folder.name.lower() not in ("probe", "facing")
     files = [p for p in sorted(folder.glob("*.json")) if p.name not in SKIP]
     if not files:
         return 0, []

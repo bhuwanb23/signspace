@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
@@ -102,7 +103,8 @@ namespace Signspace.Editor
             PlayerSettings.companyName = CompanyName;
             PlayerSettings.productName = ProductName;
             PlayerSettings.bundleVersion = Version;
-            PlayerSettings.bundleVersionCode = BundleVersionCode;
+            // Unity exposes the version code on the platform group, not on PlayerSettings itself.
+            PlayerSettings.Android.bundleVersionCode = BundleVersionCode;
             PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, packageName);
 
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel32;
@@ -116,8 +118,10 @@ namespace Signspace.Editor
             // linear colour space is correct for Quest
             PlayerSettings.colorSpace = ColorSpace.Linear;
 
-            // ISDK needs the new input system
-            PlayerSettings.activeInputHandler = ActiveInputHandling.Both;
+            // ISDK needs the new input system. Unity 6 exposes no public setter for this, so it is
+            // read back from the serialised project and the build refuses to run if it drifted.
+            // (A patch of ProjectSettings.asset here would race the asset database.)
+            AssertActiveInputBoth();
 
             // texture compression
             EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ASTC;
@@ -132,6 +136,32 @@ namespace Signspace.Editor
 
             AssetDatabase.SaveAssets();
             Debug.Log("[BuildScript] package name: " + packageName);
+        }
+
+        /// <summary>
+        /// Fails the build when Player Settings → Active Input Handling is not "Both". The Meta
+        /// Interaction SDK only raises hand events under the new input system, so a project set to
+        /// "Input Manager (Old)" compiles, builds, installs - and then shows no hands at all. That is
+        /// precisely the class of failure a build script exists to make impossible.
+        /// </summary>
+        static void AssertActiveInputBoth()
+        {
+            const string settingsPath = "ProjectSettings/ProjectSettings.asset";
+            if (!File.Exists(settingsPath))
+                throw new BuildFailedException("[BuildScript] cannot verify input handling: " + settingsPath + " is missing");
+
+            foreach (string line in File.ReadAllLines(settingsPath))
+            {
+                if (!line.TrimStart().StartsWith("activeInputHandler:")) continue;
+
+                string value = line.Substring(line.IndexOf(':') + 1).Trim();
+                if (value == "2") return;                  // 2 = Both
+
+                throw new BuildFailedException("[BuildScript] activeInputHandler is " + value +
+                    "; the hands need 2 (Both). Set Player Settings > Active Input Handling > Both.");
+            }
+
+            throw new BuildFailedException("[BuildScript] activeInputHandler not found in " + settingsPath);
         }
 
         /// <summary>

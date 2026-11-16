@@ -104,8 +104,12 @@ def read_families(path: pathlib.Path) -> dict[str, str]:
 
 
 def read_budgets(path: pathlib.Path) -> dict[str, int]:
-    """The ceilings from PERFORMANCE.md section 1."""
-    text = path.read_text()
+    """The ceilings from PERFORMANCE.md section 1.
+
+    Read as UTF-8: the table says `≤`, and on Windows the default locale codec would decode that
+    into mojibake, making every ceiling look absent. The doc is not wrong; the reader was.
+    """
+    text = path.read_text(encoding="utf-8")
     budgets: dict[str, int] = {}
     rows = {
         "draw_calls": r"\|\s*Draw calls\s*\|\s*(?:&le;|<=|≤)\s*([\d,.]+)\s*(k?)",

@@ -384,12 +384,19 @@ def _joint_delta(spec):
     flex = spec.get("flex", 0.0)
     abd = spec.get("abd", 0.0)
     opp = spec.get("opp", 0.0)
+    # `twist` is the rotation about the bone's own long axis. It only appears on the wrist/palm
+    # specs, and it is what lets two shapes differ in FACING while their fingers are identical
+    # (the K/P probe pair). Without it the Wrist joint could only be identity, so no authored pair
+    # could exercise the palm term in the metric.
+    twist = spec.get("twist", 0.0)
 
     q = IDENTITY
     if abs(abd) > 1e-9:
         q = q_mul(q, q_from_axis_angle((0.0, 0.0, 1.0), abd))
     if abs(opp) > 1e-9:
         q = q_mul(q, q_from_axis_angle((0.0, 1.0, 0.0), opp))
+    if abs(twist) > 1e-9:
+        q = q_mul(q, q_from_axis_angle((0.0, 1.0, 0.0), twist))
     if abs(flex) > 1e-9:
         q = q_mul(q, q_from_axis_angle((1.0, 0.0, 0.0), flex))
     return q
@@ -423,6 +430,14 @@ def shape_deltas(shape_id):
     for joint, role in zip(FINGERS["thumb"], thumb_roles):
         deltas[joint] = _joint_delta(thumb_spec[role])
 
+    # Optional wrist/palm orientation. Shapes that omit them keep both joints at identity, which
+    # is every shape authored before the palm term existed - so this changes no measured degree
+    # for them, and gives the K/P probe pair its 90 degrees of pronation.
+    if "wrist" in shape:
+        deltas["Wrist"] = _joint_delta(shape["wrist"])
+    if "palm" in shape:
+        deltas["Palm"] = _joint_delta(shape["palm"])
+
     return deltas
 
 
@@ -432,7 +447,18 @@ def local_rotations_from_deltas(deltas, neutral=None):
     This is the one place the hierarchy is applied, so it is also the place a
     real rig rest pose would be folded in.
     """
-    # accumulated ancestor delta for each joint
+    def _own(name):
+        """This joint's own rotation, with the rest pose folded in when one is supplied."""
+        return q_mul(neutral[name], deltas[name]) if neutral is not None else deltas[name]
+
+    # Wrist and Palm are real joints, not placeholders. They were hard-coded to identity, which
+    # made the palm term in the metric unfalsifiable: no authored shape could ever differ in
+    # facing, so nothing could show the term doing work. K/P is the content that proves it.
+    wrist = _own("Wrist")
+    palm = _own("Palm")
+
+    # Finger locals stay local: the wrist is composed in only where a basis needs the whole arm
+    # (palm_sim/PalmOrientation do exactly that), so a wrist turn cannot masquerade as finger error.
     accumulated = {}
     for finger, chain in FINGERS.items():
         running = IDENTITY
@@ -442,8 +468,11 @@ def local_rotations_from_deltas(deltas, neutral=None):
 
     rotations = {}
     for name in JOINT_NAMES:
-        if name in ("Wrist", "Palm"):
-            rotations[name] = IDENTITY
+        if name == "Wrist":
+            rotations[name] = wrist
+            continue
+        if name == "Palm":
+            rotations[name] = palm
             continue
         own = deltas[name]
         if neutral is not None:
