@@ -256,6 +256,7 @@ honours a clear, specific disclosure far more than a vague one.
 | 15 Nov 2026 | File created. Toolchain installed on E:, Unity project created, first compile (0 errors), first APK (62 MB). The metric redesigned and measured offline. The joint-alias tables reconciled. The nine stub specs written. Passthrough enabled and verified in the built manifest. | agent |
 | 16 Nov 2026 | P2 integrated: the v3 metric, the palm term, the bands, the hold timer, the left-hand policy, the schema v2, and ~20 new C# files — none of which had ever been compiled. Restored the Unity engine modules that had been dropped from `manifest.json` (144 compile errors). | agent |
 | 16 Nov 2026 | **Integration pass.** The merged tree compiled (8 errors fixed), the scene was regenerated with explicit tuning, the build now asserts it, the silently-missing payoff was restored, the APK was rebuilt at version code 10, `MATCH-ALGORITHM.md` moved to v3, the tuning raw output was regenerated, and the P3 feedback layer was wired into the scene. Details in §8. | agent |
+| 16 Nov 2026 | **P3/P4 re-integration.** A rewrite replaced the tree and reverted the integration fixes. Restored the package manifest, fixed 10 project errors, deleted the orphaned panel builder, restored the payoff and the missing K/P authoring path, fixed the budget script's encoding. P4.2's three open boxes measured by `ShelfCheck`; P3's evidence re-run unchanged. APK v13. Details in §8.10. | agent |
 
 ---
 
@@ -391,6 +392,51 @@ decoration.
 | Serialised field vs code default | editor shows 24, the app runs 20 | generator writes values; build asserts them |
 | `Object` with `using System;` | CS0104 | qualify `UnityEngine.Object` |
 | Short-circuit + `out` struct | CS0170 on every field read after the guard | initialise to `default` |
+
+### 8.10 The P3/P4 tree replaced the integrated one — ✅ RE-INTEGRATED, VERIFIED
+
+**16 Nov 2026, second pass.** The working tree was replaced with a P3/P4 rewrite: 148 changed paths,
+74 with real content. It contained substantial new work — `NearMiss.cs`, `Trackability.cs`,
+`HonestMirror.prefab`, `ShelfSilhouettes/ObjectView/Idle`, schema 3, six new Python checks — and it
+undid every integration fix from §8.1–8.3. Nothing in it had been compiled.
+
+| What was wrong | Why it happened | Fix | Evidence |
+|---|---|---|---|
+| **144 CS1069** in Meta packages: Terrain, Animation, AssetBundle modules "not found" | `manifest.json` had been replaced by a three-package list (OpenXR, XR Management, Meta SDK all); every built-in module, URP and uGUI were gone | restored the committed `manifest.json` + `packages-lock.json` | package errors **144 → 0**; only project errors remained |
+| `OrientationPenaltyDegrees` declared twice | merge scar in `Matcher.cs` | removed the duplicate | CS0102 gone |
+| `out BasisNote` on a property; `SurfaceCandidate best` unassigned behind a short-circuit; `shown * glow` (`Light`); bare `Object` ambiguous | the four §8.1 fixes, reverted | local + assign, `default`, `glowRatio`, `UnityEngine.Object` | 10 project errors → **0** |
+| `NearMissToggle` used `matcher.NearMissEnabled`, which did not exist | new toggle expected a property the rewritten `Matcher` only had as a field | added a property that routes the setter through `SetNearMissEnabled` (so the switch still persists) | compiles; the off switch keeps its save path |
+| `FeedbackUiBuilder` (previous runtime panel) no longer matched `HonestMirror` | two panel designs coexisted: the new prefab builder and the old runtime builder | deleted the orphan; `SceneBuilder` already calls `HonestMirrorBuilder` | no references remain |
+| `PlayerSettings.bundleVersionCode` / `activeInputHandler` do not exist | the same regression §8.1 fixed | Android-scoped version code; input handling is **asserted** from `ProjectSettings.asset` (must be `2`) and fails the build otherwise | settings apply, `EXIT=0` |
+| **No lock payoff in the scene** | cold batch import returned null for the committed prefab, exactly as in §8.3 | `AssetDatabase.Refresh()` + `LockPayoffBuilder.Build()` fallback | log: *did not load; regenerating* → *payoff wired, 1.04 s of 1.20 s* |
+| `shelf_budget.py`: "PERFORMANCE.md has no draw_calls ceiling" | the script read the doc with the Windows locale codec, so `≤` became mojibake and every ceiling looked absent | read **and** write UTF-8 | budget check PASS 26/120, 912/150k; report no longer contains replacement characters |
+| K/P facing pair had no authoring path | the rewrite dropped `twist` and the wrist spec, and `local_rotations_from_deltas` hard-coded Wrist/Palm to identity — the original P2.6 gap | restored twist, optional wrist/palm specs, and real wrist/palm locals (finger locals stay local, so a wrist turn cannot look like finger error) | `facing_pair_sim.py`: fingers **0.00°**, O **90.00°**, total **75.00°**, reverse identical, shipped six O **0.00°** |
+
+**P3 re-validated, not re-claimed.** Every P3 simulator was re-run against this tree: near-miss 8/8
+correct shapes, 0/2000 false positives, 9 fires without the 400 ms window and 1 with it, pause PASS
+with 1 blind lock per scenario as control, copy lint 0 over 68 literals, trackability 0 violations.
+No number in the P3 documents changed. `validate_poses.py` now reports **28 shapes** because the K/P
+facing probes are in `Facing/`; `validate_poses` was taught that folder is probe-only.
+
+**P4.1/P4.2 closed at the desk.** `shelf_sim.py` passes seven rooms and the area-cap property.
+A new `Editor/ShelfCheck.cs` builds the shelf and twelve shipped objects and measures what the task
+had only asserted:
+
+```text
+slot grid 0.425 x 0.115 m inside 0.500 x 0.160 m      PASS
+widest silhouette 0.064 x 0.041 in a 0.075 x 0.065 cell PASS
+markers: 1 dim at launch; 3 filled + 1 dim            PASS
+overlapping object pairs: 0 of 66                      PASS
+12 objects: 26 draw calls, 864 worst-case triangles    PASS
+```
+
+**Build:** APK **v13**, 62 MB compressed, version code **13** so it installs over v12; scene contains
+the shelf, the payoff, the panel and its plinth. Included in `assets/`: `Probe/` (20), `Facing/` (2)
+and `trackability.json`.
+
+**Still not measured:** every device number (frame time, idle CPU, MRUK, relaunch/reboot), a real hand
+firing the near-miss, the non-signer read, a stranger, and a signer's eye on the four excluded shapes.
+G3 and G4 remain open for those reasons, not for missing code.
 
 ---
 

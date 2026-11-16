@@ -47,22 +47,32 @@ namespace Signspace.Matching
                  "must not turn into a divide-by-zero.")]
         public JointWeights weights;
 
+        // ---- one source of truth for the tuned values --------------------------------------------
+        // A serialised scene field silently overrides a code default. That is how this project once
+        // shipped the old tuning (close 20 / slack 20) while the code said 24 / 15. SceneBuilder writes
+        // these values explicitly, and BuildScript refuses to build a scene that disagrees with them.
+        public const float TunedLockedDeg = 12f;
+        public const float TunedCloseDeg = 24f;
+        public const float TunedReleaseDeg = 2f;
+        public const float TunedSlackDeg = 15f;
+        public const float TunedHoldSeconds = 0.7f;
+
         [Header("Bands (degrees)")]
         [Tooltip("Locked: this close to the target shape.")]
-        public float lockedDeg = 12f;
+        public float lockedDeg = TunedLockedDeg;
         [Tooltip("Close: recognisably near the target shape. Measured in band_sim.py: 24 leaves 2.0 deg "
                + "to the nearest accidental pair (U-V, 26.0), and a hand making that pair is told "
                + "'close' on 0.0% of frames.")]
-        public float closeDeg = 24f;
+        public float closeDeg = TunedCloseDeg;
         [Tooltip("Degrees of hysteresis on the way OUT of a band. Entering uses the plain edge. "
                + "2 deg removes the last of the edge flicker (band_sim.py: 4 changes/30 s -> 0).")]
-        public float bandReleaseDeg = 2f;
+        public float bandReleaseDeg = TunedReleaseDeg;
         [Tooltip("Band changes only after this long in the new state, so the meter never strobes.")]
         public float bandHysteresisSeconds = 0.15f;
 
         [Header("Hold")]
         [Tooltip("How long the shape must stay inside the locked band before it counts.")]
-        public float holdSeconds = 0.7f;
+        public float holdSeconds = TunedHoldSeconds;
         [Tooltip("Tracking below this confidence pauses the timer instead of resetting it.")]
         public float confidenceFloor = 0.7f;
         [Tooltip("A tracking dip shorter than this is FROZEN, not reset. Measured in hold_sim.py.")]
@@ -79,7 +89,7 @@ namespace Signspace.Matching
         [Tooltip("Palm facing error ignored up to this angle, so a naturally different resting wrist is " +
                  "not punished. Measured: wrist jitter for a correctly-facing hand has sd 1.4 deg and " +
                  "p99 6.4 deg (palm_sim.py), so 15 deg is ~10 sigma of noise.")]
-        public float orientationSlackDeg = 15f;
+        public float orientationSlackDeg = TunedSlackDeg;
         [Tooltip("k: how much a degree of palm error costs, beyond the slack. 1.0 = a degree of facing " +
                  "error costs exactly a degree of match, which is the smallest weight that stops a 30 deg " +
                  "mis-face from locking (palm_sim.py section 4).")]

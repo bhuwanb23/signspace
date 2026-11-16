@@ -33,7 +33,7 @@ tree byte-identical, so these numbers are the committed evidence regenerated, no
 | Check | Command | Result |
 |---|---|---|
 | Pose schema | `python validate_poses.py --self-test` | **29 cases passed**; 3 broken fixtures rejected |
-| Pose set | `python validate_poses.py` | **26 shapes, 0 problems** |
+| Pose set | `python validate_poses.py` | **28 shapes, 0 problems** (6 shipped + 20 probe + 2 facing probe) |
 | Joint names | `python check_alias_tables.py` | **61 spellings, C# and Python agree** |
 | Metric | `python tune_match.py` | nearest pair **26.0°**, noise p95 **6.7°**, score **3.89**; sensitivity holds to σ=4.0°/joint |
 | Bands | `python band_sim.py` | at `closeDeg 24`: **0.04% false close**, **0.0%** lock from the neighbouring shape; 24 survives ~40% more noise than modelled |

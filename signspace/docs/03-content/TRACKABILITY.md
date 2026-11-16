@@ -294,7 +294,7 @@ what this panel exists to replace.
   pushed at anyone.
 - **The shapes are the real ones.** Each hand is the `Probe/<id>.json` capture, built by the same
   `HandVisual` and posed with the same `ApplyPose` as the taught shapes, in grey unlit at 0.85 scale.
-  `scripts/validate_poses.py` reports **26 shapes, 0 problems** including M, N, R, T — the excluded
+  `scripts/validate_poses.py` reports **28 shapes, 0 problems** including M, N, R, T — the excluded
   renders are held to the shipped standard, not a lower one.
 - **The credit** is `set-meta.json`'s `creditLine`, verbatim (ADR-007). With no meta loaded it says
   *"Handshapes authored against published ASL references. Signer review in progress."* — true today,

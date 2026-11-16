@@ -364,7 +364,7 @@ which is exactly the kind of thing a hand-run test never finds.
 ### 6.2 Current state
 
 ```
-26 shapes, 0 problems        # 6 shipped + 20 probe references
+28 shapes, 0 problems        # 6 shipped + 20 probe references + 2 facing probes (K/P)
 SELF-TEST PASSED: 29 cases
 ```
 

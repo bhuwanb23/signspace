@@ -263,7 +263,9 @@ def main() -> int:
     if not args.check:
         out = pathlib.Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(report)
+        # UTF-8 explicitly: the report quotes the `≤` ceilings it checked, and the Windows default
+        # codec would write them as replacement characters.
+        out.write_text(report, encoding="utf-8")
         print(f"wrote {out.relative_to(ROOT) if out.is_relative_to(ROOT) else out}")
 
     print(report if args.check else "")

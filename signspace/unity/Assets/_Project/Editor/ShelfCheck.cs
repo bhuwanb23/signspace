@@ -286,9 +286,20 @@ namespace Signspace.Editor
             int drawCalls = renderers + markers + 2;
             int materialCount = materials.Count + 1;    // the plate/plinth share BuildMaterials
 
-            bool ok = drawCalls <= 120 && triangles <= 150000 && materialCount <= 12;
+            // Worst case is not the average: twelve copies of the heaviest silhouette.
+            int worstShape = 0;
+            foreach (string id in Shapes)
+            {
+                Mesh mesh = ShelfSilhouettes.For(id);
+                if (mesh != null) worstShape = Mathf.Max(worstShape, mesh.triangles.Length / 3);
+            }
+            int worstTriangles = worstShape * anchor.slotCount;
+
+            bool ok = drawCalls <= 120 && triangles <= 150000 && materialCount <= 12 &&
+                      worstTriangles <= 150000;
             Debug.Log("[ShelfCheck] 12 objects: " + drawCalls + " draw calls (<= 120), " + triangles +
-                      " triangles (<= 150000), " + materialCount + " materials (<= 12) " + (ok ? "PASS" : "FAIL"));
+                      " triangles as loaded (worst case " + worstTriangles + " <= 150000), " +
+                      materialCount + " materials (<= 12) " + (ok ? "PASS" : "FAIL"));
             return ok;
         }
     }

@@ -70,6 +70,20 @@ namespace Signspace.Editor
             var matchGo = new GameObject("Matcher");
             var matcher = matchGo.AddComponent<Signspace.Matching.Matcher>();
 
+            // Write the tuned values explicitly rather than trusting a field initialiser: the scene is
+            // serialised, and a stale serialised value wins over any default forever. BuildScript then
+            // checks the serialised scene against these same constants.
+            matcher.lockedDeg = Signspace.Matching.Matcher.TunedLockedDeg;
+            matcher.closeDeg = Signspace.Matching.Matcher.TunedCloseDeg;
+            matcher.bandReleaseDeg = Signspace.Matching.Matcher.TunedReleaseDeg;
+            matcher.orientationSlackDeg = Signspace.Matching.Matcher.TunedSlackDeg;
+            matcher.holdSeconds = Signspace.Matching.Matcher.TunedHoldSeconds;
+            Debug.Log("[SceneBuilder] matcher tuning <- locked " + matcher.lockedDeg.ToString("0.#") +
+                      " / close " + matcher.closeDeg.ToString("0.#") +
+                      " / release " + matcher.bandReleaseDeg.ToString("0.#") +
+                      " / slack " + matcher.orientationSlackDeg.ToString("0.#") +
+                      " / hold " + matcher.holdSeconds.ToString("0.00") + " s");
+
             // P2.2: the weights live in an asset. Assign it here so a scene built from code has the
             // tunable table from the first frame rather than the runtime defaults.
             var jointWeights = AssetDatabase.LoadAssetAtPath<Signspace.Matching.JointWeights>(

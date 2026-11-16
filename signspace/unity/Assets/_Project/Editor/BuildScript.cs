@@ -1,9 +1,11 @@
 using System;
 using System.IO;
 using System.Security.Cryptography;
+using Signspace.Matching;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace Signspace.Editor
@@ -46,7 +48,8 @@ namespace Signspace.Editor
         const string CompanyName = "SIGNSPACE";
         const int MinimumApi = 32;      // Android 12
         const int TargetApi = 34;       // Android 14
-        const int BundleVersionCode = 1;
+        // 13 is the next code after the v12 APK built on 16 Nov; installing over it must not be a downgrade.
+        const int BundleVersionCode = 13;
         const string Version = "0.9.0";
 
         [MenuItem("SIGNSPACE/Apply Player Settings")]
@@ -60,6 +63,7 @@ namespace Signspace.Editor
         public static void BuildAndroid()
         {
             ApplySettings();
+            VerifySceneTuning();
 
             string outDir = Path.Combine(Directory.GetCurrentDirectory(), OutputFolder);
             Directory.CreateDirectory(outDir);
@@ -136,6 +140,49 @@ namespace Signspace.Editor
 
             AssetDatabase.SaveAssets();
             Debug.Log("[BuildScript] package name: " + packageName);
+        }
+
+        /// <summary>
+        /// Refuses to build a scene whose serialised matcher values disagree with the tuned constants.
+        ///
+        /// WHY THIS EXISTS
+        /// ---------------
+        /// Unity's serialised scene value beats the code default, so a scene generated before a tuning
+        /// change keeps the old bands and nothing reports it. This project shipped exactly that once
+        /// (close 20 / slack 20 in the scene, 24 / 15 in the code). The check is cheap and the failure it
+        /// prevents is invisible until a learner is told the wrong thing.
+        /// </summary>
+        static void VerifySceneTuning()
+        {
+            if (!File.Exists(ScenesPath))
+                throw new BuildFailedException("[BuildScript] scene missing: " + ScenesPath);
+
+            EditorSceneManager.OpenScene(ScenesPath, OpenSceneMode.Single);
+            var matcher = UnityEngine.Object.FindFirstObjectByType<Matcher>();
+            if (matcher == null)
+                throw new BuildFailedException("[BuildScript] no Matcher in " + ScenesPath);
+
+            var problems = new System.Text.StringBuilder();
+            Check(problems, "lockedDeg", matcher.lockedDeg, Matcher.TunedLockedDeg);
+            Check(problems, "closeDeg", matcher.closeDeg, Matcher.TunedCloseDeg);
+            Check(problems, "bandReleaseDeg", matcher.bandReleaseDeg, Matcher.TunedReleaseDeg);
+            Check(problems, "orientationSlackDeg", matcher.orientationSlackDeg, Matcher.TunedSlackDeg);
+            Check(problems, "holdSeconds", matcher.holdSeconds, Matcher.TunedHoldSeconds);
+
+            if (problems.Length > 0)
+                throw new BuildFailedException("[BuildScript] scene tuning does not match the code:" + problems);
+
+            Debug.Log("[BuildScript] scene tuning matches: locked " + matcher.lockedDeg.ToString("0.#") +
+                      " / close " + matcher.closeDeg.ToString("0.#") +
+                      " / release " + matcher.bandReleaseDeg.ToString("0.#") +
+                      " / slack " + matcher.orientationSlackDeg.ToString("0.#") +
+                      " / hold " + matcher.holdSeconds.ToString("0.00") + " s");
+        }
+
+        static void Check(System.Text.StringBuilder problems, string field, float actual, float tuned)
+        {
+            if (Mathf.Abs(actual - tuned) <= 0.0001f) return;
+            problems.Append("\n  " + field + " is " + actual + " in the scene, tuned value is " + tuned);
         }
 
         /// <summary>

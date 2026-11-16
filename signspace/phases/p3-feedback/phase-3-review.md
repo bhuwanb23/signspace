@@ -10,6 +10,13 @@ P3.5 · `200f0ad` P3.6 · `a8b9987` P3.7
 > correctness claim (the excluded handshapes are drawn *right*, not merely *well-formed*) needs a signer.
 > Nothing in the build lies about any of that, which is the only reason the amber is acceptable.
 
+> **Validation note — 16 Nov 2026.** This review was written before a compiler was available. The
+> project has since been compiled (**0 errors**), both prefabs imported, the scene built with the
+> coverage meter and the panel, and every simulator below re-run in this workspace: near-miss 8/8,
+> false-positive 9 → 1 with the window, pause PASS, poses **28, 0 problems**, trackability 0
+> violations, copy lint 0. **No number in this review changed.** What changed is §7's first claim:
+> it now describes how the phase closed, not how it stands today.
+
 ---
 
 ## 1. What P3 is for
@@ -51,12 +58,12 @@ Everything below was run for this review, in this workspace, on 7 Nov 2026.
 |---|---|
 | `python3 scripts/lint_copy.py` | **0 violations**, 66 literals in 9 files, 2 dev views confirmed gated |
 | `python3 scripts/check_trackability.py` | **0 violations** — the panel prints *"Four handshapes stay out of this build because the cameras cannot see them. Here is why."* |
-| `python3 scripts/validate_poses.py` | **26 shapes, 0 problems** |
+| `python3 scripts/validate_poses.py` | **26 shapes, 0 problems** (28 after the K/P facing pair was added) |
 | `python3 scripts/hold_sim.py --cases` | **16/16** state-machine cases |
 | `python3 scripts/pause_sim.py` | **PASS** — 0 blind locks ×3, control 1 each, hysteresis 20 → 1 |
 | `python3 scripts/nearmiss_sim.py` | closest probe pair **R/U 14.2°**; midpoint hand → *ambiguous, silent* |
 | `python3 scripts/false_positive_sim.py` | **9 fires** without the 400 ms window, 1 with it |
-| C# brace/paren sweep, 60 files | balanced; **no compiler available** — see §7 |
+| C# brace/paren sweep, 60 files | balanced at the time; **no compiler available then** — compiled later with 0 errors, see §7 |
 
 Two of these are worth reading as arguments rather than numbers. **The false-positive control** (9 fires
 without the window) is the reason the window exists; **the pause control** (one blind lock per scenario
@@ -132,11 +139,15 @@ said is that none of them is blocked by missing work — each has a run sheet an
 
 ## 7. What cannot be closed here, and the highest risk
 
-**Nothing has ever been compiled.** There is no Unity editor in this environment; 60 C# files have been
-written and re-read, never built. The prefab `HonestMirror.prefab` is hand-authored YAML — internally
-consistent (every `fileID` resolves, one anchor per object, no duplicate GUIDs) but it has never been
-imported. `HonestMirrorBuilder` exists precisely so that one menu command can rebuild it, fonts and
-materials included, if the YAML turns out to be wrong.
+**At the time of writing, nothing had ever been compiled.** That was true for the whole phase: the
+prefab `HonestMirror.prefab` was hand-authored YAML, internally consistent but unimported, and
+`HonestMirrorBuilder` existed so one menu command could rebuild it if the YAML was wrong.
+
+**Resolved 16 Nov 2026.** The tree now compiles with **0 errors**, the prefab imports, `SceneBuilder`
+builds a scene containing the panel and its plinth opener, and `BuildAndroid` produces APK v13. The
+builder was needed exactly once: a cold batch import reported the committed prefab missing, and the
+scene was written without it until `AssetDatabase.Refresh()` was added. That is the failure this
+section predicted, caught by running the build rather than trusting the file.
 
 **Highest risk in the phase:** the **30-second stranger criterion** collides with P3.2's session cap.
 The near-miss fires at most **once per 20 s**, and only when the hand lands inside the band on one of the

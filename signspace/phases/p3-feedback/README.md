@@ -62,8 +62,9 @@ This phase is the submission's identity, not its polish. Two of the five novelty
 | Tasks | **7 of 7 complete as work**; P3.6's measurement owed |
 | Near-miss | 8/8 testable pairs, correct shape, D(made) 2.2–2.7°; 0 false positives over 2000 sloppy samples; 9 fires without the 400 ms window |
 | Copy | "That's O — 3° away. C opens a little." — 9 words, worst composed 11; 0 lint violations over 66 literals in 9 files |
-| Honest mirror | M, N, R, T drawn from their own captures (26 shapes, 0 problems); count line refuses to name a tracking figure until `measured` flips |
+| Honest mirror | M, N, R, T drawn from their own captures (28 shapes: 26 + the K/P facing probe, 0 problems); count line refuses to name a tracking figure until `measured` flips |
 | Visible pause | 0 locks below the floor in three degradations; 1 each with the floor removed; hysteresis 20 → 1 |
 | Numbers | `fill_trackability.py` + `check_trackability.py`; four broken files each rejected |
 | Gate G3 | 3 of 8 criteria can be closed from a desk; 3 need a headset or a person; 1 is red until a stranger plays |
-| Not verified | every line of C#, the prefab import, every device number, the non-signer read, the signer's eye on four renders |
+| Verified 16 Nov | **compiled, 0 errors**; both prefabs import and the scene builds with the payoff and panel; 12 simulator/validator scripts re-run green; APK v13 built |
+| Still not verified | every device number, the non-signer read, the signer's eye on four renders, a real hand firing a near-miss |
