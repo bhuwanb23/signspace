@@ -48,6 +48,8 @@ namespace Signspace.Matching
 
         void Awake()
         {
+            if (!Signspace.Core.DevOnly.Allowed) { gameObject.SetActive(false); return; }
+
             if (hands == null || hands.Length == 0)
             {
 #if UNITY_2023_1_OR_NEWER
@@ -80,7 +82,7 @@ namespace Signspace.Matching
                 {
                     if (h == null) continue;
                     _sb.Append(h.hand).Append(": ")
-                       .Append(h.IsTracked ? "tracked" : "LOST")
+                       .Append(h.IsTracked ? "tracked" : "not tracked")
                        .Append("  conf ").Append(h.Confidence.ToString("0.00"))
                        .Append("  joints ").Append(h.MappedJoints).Append("/26")
                        .Append("  bones ").Append(h.DeviceBoneCount)

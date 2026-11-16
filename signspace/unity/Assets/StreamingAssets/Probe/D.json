@@ -1,15 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "D",
   "handedness": "right",
+  "signer": "synthetic-neutral-v1",
+  "captured": "2026-11-15T00:00:00Z",
+  "vantage": "authored-neutral",
   "jointCount": 26,
-  "neutralCaptured": "2026-11-15T00:00:00Z",
-  "source": "probe-reference",
-  "family": "spread",
-  "description": "Index extended; middle, ring and little curved to meet the thumb tip. Two contacts the sensor cannot resolve.",
-  "authoringConfidence": "medium",
-  "probeOnly": true,
-  "jointNames": [
+  "joints": [
     "Wrist",
     "Palm",
     "ThumbMetacarpal",
@@ -37,7 +34,7 @@
     "LittleDistal",
     "LittleTip"
   ],
-  "q": [
+  "rot": [
     0.0,
     0.0,
     0.0,
@@ -142,5 +139,15 @@
     -0.0521,
     -0.0046,
     0.087
-  ]
+  ],
+  "source": "probe-reference",
+  "confidence": {
+    "authoring": "medium",
+    "measured": null,
+    "note": "probe reference, not content and not signer-reviewed"
+  },
+  "family": "spread",
+  "description": "Index extended; middle, ring and little curved to meet the thumb tip. Two contacts the sensor cannot resolve.",
+  "notes": "P1.5 probe reference. NOT SHIPPED CONTENT.",
+  "probeOnly": true
 }

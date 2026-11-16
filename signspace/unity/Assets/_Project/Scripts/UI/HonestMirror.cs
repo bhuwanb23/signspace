@@ -26,6 +26,11 @@ namespace Signspace.UI
         public string excludedReason =
             "The cameras cannot see a finger that is behind another finger.";
 
+        [Header("Hands (P2.7)")]
+        [Tooltip("Which hand this build reads. Comes from HandSupport, so the panel cannot promise a " +
+                 "hand the build does not read. Empty hides the line.")]
+        public string handLimitation = HandSupport.OneLineExplanation;
+
         [Header("Measured numbers — from TRACKABILITY.md, never invented")]
         public int robustVariants;
         public int totalVariants;
@@ -76,6 +81,11 @@ namespace Signspace.UI
                 sb.AppendLine();
                 sb.Append("Not taught here: ");
                 sb.AppendLine(string.Join(", ", excludedShapes));
+                if (!string.IsNullOrEmpty(handLimitation))
+                {
+                    sb.AppendLine();
+                    sb.AppendLine(handLimitation);
+                }
                 if (!string.IsNullOrEmpty(measuredOn))
                     sb.Append($"Measured on {device}, {measuredOn}.");
                 body.text = sb.ToString();

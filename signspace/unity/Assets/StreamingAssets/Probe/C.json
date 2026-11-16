@@ -1,15 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "C",
   "handedness": "right",
+  "signer": "synthetic-neutral-v1",
+  "captured": "2026-11-15T00:00:00Z",
+  "vantage": "authored-neutral",
   "jointCount": 26,
-  "neutralCaptured": "2026-11-15T00:00:00Z",
-  "source": "probe-reference",
-  "family": "closure",
-  "description": "Fingers curved into a C with a visible gap; thumb opposed, not touching.",
-  "authoringConfidence": "high",
-  "probeOnly": true,
-  "jointNames": [
+  "joints": [
     "Wrist",
     "Palm",
     "ThumbMetacarpal",
@@ -37,7 +34,7 @@
     "LittleDistal",
     "LittleTip"
   ],
-  "q": [
+  "rot": [
     0.0,
     0.0,
     0.0,
@@ -142,5 +139,15 @@
     -0.0151,
     -0.0087,
     0.4999
-  ]
+  ],
+  "source": "probe-reference",
+  "confidence": {
+    "authoring": "high",
+    "measured": null,
+    "note": "probe reference, not content and not signer-reviewed"
+  },
+  "family": "closure",
+  "description": "Fingers curved into a C with a visible gap; thumb opposed, not touching.",
+  "notes": "P1.5 probe reference. NOT SHIPPED CONTENT.",
+  "probeOnly": true
 }

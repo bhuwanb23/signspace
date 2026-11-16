@@ -1,15 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "F",
   "handedness": "right",
+  "signer": "synthetic-neutral-v1",
+  "captured": "2026-11-15T00:00:00Z",
+  "vantage": "authored-neutral",
   "jointCount": 26,
-  "neutralCaptured": "2026-11-15T00:00:00Z",
-  "source": "probe-reference",
-  "family": "closure",
-  "description": "Index tip meets the thumb tip in a ring; middle, ring and little stay extended. The index\u2013thumb contact makes the index look shorter.",
-  "authoringConfidence": "low",
-  "probeOnly": true,
-  "jointNames": [
+  "joints": [
     "Wrist",
     "Palm",
     "ThumbMetacarpal",
@@ -37,7 +34,7 @@
     "LittleDistal",
     "LittleTip"
   ],
-  "q": [
+  "rot": [
     0.0,
     0.0,
     0.0,
@@ -142,5 +139,15 @@
     -0.0009,
     -0.0523,
     0.9985
-  ]
+  ],
+  "source": "probe-reference",
+  "confidence": {
+    "authoring": "low",
+    "measured": null,
+    "note": "probe reference, not content and not signer-reviewed"
+  },
+  "family": "closure",
+  "description": "Index tip meets the thumb tip in a ring; middle, ring and little stay extended. The index\u2013thumb contact makes the index look shorter.",
+  "notes": "P1.5 probe reference. NOT SHIPPED CONTENT.",
+  "probeOnly": true
 }

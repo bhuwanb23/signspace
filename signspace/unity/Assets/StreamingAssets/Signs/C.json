@@ -1,11 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "C",
   "handedness": "right",
+  "signer": "synthetic-neutral-v1",
+  "captured": "2026-11-15T00:00:00Z",
+  "vantage": "authored-neutral",
   "jointCount": 26,
-  "neutralCaptured": "2026-11-15T00:00:00Z",
-  "source": "reference-authored",
-  "jointNames": [
+  "joints": [
     "Wrist",
     "Palm",
     "ThumbMetacarpal",
@@ -33,7 +34,7 @@
     "LittleDistal",
     "LittleTip"
   ],
-  "q": [
+  "rot": [
     0.0,
     0.0,
     0.0,
@@ -139,6 +140,12 @@
     -0.0087,
     0.4999
   ],
+  "source": "reference-authored",
+  "confidence": {
+    "authoring": "high",
+    "measured": null,
+    "note": "reference-authored; no signer review recorded in set-meta.json yet"
+  },
   "family": "closure",
   "description": "Fingers curved into a C with a visible gap; thumb opposed, not touching.",
   "notes": "Authored from published ASL fingerspelling references by scripts/make_pose.py. Not yet reviewed by a Deaf signer -- see set-meta.json for the current authorship state."
