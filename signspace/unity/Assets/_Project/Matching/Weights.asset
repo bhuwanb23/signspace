@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f2a1c9d4b6e4a0f9c3d5e8a1b2f4c6d, type: 3}
+  m_Name: Weights
+  m_EditorClassIdentifier: 
+  version: 1
+  joints:
+  - name: Wrist
+    weight: 0.40
+  - name: Palm
+    weight: 0.40
+  - name: ThumbMetacarpal
+    weight: 0.40
+  - name: ThumbProximal
+    weight: 0.70
+  - name: ThumbDistal
+    weight: 1.00
+  - name: ThumbTip
+    weight: 0.00
+  - name: IndexMetacarpal
+    weight: 0.40
+  - name: IndexProximal
+    weight: 0.70
+  - name: IndexIntermediate
+    weight: 1.00
+  - name: IndexDistal
+    weight: 1.00
+  - name: IndexTip
+    weight: 0.00
+  - name: MiddleMetacarpal
+    weight: 0.40
+  - name: MiddleProximal
+    weight: 0.70
+  - name: MiddleIntermediate
+    weight: 1.00
+  - name: MiddleDistal
+    weight: 1.00
+  - name: MiddleTip
+    weight: 0.00
+  - name: RingMetacarpal
+    weight: 0.40
+  - name: RingProximal
+    weight: 0.70
+  - name: RingIntermediate
+    weight: 1.00
+  - name: RingDistal
+    weight: 1.00
+  - name: RingTip
+    weight: 0.00
+  - name: LittleMetacarpal
+    weight: 0.40
+  - name: LittleProximal
+    weight: 0.70
+  - name: LittleIntermediate
+    weight: 1.00
+  - name: LittleDistal
+    weight: 1.00
+  - name: LittleTip
+    weight: 0.00

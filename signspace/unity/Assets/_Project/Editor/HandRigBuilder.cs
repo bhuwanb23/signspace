@@ -24,6 +24,11 @@ namespace Signspace.Editor
     ///   HandVisual.prefab      HandVisual + 20 capsules, joints serialised, no materials baked in
     ///   TrackedHand_Left       prefab instance + SkeletonPoseSource + MetaHandSource
     ///   TrackedHand_Right      the same, and this one also drives the reference hand's grab
+    ///
+    /// ONLY ONE HAND PLAYS (P2.7). Both hands are built and tracked - P1.3 rates gestures with the
+    /// left - but only the hand HandSupport allows is bound to the Matcher. Before P2.7 both were,
+    /// which meant the two hands overwrote one another's matcher state every frame: the right hand
+    /// could never hold a lock while the left hand was visible, and nothing said so.
     ///   HandConfidenceReadout  on the rig root, so the numbers are always in view in a dev build
     ///
     /// Two materials, not one: the reference hand and your own hand must be distinguishable at a
@@ -104,10 +109,17 @@ namespace Signspace.Editor
             }
             else
             {
+                // P2.7: one hand, one matcher. The policy decides; this only obeys it.
                 foreach (var h in new[] { left, right })
                 {
                     var ps = h.source.poseSource;
-                    if (ps != null) ps.matcher = matcher;
+                    if (ps == null) continue;
+                    bool feeds = HandSupport.FeedsMatcher(h.source.hand);
+                    ps.matcher = matcher;
+                    ps.driveMatcher = feeds;
+                    ps.mirrorInput = HandSupport.MirrorsInput(h.source.hand);
+                    Debug.Log("[HandRigBuilder] " + h.source.name + " (" + h.source.hand + ") matcher=" +
+                              feeds + (feeds ? "" : " - " + HandSupport.Why));
                 }
             }
 

@@ -66,24 +66,62 @@ namespace Signspace.Editor
                                  "A plain camera was created instead. Check that Meta XR All-in-One is imported.");
             }
 
-            // ---- passthrough ------------------------------------------------------
-            // "The room is the level." Passthrough is not a nice-to-have: without it the
-            // experience has no floor and the shelf has nothing to stand on. Meta's own
-            // setup task does this in the editor UI, which does not exist in batch
-            // mode, so it is done here.
-            EnablePassthrough(rigGo);
-
             // ---- the three systems that matter -----------------------------
             var matchGo = new GameObject("Matcher");
             var matcher = matchGo.AddComponent<Signspace.Matching.Matcher>();
-            matchGo.AddComponent<Signspace.Matching.DebugOverlay>();
-            var debugOverlay = matchGo.GetComponent<Signspace.Matching.DebugOverlay>();
+
+            // P2.2: the weights live in an asset. Assign it here so a scene built from code has the
+            // tunable table from the first frame rather than the runtime defaults.
+            var jointWeights = AssetDatabase.LoadAssetAtPath<Signspace.Matching.JointWeights>(
+                "Assets/_Project/Matching/Weights.asset");
+            if (jointWeights != null)
+            {
+                matcher.weights = jointWeights;
+                string weightsProblem = jointWeights.Validate();
+                if (!string.IsNullOrEmpty(weightsProblem))
+                    Debug.LogError("[SceneBuilder] JointWeights unusable: " + weightsProblem);
+                else
+                    Debug.Log("[SceneBuilder] matcher weights <- Matching/Weights.asset (" +
+                              jointWeights.Summary() + ")");
+            }
+            else
+            {
+                Debug.LogWarning("[SceneBuilder] Matching/Weights.asset not found; the matcher will use " +
+                                 "its runtime defaults. Run SIGNSPACE/P2.2 Write weights asset from defaults.");
+            }
+            // The overlay lives on its OWN child object, not on the matcher's object: DevOnly removes
+            // the object it is attached to from a release build, and attaching it to the Matcher would
+            // delete the matcher from the submission build - a spectacularly quiet way to ship nothing.
+            var devViewsGo = new GameObject("DevViews");
+            devViewsGo.transform.SetParent(matchGo.transform, false);
+            devViewsGo.AddComponent<Signspace.Core.DevOnly>();
+            var debugOverlay = devViewsGo.AddComponent<Signspace.Matching.DebugOverlay>();
             debugOverlay.matcher = matcher;
 
             var sourceGo = new GameObject("SkeletonPoseSource");
             var source = sourceGo.AddComponent<Signspace.Matching.SkeletonPoseSource>();
             source.matcher = matcher;
             debugOverlay.poseSource = source;
+
+            // ---- P2.3: the three bands as colour, motion and sound -------------------------
+            // Feedback hangs off the matcher, not the reference hand, because the band is a fact about
+            // the learner's hand and must survive the reference visual being dissolved by LockPayoff.
+            var bandFeedback = matchGo.AddComponent<Signspace.UI.BandFeedback>();
+            bandFeedback.matcher = matcher;
+
+            var bandAudio = matchGo.AddComponent<Signspace.UI.BandAudio>();
+            bandAudio.matcher = matcher;
+            bandAudio.warmingToClose = AssetDatabase.LoadAssetAtPath<AudioClip>(
+                "Assets/_Project/Audio/SFX/band_close.wav");
+            bandAudio.closeToLocked = AssetDatabase.LoadAssetAtPath<AudioClip>(
+                "Assets/_Project/Audio/SFX/band_lock_in.wav");
+            bandAudio.lockedToWarming = AssetDatabase.LoadAssetAtPath<AudioClip>(
+                "Assets/_Project/Audio/SFX/band_release.wav");
+            if (bandAudio.IsMapped)
+                Debug.Log("[SceneBuilder] band sounds mapped (placeholders; P7 replaces the clips)");
+            else
+                Debug.LogWarning("[SceneBuilder] band clips missing from Audio/SFX; band changes will " +
+                                 "be silent, which SOUND-MAP.md allows but is not what was built.");
 
             // ---- the reference hand: the thing you grab and turn ------------
             var refGo = new GameObject("ReferenceHand");
@@ -104,6 +142,45 @@ namespace Signspace.Editor
 
             var saveGo = new GameObject("SaveSystem");
             saveGo.AddComponent<Signspace.Matching.SaveSystem>();
+
+            // ---- P2.5: the lock payoff ------------------------------------------------------
+            // Instantiated from the committed prefab so the timing lives in one place (the prefab) and
+            // the scene only wires what it alone can know: the matcher, the tracked hand, the shelf.
+            var payoffPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/LockPayoff.prefab");
+            Signspace.Core.LockPayoff payoff = null;
+            if (payoffPrefab != null)
+            {
+                var payoffGo = (GameObject)PrefabUtility.InstantiatePrefab(payoffPrefab);
+                payoff = payoffGo.GetComponent<Signspace.Core.LockPayoff>();
+                payoff.matcher = matcher;
+                payoff.save = saveGo.GetComponent<Signspace.Matching.SaveSystem>();
+                payoff.shelf = Object.FindFirstObjectByType<Signspace.Spatial.ShelfAnchor>();
+                payoff.referenceHand = refGo.transform;
+                payoff.referenceHandVisual = visualGo;
+                if (payoff.flyFrom == null) payoff.flyFrom = refGo.transform;
+
+                // the controller-free "haptic": a pulse in the hand that did the thing
+                var pulse = visualGo.AddComponent<Signspace.UI.HandPulse>();
+                pulse.target = visualGo.transform;
+                payoff.handPulse = pulse;
+
+                Debug.Log("[SceneBuilder] lock payoff wired, " + payoff.TotalSeconds.ToString("0.00") +
+                          " s of a " + payoff.budgetSeconds.ToString("0.00") + " s budget");
+            }
+            else
+            {
+                Debug.LogWarning("[SceneBuilder] Prefabs/LockPayoff.prefab missing; run " +
+                                 "SIGNSPACE/P2.5 Build lock payoff prefab. No payoff will play.");
+            }
+
+
+            // ---- P2.4: the lock log ---------------------------------------------------------
+            // Every lock and unlock with a timestamp, so "20/20 intentional, 0/20 false" can be
+            // checked after the headset comes off instead of remembered.
+            var lockLogGo = new GameObject("LockLogger");
+            var lockLogger = lockLogGo.AddComponent<Signspace.Core.LockLogger>();
+            lockLogger.matcher = matcher;
+            Debug.Log("[SceneBuilder] lock log -> " + lockLogger.LogPath);
 
             // ---- P1.1: the two tracked hands, and the HandVisual prefab ---------------------
             // This is the step that was missing entirely before P1.1: nothing in the scene had
@@ -129,83 +206,6 @@ namespace Signspace.Editor
             UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.Refresh();
             Debug.Log("[SceneBuilder] wrote " + ScenePath);
-        }
-
-        /// <summary>
-        /// Turns passthrough on: the OVRManager flag, the camera's passthrough layer,
-        /// and the project-level support setting.
-        ///
-        /// All three, because all three are separate. The OVRManager flag alone
-        /// enables the runtime feature; the layer is what actually composites the
-        /// camera feed; and the project config is what Meta's own setup task
-        /// checks before it will call the project configured.
-        /// </summary>
-        static void EnablePassthrough(GameObject rig)
-        {
-            if (rig == null) return;
-
-            // NOTE: these Meta types are in the GLOBAL namespace in Core SDK v207.
-            // They used to live under Oculus.VR, and writing Oculus.VR.OVRManager
-            // does not compile any more.
-            var manager = rig.GetComponentInChildren<OVRManager>(true);
-            if (manager != null)
-            {
-                manager.isInsightPassthroughEnabled = true;
-                Debug.Log("[SceneBuilder] OVRManager: passthrough enabled");
-            }
-            else
-            {
-                Debug.LogWarning("[SceneBuilder] no OVRManager on the rig - passthrough was not enabled.");
-            }
-
-            var camera = rig.GetComponentInChildren<Camera>(true);
-            if (camera != null && camera.GetComponent<OVRPassthroughLayer>() == null)
-            {
-                camera.gameObject.AddComponent<OVRPassthroughLayer>();
-                Debug.Log("[SceneBuilder] added the OVRPassthroughLayer to " + camera.name);
-            }
-
-            // A camera with a solid-colour background hides the room. The
-            // passthrough feed is composited UNDER the app, so the app's camera
-            // has to be transparent for the room to be visible at all.
-            if (camera != null)
-            {
-                camera.clearFlags = CameraClearFlags.SolidColor;
-                camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
-                Debug.Log("[SceneBuilder] camera background cleared for passthrough");
-            }
-
-            // The VR splash screen is a black overlay at launch. On an MR app it is
-            // an inconsistent experience - the room is there and the app hides it.
-            PlayerSettings.virtualRealitySplashScreen = null;
-            PlayerSettings.SplashScreen.show = false;
-            Debug.Log("[SceneBuilder] splash screens disabled");
-
-            try
-            {
-                var config = OVRProjectConfig.CachedProjectConfig;
-                if (config != null)
-                {
-                    config.insightPassthroughSupport = OVRProjectConfig.FeatureSupport.Required;
-
-                    // THIS is the flag that puts the permission in the built manifest.
-                    // Meta's own OVRManifestPreprocessor adds
-                    // com.oculus.permission.USE_PASSTHROUGH only when
-                    // isPassthroughCameraAccessEnabled is true AND the passthrough
-                    // support is not None. Without it the build SUCCEEDS, the APK
-                    // installs, and the headset shows a black screen where the room
-                    // should be - with nothing in the app to say why.
-                    config.isPassthroughCameraAccessEnabled = true;
-
-                    EditorUtility.SetDirty(config);
-                    AssetDatabase.SaveAssets();
-                    Debug.Log("[SetupRenderPipeline] passthrough: support Required, camera access enabled");
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[SceneBuilder] could not set the project passthrough support: " + e.Message);
-            }
         }
 
         /// <summary>Finds a prefab anywhere in the project or in an imported package.</summary>
