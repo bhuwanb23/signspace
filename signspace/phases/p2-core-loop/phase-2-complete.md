@@ -182,9 +182,12 @@ work.
 - **`LockPayoff.prefab` is hand-authored YAML.** Guid-matched and brace-checked; never imported.
 
 **Known content gaps**
-- **No two shapes differ in palm facing**, so the app cannot yet distinguish two signs that differ *only*
-  in orientation — even though the machinery that would is built and measured (P2.6). P3 should author
-  **K vs P**.
+- ~~**No two shapes differ in palm facing**, so the app cannot yet distinguish two signs that differ
+  *only* in orientation.~~ **Closed 16 Nov:** K and P are authored in
+  `StreamingAssets/Facing/` (probe-only, not shipped) — identical fingers, 90° of pronation. Measured by
+  `scripts/facing_pair_sim.py`: finger distance **0.00°**, palm error **90.00°**, total **75.00°**; with the
+  palm term removed they would lock. The term now has content and is load-bearing. Whether K/P *ship* is
+  a P5 content decision, because it changes the six-shape commitment.
 - **The near-miss compares finger distances only**, so a mis-faced hand can be near-missed as a different
   shape. Defensible (it answers "what shape are your fingers making"), but it can fire alongside a palm
   verdict; P2.6 §5 records the fix if playtesting hates it.
@@ -199,9 +202,11 @@ work.
 - A 45° mis-face reads **warming**, not close, because the palm term is additive and uncapped. Capping was
   tried on paper and rejected: any cap at the lock edge makes a 30° mis-face land at exactly 12.0° and
   lock (P2.6 §5).
-- The reference hand's joints carry **no lateral offsets** (`HandVisual` never sets `localPosition`), so
-  fingers radiate from one origin. Invisible to the metric — it is rotation-only — and the first thing to
-  fix if the hand reads as a starfish on device.
+- ~~The reference hand's joints carry **no lateral offsets** (`HandVisual` never sets `localPosition`), so
+  fingers radiate from one origin.~~ **Fixed 16 Nov:** each metacarpal now sits at its knuckle and every
+  other joint at the tip of its parent bone (`HandVisual.RestOffsets`). `HandRigCheck` measures base
+  spread **45 mm**, proximal spread **17 mm**, closest tips **18 mm**, wrist-to-middle-tip **192 mm** —
+  previously the first three were **0**. The metric reads rotations, so no measured degree changed.
 
 ---
 

@@ -109,6 +109,9 @@ namespace Signspace.Matching
         public float nearMissMaxDeg = TunedNearMissMaxDeg;
         [Tooltip("Minimum seconds between two near-miss messages.")]
         public float nearMissCooldownSeconds = 20f;
+        [Tooltip("Most near-miss messages in one session. After this the matcher stays silent, because " +
+                 "a hint that keeps arriving stops being a hint and becomes noise. 0 = no cap.")]
+        public int nearMissSessionCap = 3;
         [Tooltip("Confidence required for the preceding window before we are allowed to name a shape.")]
         public float nearMissConfidenceWindowSeconds = 0.4f;
         [Tooltip("How much closer the wrong shape must be than the target before we name it.")]
@@ -128,12 +131,39 @@ namespace Signspace.Matching
         float[] _jointAngles = new float[JointNames.Canonical.Length];   // P2.2: per-joint, for the overlay
         readonly HoldTimer _hold = new HoldTimer();
         float _hysteresisTimer, _nearMissCooldown, _goodConfidenceTimer;
+        int _nearMissCount;
         Band _band = Band.Warming, _pendingBand = Band.Warming;
         bool _locked, _paused;
         float _lastConfidence = 1f;
         HandPose _target;
 
         public Band CurrentBand => _band;
+
+        /// <summary>How many near-miss messages this session has produced. The cap is visible so the
+        /// off switch and the cap can be checked by a test rather than by memory.</summary>
+        public int NearMissesThisSession => _nearMissCount;
+
+        /// <summary>
+        /// Runtime off switch (G3). Setting this false silences the naming immediately; setting it
+        /// true does NOT restore the session's spent budget - the cap is per session, so a user cannot
+        /// flip it off and on to farm hints. Use ResetNearMissSession() to start a genuinely new
+        /// session (a new play space), never to make a test pass.
+        /// </summary>
+        public bool NearMissEnabled
+        {
+            get { return nearMissEnabled; }
+            set
+            {
+                nearMissEnabled = value;
+                if (!value) _nearMissCooldown = 0f;
+            }
+        }
+
+        public void ResetNearMissSession()
+        {
+            _nearMissCount = 0;
+            _nearMissCooldown = 0f;
+        }
 
         /// <summary>What the hold is doing right now: Idle, Holding, Coasting, Stalled, Locked.
         /// Named Phase rather than State so it cannot be confused with the type in expressions.</summary>
@@ -376,9 +406,11 @@ namespace Signspace.Matching
                 && unambiguous
                 && clearlyCloser
                 && _goodConfidenceTimer >= nearMissConfidenceWindowSeconds
-                && _nearMissCooldown <= 0f)
+                && _nearMissCooldown <= 0f
+                && (nearMissSessionCap <= 0 || _nearMissCount < nearMissSessionCap))
             {
                 _nearMissCooldown = nearMissCooldownSeconds;
+                _nearMissCount++;
                 OnNearMiss?.Invoke(bestOtherId, bestOther);
             }
         }

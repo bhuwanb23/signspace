@@ -127,6 +127,22 @@ Nothing was changed in code, constants, or evidence files.
 
 ---
 
+## 5b. Follow-up, same day: the four software gaps are closed
+
+The audit above separated hardware measurements from software that was still missing. All four software
+items were built and checked without a headset afterwards (details in `BUILD-LOG.md` §8.7):
+
+| Was | Now | Check |
+|---|---|---|
+| Reference hand's fingers all began at the palm's centre | `HandVisual.RestOffsets` — knuckles across the palm, joints at parent-bone tips | `HandRigCheck`: 45 / 17 / 18 / 192 mm (spreads were 0) |
+| Honest mirror was text-only | four shape renders from their real probe pose files | 4 slots in `Main.unity` |
+| No session cap, no off switch | cap 3 + `NearMissToggle` block | `near_miss_sim.py`: 3 fires, 0 when off |
+| No facing pair existed | K/P in `Facing/`, probe-only | `facing_pair_sim.py`: 0.00° fingers / 90.00° O / 75.00° total |
+
+This does **not** change the verdict: the three gates are still waiting on device measurements, listed in
+§6 below. It means the *software* half of P3 is finished, so a device session is the only thing between
+the current build and G3.
+
 ## 6. Can P3 start? Yes — with two dependencies named up front
 
 **Ready now (no hardware):**

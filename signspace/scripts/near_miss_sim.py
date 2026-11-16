@@ -29,6 +29,8 @@ import tune_match as tm
 LOCKED_DEG = 12.0
 NEAR_MISS_MAX_DEG = 26.0
 MARGIN_DEG = 2.0
+SESSION_CAP = 3          # Matcher.nearMissSessionCap
+COOLDOWN_S = 20.0        # Matcher.nearMissCooldownSeconds
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "phases" / "p3-feedback" / "near-miss-test.csv"
 
@@ -82,6 +84,35 @@ with OUT.open("w", newline="") as f:
     writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
     writer.writeheader()
     writer.writerows(rows)
+
+def session_fires(minutes=5.0, attempt_interval=2.0, enabled=True, cap=SESSION_CAP):
+    """Replays the matcher's gate over a session: a wrong-shape attempt every 2 s.
+
+    This is the check G3 criterion 3 asks for ("session rate cap, and an off switch"). It models
+    only the two gates that bound the count - cooldown and cap - because the rule itself is what
+    the 36-pair table above already tests.
+    """
+    fires = 0
+    cooldown = 0.0
+    t = 0.0
+    while t < minutes * 60.0:
+        if enabled and cooldown <= 0.0 and (cap <= 0 or fires < cap):
+            fires += 1
+            cooldown = COOLDOWN_S
+        cooldown = max(0.0, cooldown - attempt_interval)
+        t += attempt_interval
+    return fires
+
+
+cap_fires = session_fires()
+uncapped_fires = session_fires(minutes=1.0, cap=0)
+off_fires = session_fires(enabled=False)
+print(f"session cap: {cap_fires} fires in 5 min of constant attempts (cap {SESSION_CAP}) "
+      f"- {'PASS' if cap_fires == SESSION_CAP else 'FAIL'}")
+print(f"cooldown still bounds a 1 min session with no cap: {uncapped_fires} fires "
+      f"- {'PASS' if uncapped_fires <= 4 else 'FAIL'}")
+print(f"off switch: {off_fires} fires with naming disabled "
+      f"- {'PASS' if off_fires == 0 else 'FAIL'}")
 
 fired_rows = [r for r in rows if r["fired"] == "yes"]
 mismatches = [r for r in rows if r["fired"] != r["expected"]]

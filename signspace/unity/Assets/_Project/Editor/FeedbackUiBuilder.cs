@@ -73,7 +73,7 @@ namespace Signspace.Editor
             panelRect.anchorMin = new Vector2(0.5f, 0.5f);
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
-            panelRect.sizeDelta = new Vector2(1050f, 680f);
+            panelRect.sizeDelta = new Vector2(1050f, 800f);
             panelRect.anchoredPosition = Vector2.zero;
 
             var bg = panelGo.AddComponent<Image>();
@@ -82,10 +82,23 @@ namespace Signspace.Editor
             var header = MakeText(panelGo.transform, "Header", font, 44, TextAnchor.UpperCenter,
                                   new Vector2(0.5f, 1f), new Vector2(-60f, -50f), new Vector2(930f, 90f));
             var body = MakeText(panelGo.transform, "Body", font, 30, TextAnchor.UpperLeft,
-                                new Vector2(0.5f, 1f), new Vector2(-60f, -170f), new Vector2(930f, 380f));
+                                new Vector2(0.5f, 1f), new Vector2(-60f, -170f), new Vector2(930f, 300f));
             var credit = MakeText(panelGo.transform, "Credit", font, 22, TextAnchor.LowerCenter,
-                                  new Vector2(0.5f, 0f), new Vector2(0f, 34f), new Vector2(930f, 70f));
+                                  new Vector2(0.5f, 0f), new Vector2(0f, 26f), new Vector2(930f, 70f));
             credit.color = new Color(0.72f, 0.76f, 0.80f, 1f);
+
+            // Excluded shapes, rendered from their real probe pose files at start (P3.4). Empty
+            // slots stay dim rather than showing a guessed hand. G3 asks for correct renders, so
+            // the panel must not be text-only.
+            var slots = new RawImage[mirror.excludedShapes.Length];
+            const float spacing = 190f;
+            float startX = -(slots.Length - 1) * spacing * 0.5f;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                slots[i] = MakeShapeSlot(panelGo.transform, mirror.excludedShapes[i], font,
+                                         new Vector2(startX + i * spacing, 168f));
+            }
+            mirror.thumbnails = slots;
 
             mirror.root = panelGo;
             mirror.header = header;
@@ -127,10 +140,45 @@ namespace Signspace.Editor
             var binding = handle.AddComponent<HonestMirrorHandle>();
             binding.mirror = mirror;
 
+            // ---- the near-miss off switch (G3) ----------------------------------------------
+            // A second block, smaller and below the mirror handle: one gesture silences the naming
+            // for the session, and the block dims so the state is visible. Not a settings screen.
+            var toggleGo = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            toggleGo.name = "NearMissToggle";
+            toggleGo.transform.SetParent(rigRoot, false);
+            toggleGo.transform.localPosition = new Vector3(0.42f, 0.78f, 0.55f);
+            toggleGo.transform.localScale = Vector3.one * 0.075f;
+            var toggleGrab = toggleGo.AddComponent<Grabbable>();
+            toggleGrab.radius = 0.04f;
+            toggleGrab.grabDistance = 0.14f;
+            var toggle = toggleGo.AddComponent<NearMissToggle>();
+            toggle.matcher = matcher;
+
             Debug.Log("[SceneBuilder] P3 feedback wired: near-miss line, honest mirror " +
-                      "(panel + handle), pause indicator");
+                      "(panel + handle), pause indicator, near-miss off switch");
 
             return mirror;
+        }
+
+        static RawImage MakeShapeSlot(Transform parent, string shape, Font font, Vector2 position)
+        {
+            var go = new GameObject("Shape_" + shape, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = new Vector2(150f, 150f);
+
+            var image = go.AddComponent<RawImage>();
+            image.color = new Color(1f, 1f, 1f, 0.12f);
+            image.raycastTarget = false;
+
+            var label = MakeText(go.transform, "Label", font, 30, TextAnchor.UpperCenter,
+                                 new Vector2(0.5f, 0f), new Vector2(0f, -40f), new Vector2(150f, 40f));
+            label.text = shape;
+            label.color = new Color(0.80f, 0.84f, 0.88f, 1f);
+            return image;
         }
 
         static Text MakeText(Transform parent, string name, Font font, int size, TextAnchor anchor,

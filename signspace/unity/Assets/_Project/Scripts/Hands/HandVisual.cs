@@ -95,6 +95,31 @@ namespace Signspace.Matching
                 { "LittleMetacarpal", "Palm" },
             };
 
+        /// <summary>
+        /// Where each joint sits in its parent's space, in metres, for the REFERENCE hand's rest
+        /// pose. Without this every joint sat at (0,0,0) and all five fingers radiated from the
+        /// palm's centre - a bundle of fingers, not a hand - because the pose files carry rotations
+        /// only and nothing ever set a local position.
+        ///
+        /// Convention matches hand_model.py: +Y toward the child (distal), +Z out of the back of
+        /// the hand, +X completing the right-handed set, so the thumb side is +X. The four
+        /// metacarpal bases are spread across the palm; every other joint is placed at the tip of
+        /// its parent bone, in Build(), which keeps the finger chains connected.
+        ///
+        /// These are GEOMETRY ONLY. The metric reads rotations, so adding offsets cannot change a
+        /// single measured degree - see the note in ApplyPose.
+        /// </summary>
+        static readonly System.Collections.Generic.Dictionary<string, Vector3> RestOffsets =
+            new System.Collections.Generic.Dictionary<string, Vector3>
+            {
+                { "Palm", new Vector3(0f, 0.045f, 0f) },
+                { "IndexMetacarpal", new Vector3(0.020f, 0.028f, 0.004f) },
+                { "MiddleMetacarpal", new Vector3(0.006f, 0.032f, 0.002f) },
+                { "RingMetacarpal", new Vector3(-0.009f, 0.030f, 0f) },
+                { "LittleMetacarpal", new Vector3(-0.024f, 0.024f, -0.002f) },
+                { "ThumbMetacarpal", new Vector3(0.026f, 0.012f, 0.012f) },
+            };
+
         static Mesh _capsuleMesh;
         static Mesh _palmMesh;
 
@@ -138,6 +163,24 @@ namespace Signspace.Matching
                 if (parent != null) byName[name].SetParent(byName[parent], false);
             }
 
+            // rest pose: a joint sits at the end of its parent's bone, and the metacarpals sit at
+            // their knuckle across the palm. This is what makes the reference hand a hand.
+            foreach (var pair in RestOffsets)
+            {
+                if (byName.ContainsKey(pair.Key)) byName[pair.Key].localPosition = pair.Value * scale;
+            }
+            for (int i = 0; i < JointNames.Canonical.Length; i++)
+            {
+                string name = JointNames.Canonical[i];
+                if (RestOffsets.ContainsKey(name)) continue;
+
+                string parent = Parents.ContainsKey(name) ? Parents[name] : PreviousInFinger(name);
+                if (parent == null || !byName.ContainsKey(parent)) continue;
+                float parentLength;
+                if (!SegmentLengths.TryGetValue(parent, out parentLength)) continue;
+                byName[name].localPosition = new Vector3(0f, parentLength * scale, 0f);
+            }
+
             // geometry
             foreach (var pair in SegmentLengths)
             {
@@ -145,14 +188,19 @@ namespace Signspace.Matching
                 string parent = Parents.ContainsKey(joint) ? Parents[joint] : PreviousInFinger(joint);
                 if (parent == null) continue;
 
-                Vector3 local = byName[joint].localPosition;
-                float length = pair.Value * scale;
+                // The capsule spans parent joint -> this joint, so it follows the joint's own rest
+                // offset instead of always hanging straight down +Y. A collapsed offset falls back
+                // to the authored segment length so a hand can never lose a bone.
+                Vector3 offset = byName[joint].localPosition;
+                if (offset.magnitude < 1e-4f)
+                    offset = new Vector3(0f, pair.Value * scale, 0f);
+                float length = offset.magnitude;
                 float radius = (SegmentRadii.ContainsKey(joint) ? SegmentRadii[joint] : 0.008f) * scale;
 
                 var bone = new GameObject(joint + "_bone");
                 bone.transform.SetParent(byName[parent].transform, false);
-                bone.transform.localPosition = new Vector3(0f, length * 0.5f, 0f);
-                bone.transform.localRotation = Quaternion.identity;
+                bone.transform.localPosition = offset * 0.5f;
+                bone.transform.localRotation = Quaternion.FromToRotation(Vector3.up, offset.normalized);
 
                 if (joint == "Palm")
                 {

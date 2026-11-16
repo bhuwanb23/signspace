@@ -37,6 +37,7 @@ SKIP = {"set-meta.json", "index.json", "probe-meta.json"}
 DEFAULT_FOLDERS = (
     REPO_ROOT / "unity" / "Assets" / "StreamingAssets" / "Signs",
     REPO_ROOT / "unity" / "Assets" / "StreamingAssets" / "Probe",
+    REPO_ROOT / "unity" / "Assets" / "StreamingAssets" / "Facing",
 )
 
 BROKEN_DIR = REPO_ROOT / "scripts" / "fixtures" / "broken"
@@ -76,7 +77,9 @@ def validate_folder(folder: pathlib.Path, canonical, *, verbose=True) -> tuple[i
     if not folder.exists():
         return 0, [f"no pose folder at {folder}"]
 
-    shipped = folder.name.lower() != "probe"
+    # Probe references and the facing pair are measurements, not content. Everything else is the
+    # shipped set, where a probeOnly flag is a contradiction.
+    shipped = folder.name.lower() not in ("probe", "facing")
     files = [p for p in sorted(folder.glob("*.json")) if p.name not in SKIP]
     if not files:
         return 0, []
@@ -129,7 +132,7 @@ def migrate_folder(folder: pathlib.Path, canonical) -> int:
             continue
         upgraded = ps.migrate_v1(payload)
         errs, _ = ps.validate(upgraded, canonical, filename=f.name,
-                              folder_is_shipped=folder.name.lower() != "probe")
+                              folder_is_shipped=folder.name.lower() not in ("probe", "facing"))
         if errs:
             print(f"[MIGRATE FAIL] {f.name}: still invalid after migration")
             for e in errs:

@@ -361,7 +361,27 @@ that nothing instantiated. They are now in `Main.unity`:
 The near-miss now compares the **finger term only**, so a correct shape with a twisted wrist can never
 be renamed as a different sign.
 
-### 8.7 Traps found in this pass, for the next person
+### 8.7 The four software gaps the P0–P2 audit found — 🟡 CLOSED (not device-tested)
+
+The audit (`phases/P0-P2-VALIDATION.md`) separated hardware measurements from software that was still
+missing. Four were software; all four are now built and checked without a headset:
+
+| Gap | Fix | Evidence |
+|---|---|---|
+| Reference hand drew every finger from the palm's centre — `Build()` never set a joint's `localPosition` | `HandVisual.RestOffsets`: metacarpals at their knuckles, every other joint at its parent bone's tip; capsule geometry now follows the offset instead of hanging +Y | `HandRigCheck`: base spread **45 mm**, proximal **17 mm**, tips **18 mm**, wrist→middle tip **192 mm** (the three spreads were **0**) |
+| Honest mirror was text-only while G3 requires correct shape renders | `HonestMirror.RenderExcludedShapes()` renders M/N/T/R at start from their own probe pose files into 256² textures; empty slots stay dim rather than guessed | 4 `Shape_*` slots + labels in `Main.unity`; 20 renderers per thumb, destroyed after render |
+| No session rate cap and no runtime off switch | `Matcher.nearMissSessionCap = 3`, `NearMissEnabled`, `ResetNearMissSession()`; `NearMissToggle` block beside the mirror handle, dims when off | `near_miss_sim.py`: **3 fires in 5 min** of constant attempts, **0** with naming off, cooldown still bounds a 1-min session |
+| No authored pair differed in palm facing, so P2.6's term had no content | K and P authored in `StreamingAssets/Facing/` (probe-only): identical fingers, 90° pronation. `hand_model` gained a `twist` axis and optional `wrist` spec — Wrist/Palm were hard-coded identity | `facing_pair_sim.py`: finger distance **0.00°**, O **90.00°**, total **75.00°**; with the palm term they would lock. Largest O among the shipped six: **0.00°** |
+
+Two decisions worth keeping:
+
+- **K/P do not ship yet.** They are reference content in `Facing/`, not `Signs/`. Shipping them changes
+the six-shape commitment, the demo and P5's capture plan, so that is a P5 decision, not a side effect of
+a bug fix.
+- **The switch does not refill the cap.** Toggling naming off and on cannot farm hints, or the cap is
+decoration.
+
+### 8.8 Traps found in this pass, for the next person
 
 | Trap | Symptom | Fix |
 |---|---|---|
@@ -382,6 +402,8 @@ be renamed as a different sign.
    scenarios, one stranger for the near-miss, the copy read to a non-signer.
 3. **P4 shelf** — replace the provisional `HonestMirrorHandle` placement with the real shelf object;
    the binding is one event, so the panel does not change.
+4. **Decide whether K/P ship** (`StreamingAssets/Facing/` → `Signs/`). The measurement says they are a
+   clean facing-only pair; the cost is a seven-shape set, a new pair in the demo and a capture-plan edit.
 4. **POSE-FORMAT §4.3** — the left-hand frame test; until it runs, `HandSupport.LeftHandSupported`
    stays false and the honest mirror says so.
 
