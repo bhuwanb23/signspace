@@ -32,8 +32,9 @@ namespace Signspace.Gaze
         [Tooltip("Sphere radius at each fingertip, in metres at hand scale 1.")]
         public float radiusMetres = 0.011f;
 
-        [Tooltip("Layer for the targets. Default is everything the gaze ray tests.")]
-        public int layer = 0;
+        [Tooltip("Layer for the targets. -1 keeps the joint's own layer, which is the safe default: " +
+                 "moving a hand joint to Default could change what the hand's own materials render on.")]
+        public int layer = -1;
 
         /// <summary>How many targets exist. The check asserts this equals the number of long fingers + thumb.</summary>
         public int Count { get; private set; }
@@ -98,7 +99,7 @@ namespace Signspace.Gaze
                 target.label = names[f];
                 target.group = groups[f];
 
-                go.layer = layer;
+                if (layer >= 0) go.layer = layer;
                 Count++;
             }
 

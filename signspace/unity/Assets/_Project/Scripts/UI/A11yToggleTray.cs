@@ -125,11 +125,23 @@ namespace Signspace.UI
             var renderer = plate.GetComponent<Renderer>();
             var shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Standard");
-            var mat = new Material(shader);
-            mat.name = "A11yBlock_" + name;
-            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", new Color(0.30f, 0.33f, 0.36f, 1f));
-            if (mat.HasProperty("_Color")) mat.SetColor("_Color", new Color(0.30f, 0.33f, 0.36f, 1f));
-            if (renderer != null) renderer.sharedMaterial = mat;
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+
+            if (shader != null)
+            {
+                var mat = new Material(shader);
+                mat.name = "A11yBlock_" + name;
+                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", new Color(0.30f, 0.33f, 0.36f, 1f));
+                if (mat.HasProperty("_Color")) mat.SetColor("_Color", new Color(0.30f, 0.33f, 0.36f, 1f));
+                if (renderer != null) renderer.sharedMaterial = mat;
+            }
+            else
+            {
+                // A null shader would throw and take the whole tray down at Start. The block still works
+                // (the collider and the label are what the user interacts with), so it is a warning.
+                Debug.LogWarning("[A11yToggleTray] no usable shader for the switch blocks; the plates " +
+                                 "use the primitive's default material.");
+            }
 
             var grab = plate.AddComponent<Grabbable>();
             grab.radius = 0.045f;

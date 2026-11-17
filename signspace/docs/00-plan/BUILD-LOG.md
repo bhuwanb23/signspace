@@ -561,8 +561,8 @@ and payoff: `P5.5 Check credits`, `P5.7 Check blind-spot copy`, `ShelfCheck`, `H
 `PersistenceP43Checks` all pass. Scene rebuilt: `Accessibility` object, 8 tray blocks, 5 fingertip
 targets, both panel handles gaze-reachable.
 
-**Build:** APK 64,516,403 bytes,
-`sha256 c71b9d26df9838b2eee4698bf6e748722b22fe8dd03f8195be1a920f18f83e4f`.
+**Build:** APK 64,510,983 bytes,
+`sha256 54d6858a0daee6a755e4bb2a9943e5c4291ea4c2aaa28b43cf2a1b80bd087fce`.
 
 **Not run, and not implied:** the 0.4 m/0.6 m finger-precision test, the eyes-still/head-still
 discriminator, the eyes-only recording, the restricted-hand calibration video, the per-switch loop

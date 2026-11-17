@@ -44,7 +44,7 @@ Gaze is a named rubric technology and the mechanism that makes finger-level insp
 | `SIGNSPACE/P6 Check all` | 106 passed, 0 failed |
 | compile | 0 errors |
 | scene rebuild | ✅ — `Accessibility` wired, 8 tray blocks, 5 finger targets, both panel handles gaze-reachable |
-| APK | 64,516,403 B · `sha256 c71b9d26df9838b2eee4698bf6e748722b22fe8dd03f8195be1a920f18f83e4f` |
+| APK | 64,510,983 B · `sha256 54d6858a0daee6a755e4bb2a9943e5c4291ea4c2aaa28b43cf2a1b80bd087fce` |
 | regression | P5 credits, P5.7 copy, shelf, hand rig, P4.3 persistence all pass |
 
 **Every human/device row from this phase is in [`docs/00-plan/HUMAN-TASKS.md`](../../docs/00-plan/HUMAN-TASKS.md)** (H14–H22).

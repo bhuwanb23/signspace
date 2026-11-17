@@ -10,8 +10,8 @@
 > already point at, so finishing a row is "do the thing, save the file, tick the box".
 
 **Build under test:** `unity/Builds/Android/signspace.apk`
-· 64,516,403 bytes
-· `sha256 c71b9d26df9838b2eee4698bf6e748722b22fe8dd03f8195be1a920f18f83e4f`
+· 64,510,983 bytes
+· `sha256 54d6858a0daee6a755e4bb2a9943e5c4291ea4c2aaa28b43cf2a1b80bd087fce`
 · built 2026-11-17 from `main`
 
 ---
