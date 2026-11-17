@@ -51,7 +51,7 @@ namespace Signspace.Editor
         // 13 is the next code after the v12 APK built on 16 Nov; installing over it must not be a downgrade.
         // 14 is the P7 polish build: new audio, the 70° tray pose, and the perf switches.
         const int BundleVersionCode = 14;
-        const string Version = "0.9.0";
+        const string Version = "1.0.0-competition";
 
         [MenuItem("SIGNSPACE/Apply Player Settings")]
         public static void ApplySettingsOnly()

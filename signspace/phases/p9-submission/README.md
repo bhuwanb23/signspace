@@ -1,7 +1,7 @@
 # P9 — Submission
 
 **Day 10–11 (Mon 16 – Tue 17 Nov) · Budget 10 h · Gate:** G9 — Is the entry submitted, confirmed by email, with an invite URL that works from a stranger's clean device?
-**Status:** ⬜ Not started
+**Status:** 🟡 **Desk-side preparation done.** Version bumped to `1.0.0-competition`. `P9Checks.CheckAll` runs the freeze check + copy verify. Shot list, submitted.md template, and archive template written. **Owner-only remaining:** keystore confirmation, channel upload, invite URL, footage, edit, Devpost submission, clean-account verify, git tag, freeze.
 
 ## Objective
 Convert eleven days of work into a submitted, verified, installable entry — video, copy, build, and a clean-account install path that a judge can follow without help.

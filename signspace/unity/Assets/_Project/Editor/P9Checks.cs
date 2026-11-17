@@ -24,7 +24,7 @@ namespace Signspace.Editor
     public static class P9Checks
     {
         const string ApkPath = "Builds/Android/signspace.apk";
-        const string HashFile = "phases/p9-submission/apk-hash.txt";
+        const string HashFile = "../phases/p9-submission/apk-hash.txt";
 
         [MenuItem("SIGNSPACE/P9.5 Verify submission copy")]
         public static void VerifyCopy()
@@ -32,17 +32,21 @@ namespace Signspace.Editor
             // the copy limits are enforced by scripts/count.py, which reads the
             // submission copy file and exits 1 if either limit is exceeded.
             // Here we only check that the file still exists and is non-empty.
-            var taglinePath = "docs/06-submission/SUBMISSION-COPY.md";
+            var taglinePath = "Assets/_Project/../../docs/06-submission/SUBMISSION-COPY.md";
             if (!File.Exists(taglinePath))
             {
-                Debug.LogError("[P9Checks] " + taglinePath + " is missing.");
-                EditorApplication.Exit(1);
-                return;
+                // the docs live at the repo root, not inside the Unity project
+                taglinePath = "../docs/06-submission/SUBMISSION-COPY.md";
+                if (!File.Exists(taglinePath))
+                {
+                    Debug.LogError("[P9Checks] " + taglinePath + " is missing.");
+                    EditorApplication.Exit(1);
+                    return;
+                }
             }
             string text = File.ReadAllText(taglinePath);
             Debug.Log("[P9Checks] submission copy present (" + text.Length + " chars).");
             Debug.Log("[P9Checks] tagline 118/140 chars, description 494/500 words - verified by scripts/count.py");
-            EditorApplication.Exit(0);
         }
 
         [MenuItem("SIGNSPACE/P9.1 Freeze the build")]
@@ -86,7 +90,7 @@ namespace Signspace.Editor
             Directory.CreateDirectory("phases/p9-submission");
             string record = "APK: " + ApkPath + "\n" +
                             "package: " + packageName + "\n" +
-                            "version: 0.9.0 (bundle version code " + versionCode + ")\n" +
+                            "version: 1.0.0-competition (bundle version code " + versionCode + ")\n" +
                             "sha256: " + hash + "\n" +
                             "frozen at: " + DateTime.UtcNow.ToString("o") + "\n" +
                             "commit: " + ReadCommitHash() + "\n";
@@ -100,7 +104,9 @@ namespace Signspace.Editor
         [MenuItem("SIGNSPACE/P9 Check all")]
         public static void CheckAll()
         {
-            Debug.Log("[P9Checks] P9.1 ...");
+            Debug.Log("[P9Checks] P9.5 Verify submission copy ...");
+            VerifyCopy();
+            Debug.Log("[P9Checks] P9.1 Freeze the build ...");
             FreezeBuild();
         }
 
