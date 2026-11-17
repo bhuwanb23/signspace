@@ -82,6 +82,10 @@ namespace Signspace.Matching
         public MetaHandSource trackedSource;
 
         /// <summary>True while the user is holding the reference hand.</summary>
+        [Tooltip("P6.5 one-handed mode: the reference hand follows the tracked wrist with no pinch, so " +
+                 "the whole loop runs with one hand. Set by A11ySettings.")]
+        public bool oneHanded;
+
         public bool IsGrabbed { get; private set; }
 
         /// <summary>
@@ -154,10 +158,30 @@ namespace Signspace.Matching
             {
                 FollowWrist();
             }
+            else if (oneHanded)
+            {
+                PostOneHanded();
+            }
             else
             {
                 IdleDrift();
             }
+        }
+
+        /// <summary>
+        /// One-handed mode: the hand is always at the wrist's rotation, offset-free, so shaping works
+        /// without a pinch on the reference hand. Position is never written - the hand stays where the
+        /// plinth put it, in front of the user, because moving it to the wrist would drag it out of the
+        /// comfortable cone on every reach.
+        /// </summary>
+        void PostOneHanded()
+        {
+            Quaternion target = WristRotation;
+            TargetRotation = target;
+            pivot.rotation = Quaternion.Slerp(pivot.rotation, target,
+                                              1f - Mathf.Exp(-followSmoothness * Time.deltaTime));
+            IsApplyingRotation = true;
+            LagDegrees = Quaternion.Angle(pivot.rotation, target);
         }
 
         void Grab()

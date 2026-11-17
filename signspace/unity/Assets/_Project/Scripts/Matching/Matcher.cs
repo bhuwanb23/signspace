@@ -113,6 +113,105 @@ namespace Signspace.Matching
                  "cannot produce - every pair is at least 26 deg apart.")]
         public float nearMissMarginDeg = 2f;
 
+        // ---- P6.4: calibration -------------------------------------------------------------------
+        // Per-finger factors that put the user's own range on the canonical scale. 1 means "no
+        // calibration or a full-range hand"; 2 means "this finger moves half as far as the model".
+        // Applied to each finger's weighted mean, which is equivalent to scaling both the target and
+        // the hand by the same factor because the mean is linear in the joint angles.
+        float[] _fingerScale;
+        Quaternion[] _normalised;
+        int[] _fingerOfJoint;
+
+        /// <summary>
+        /// Widens the lock band when the user's range is small. Normalising stretches the user's motion
+        /// to canonical scale, and the tracker's noise is stretched with it, so without this a hand at
+        /// 50% range would see its noise floor double. Capped at 1.35 so the band cannot swallow a
+        /// genuinely wrong shape.
+        /// </summary>
+        public float bandScale = 1f;
+
+        public float EffectiveLockedDeg => lockedDeg * bandScale;
+
+        /// <summary>
+        /// Installs a calibration. `scales` is per finger (5 entries, 1 = no change); `band` is the
+        /// widening computed from the same measurement. Passing null clears it and restores the
+        /// default path exactly.
+        /// </summary>
+        public void SetFingerNormalisation(float[] scales, float band)
+        {
+            if (scales == null)
+            {
+                _fingerScale = null;
+                bandScale = 1f;
+                return;
+            }
+
+            _fingerScale = new float[scales.Length];
+            for (int i = 0; i < scales.Length; i++)
+                _fingerScale[i] = Mathf.Clamp(scales[i], 1f, 2.5f);
+
+            bandScale = Mathf.Clamp(band, 1f, 1.35f);
+            Debug.Log("[Matcher] calibration applied: per-finger " +
+                      string.Join(" ", _fingerScale) + ", band x" + bandScale.ToString("0.00"));
+        }
+
+        public bool HasCalibration => _fingerScale != null;
+
+        /// <summary>
+        /// P6.4: expand one joint rotation by `scale` about its own axis.
+        ///
+        /// WHY NOT SCALE THE DISTANCE
+        /// --------------------------
+        /// The first version multiplied each finger's mismatch angle by the calibration factor, which
+        /// does the opposite of what the feature is for: a hand that reaches 45 degrees against a
+        /// 90-degree target is 45 degrees away, and multiplying by 2 makes it 90 away, not 0. The
+        /// stretch has to happen to the USER'S rotation before the comparison, so that the hand that
+        /// reaches half as far is read as reaching the whole way. Scaling the rotation about its own
+        /// axis is exactly that, and because pose files store rotations against the identity rest pose,
+        /// the joint's local rotation is already the rotation from rest.
+        /// </summary>
+        public static Quaternion ScaleRotation(Quaternion q, float scale)
+        {
+            if (scale <= 0f || Mathf.Approximately(scale, 1f)) return q;
+            q.ToAngleAxis(out float angle, out Vector3 axis);
+            if (angle <= 0.0001f || float.IsNaN(axis.x)) return q;
+            // 180 is the full range of a quaternion's angle; going past it would wrap oddly, so the
+            // stretch is clamped there. A finger that needs more than 180 deg of stretch is not a
+            // calibration problem.
+            return Quaternion.AngleAxis(Mathf.Min(angle * scale, 180f), axis);
+        }
+
+        /// <summary>
+        /// Applies the per-finger stretch to the incoming hand. Wrist and palm are untouched: the
+        /// calibration measures fingers, and stretching the palm would change the orientation gate.
+        /// </summary>
+        Quaternion[] Normalised(Quaternion[] localRotations)
+        {
+            if (_fingerScale == null || localRotations == null) return localRotations;
+
+            if (_normalised == null || _normalised.Length != localRotations.Length)
+            {
+                _normalised = new Quaternion[localRotations.Length];
+                _fingerOfJoint = new int[localRotations.Length];
+                for (int j = 0; j < _fingerOfJoint.Length; j++) _fingerOfJoint[j] = -1;
+                for (int f = 0; f < PoseMath.FingerChains.Length; f++)
+                {
+                    var chain = PoseMath.FingerChains[f];
+                    for (int i = 0; i < chain.Length; i++)
+                        if (chain[i] < _fingerOfJoint.Length) _fingerOfJoint[chain[i]] = f;
+                }
+            }
+
+            System.Array.Copy(localRotations, _normalised, localRotations.Length);
+            for (int j = 0; j < _normalised.Length; j++)
+            {
+                int f = _fingerOfJoint[j];
+                if (f < 0 || f >= _fingerScale.Length) continue;
+                _normalised[j] = ScaleRotation(_normalised[j], _fingerScale[f]);
+            }
+            return _normalised;
+        }
+
         // ---- events ----
         public event Action<Band> OnBandChanged;
         public event Action<string> OnLocked;                  // shape id
@@ -295,7 +394,11 @@ namespace Signspace.Matching
             bool trustworthy = confidence >= confidenceFloor;
             SetPaused(!trustworthy);
 
-            float d = PoseMath.Distance(weights, _target.LocalRotations, localRotations,
+            // P6.4: the calibrated hand is stretched to canonical range before it is compared. The
+            // target is NOT stretched with it - that would cancel out and normalise nothing.
+            var hand = Normalised(localRotations);
+
+            float d = PoseMath.Distance(weights, _target.LocalRotations, hand,
                                         _fingerAngles, _jointAngles,
                                         out float wristAngle, out float flatDegrees);
             DistanceDegrees = d;
@@ -313,10 +416,10 @@ namespace Signspace.Matching
             // perfect fingers and 12 deg of wrong facing once both were inside the floor. Additive is the
             // behaviour the task wants: the facing error is added to the shape error, weighted, so the
             // two contribute independently and neither can hide the other.
-            float orientation = PalmOrientation.ErrorDegrees(_target.LocalRotations, localRotations);
-            PalmOrientation.TryBasis(localRotations, out _, out PalmBasisSource basisSource, out string basisNote);
+            float orientation = PalmOrientation.ErrorDegrees(_target.LocalRotations, hand);
+            PalmOrientation.TryBasis(hand, out _, out PalmBasisSource basisSource, out string basisNote);
             BasisNote = basisNote;
-            PalmOrientation.Components(_target.LocalRotations, localRotations,
+            PalmOrientation.Components(_target.LocalRotations, hand,
                                        out float palmSwing, out float palmTwist);
             PalmSwingDegrees = palmSwing;
             PalmTwistDegrees = palmTwist;
@@ -343,7 +446,7 @@ namespace Signspace.Matching
                 _shapeIds[i] = s.Id;
                 _shapeDegrees[i] = (s.Id == _target.Id || s.JointCount != _target.JointCount)
                     ? float.PositiveInfinity
-                    : PoseMath.Distance(weights, s.LocalRotations, localRotations, null, null, out _, out _);
+                    : PoseMath.Distance(weights, s.LocalRotations, hand, null, null, out _, out _);
             }
 
             float bestOther = float.PositiveInfinity;
@@ -362,7 +465,7 @@ namespace Signspace.Matching
             // Ticked BEFORE the trustworthy check below, because a tracking dropout has to reach the
             // hold timer: freezing progress through a dip is the whole point, and a timer that is only
             // ticked on good frames would be reset by omission rather than by decision.
-            var hold = _hold.Tick(d, trustworthy, lockedDeg, lockedDeg + bandReleaseDeg, dt);
+            var hold = _hold.Tick(d, trustworthy, EffectiveLockedDeg, EffectiveLockedDeg + bandReleaseDeg, dt);
             HoldPhase = hold.State;
             HoldSecondsHeld = hold.HeldSeconds;
 
@@ -389,7 +492,7 @@ namespace Signspace.Matching
                 return;
             }
 
-            Band wanted = (Band)PoseMath.Band(d, lockedDeg, closeDeg, bandReleaseDeg, (int)_band);
+            Band wanted = (Band)PoseMath.Band(d, EffectiveLockedDeg, closeDeg, bandReleaseDeg, (int)_band);
             if (wanted != _band)
             {
                 if (wanted != _pendingBand) { _pendingBand = wanted; _hysteresisTimer = 0f; }
@@ -408,7 +511,7 @@ namespace Signspace.Matching
 
             // The rule lives in NearMiss.cs; this decides only whether the app is allowed to speak yet.
             var nearMiss = NearMiss.Evaluate(d, _target.Id, _shapeIds, _shapeDegrees, shapes.Count,
-                                             lockedDeg, nearMissMarginDeg);
+                                             EffectiveLockedDeg, nearMissMarginDeg);
             NearMissState = nearMiss;
 
             // Stability of the DECISION, not just of the tracking (P3.2's trap). A hand sweeping through
