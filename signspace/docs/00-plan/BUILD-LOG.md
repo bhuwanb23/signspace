@@ -524,8 +524,8 @@ the shelf and is opened by pinching its bead.
 problems** (adds `Signs/deferred` to the validated set); `check_trackability.py` 0 violations;
 `lint_copy.py` 70 literals in 9 files, 0 violations; scene rebuilt with `Credits` following the shelf.
 
-**Build:** APK 64,470,027 bytes,
-`sha256 10aac7e46b645f8809504017e0e24103abd70fff9a017e49e1bec2e9709d9b7d`.
+**Build:** APK 64,470,043 bytes,
+`sha256 6366e09a41083ba76ad7975e5f6b553d4b113fd16b10bb1c529623abd40f5d3b`.
 
 **Not run, and not implied:** the signer session, consent signature, compensation payment, credit
 wording approval, the signer's descriptions, the signer's rewrite of the blind-spot copy, the vantage

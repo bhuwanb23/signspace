@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using Signspace.Matching;
 using Signspace.Spatial;
 using Signspace.UI;
@@ -75,6 +76,19 @@ namespace Signspace.Editor
             }
         }
 
+        /// <summary>Drives the panel's real text composition, the same path the runtime uses.</summary>
+        static void Compose(CreditsPanel panel, SetMeta meta)
+        {
+            var prop = typeof(CreditsPanel).GetProperty("Meta",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var build = typeof(CreditsPanel).GetMethod("Build",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Require(prop != null && build != null, "CreditsPanel no longer exposes the path this check drives");
+
+            prop.SetValue(panel, meta, null);
+            build.Invoke(panel, null);
+        }
+
         [MenuItem("SIGNSPACE/P5.5 Check credits")]
         public static void CheckCredits()
         {
@@ -117,6 +131,45 @@ namespace Signspace.Editor
                 if (!string.IsNullOrEmpty(meta.signerName))
                     Require(meta.authorship == "signer-verified",
                             "a signer name is present while authorship is '" + meta.authorship + "'");
+
+                // ---- the text the panel actually composes ----------------------------------
+                // Reading the file is not the same as proving the panel renders it. The first version of
+                // this check only did the former, so a panel that ignored `Meta` would still have passed.
+                var probe = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                try
+                {
+                    var live = probe.GetComponent<CreditsPanel>();
+                    Require(live != null && live.body != null, "the instantiated panel has no body text");
+
+                    // A: a signed build names the signer, the city and the date.
+                    Compose(live, new SetMeta
+                    {
+                        authorship = "signer-verified",
+                        signerName = "Test Signer",
+                        signerCity = "Test City",
+                        verifiedOn = "2026-11-20",
+                        creditLine = "Handshapes verified by Test Signer. " + CreditsPanel.FixedLine
+                    });
+                    Require(live.body.text.Contains("Test Signer"), "the panel does not show the signer's name");
+                    Require(live.body.text.Contains("Test City"), "the panel does not show the signer's city");
+                    Require(live.body.text.Contains("2026-11-20"), "the panel does not show the capture date");
+                    Require(live.body.text.Contains(CreditsPanel.FixedLine), "the panel dropped the fixed sentence");
+
+                    // B: no signer names itself as unsigned instead of leaving a blank.
+                    Compose(live, meta);
+                    Require(live.body.text.Contains("No signer has reviewed"),
+                            "the panel does not state the unsigned state plainly");
+                    Require(live.body.text.Contains(CreditsPanel.FixedLine), "the unsigned panel lost the fixed sentence");
+
+                    // C: a credit line that omits the fixed sentence still gets it.
+                    Compose(live, new SetMeta { creditLine = "Handshapes authored from references." });
+                    Require(live.body.text.Contains(CreditsPanel.FixedLine),
+                            "the panel does not append the fixed sentence when the data omits it");
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(probe);
+                }
 
                 // The scene instance rides the shelf.
                 EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);

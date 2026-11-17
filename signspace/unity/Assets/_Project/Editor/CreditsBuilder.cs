@@ -78,7 +78,9 @@ namespace Signspace.Editor
             // ---- the panel ---------------------------------------------------------------
             var content = new GameObject("Content");
             content.transform.SetParent(root.transform, false);
-            content.transform.localPosition = new Vector3(0.20f, 0.18f, 0.02f);
+            // x = 0.12 keeps the bead inside the *narrow* tray plate (0.30 m wide, half-width 0.15) as
+            // well as the full 0.50 m plate; 0.20 was past the tray's edge and would have floated.
+            content.transform.localPosition = new Vector3(0.12f, 0.20f, 0.02f);
 
             var canvasGo = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas), typeof(Image));
             canvasGo.transform.SetParent(content.transform, false);
@@ -108,7 +110,7 @@ namespace Signspace.Editor
             var bead = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bead.name = "CreditsBead";
             bead.transform.SetParent(root.transform, false);
-            bead.transform.localPosition = new Vector3(0.20f, 0.035f, 0.03f);
+            bead.transform.localPosition = new Vector3(0.12f, 0.035f, 0.03f);
             bead.transform.localScale = Vector3.one * 0.035f;
             var beadRenderer = bead.GetComponent<Renderer>();
             if (beadRenderer != null)
