@@ -576,6 +576,28 @@ namespace Signspace.Editor
 
         // ------------------------------------------------------------------ runner
 
+        /// <summary>
+        /// Runs every P6 check inside another suite's process, without exiting, and returns how many
+        /// assertions failed. P7 calls this because polish touched the matcher, the tray and the scene.
+        /// </summary>
+        public static int RunInline()
+        {
+            bool previous = _exitOnFinish;
+            _exitOnFinish = false;
+            int before = _failures;
+
+            CheckGaze();
+            CheckEyeTracking();
+            CheckEyesOnly();
+            CheckCalibration();
+            CheckToggles();
+            CheckReducedMotion();
+            CheckA11yDoc();
+
+            _exitOnFinish = previous;
+            return _failures - before;
+        }
+
         [MenuItem("SIGNSPACE/P6 Check all")]
         public static void CheckAll()
         {

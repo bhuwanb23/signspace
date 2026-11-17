@@ -49,7 +49,8 @@ namespace Signspace.Editor
         const int MinimumApi = 32;      // Android 12
         const int TargetApi = 34;       // Android 14
         // 13 is the next code after the v12 APK built on 16 Nov; installing over it must not be a downgrade.
-        const int BundleVersionCode = 13;
+        // 14 is the P7 polish build: new audio, the 70° tray pose, and the perf switches.
+        const int BundleVersionCode = 14;
         const string Version = "0.9.0";
 
         [MenuItem("SIGNSPACE/Apply Player Settings")]
@@ -137,6 +138,28 @@ namespace Signspace.Editor
 
             // IL2CPP needs the NDK path; take it from the installed module
             EditorUserBuildSettings.androidBuildSystem = AndroidBuildSystem.Gradle;
+
+            // ---- P7.5: no animated splash -------------------------------------------------
+            // A judge launches once, cold. Unity's logo cannot be removed on this licence, but an
+            // animated one costs a second and a half of the first impression; static costs none.
+            Debug.Log("[BuildScript] " + SplashSettings.MakeStatic());
+
+            // ---- P7.4: MSAA in the pipeline asset, which is where URP reads it -----------------
+            // 4x MSAA is the default and costs bandwidth the 3S cannot spare on a passthrough scene
+            // with no specular highlights to benefit from it. 2x is the documented choice; the 4x-vs-2x
+            // comparison stays a device row (P7.4, HUMAN-TASKS) because it needs the GPU.
+            var pipeline = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset>(
+                "Assets/_Project/Rendering/SignSpacePipeline.asset");
+            if (pipeline != null)
+            {
+                pipeline.msaaSampleCount = 2;
+                EditorUtility.SetDirty(pipeline);
+                Debug.Log("[BuildScript] MSAA set to 2x in the URP asset");
+            }
+            else
+            {
+                Debug.LogWarning("[BuildScript] URP asset missing; MSAA left as configured");
+            }
 
             AssetDatabase.SaveAssets();
             Debug.Log("[BuildScript] package name: " + packageName);

@@ -56,6 +56,10 @@ namespace Signspace.Hands
         public bool IsRunning => Current != Step.Idle && Current != Step.Done;
         public bool HasResult { get; private set; }
 
+        /// <summary>Fired when a run starts and when one ends, however it ends. Audio hangs off these.</summary>
+        public event System.Action OnStarted;
+        public event System.Action OnFinished;
+
         /// <summary>0..1 through the whole flow. Drives the caption's progress bar.</summary>
         public float Progress01
         {
@@ -164,6 +168,7 @@ namespace Signspace.Hands
             _measuring = true;
             Enter(Step.Open);
             if (referenceHand != null) referenceHand.ShowNeutral();
+            OnStarted?.Invoke();
             Debug.Log("[Calibration] started — " + Prompt);
         }
 
@@ -184,6 +189,7 @@ namespace Signspace.Hands
                 save.Data.calibrated = false;
                 save.Data.calibration = new CalibrationRecord();
             }
+            OnFinished?.Invoke();
             Debug.Log("[Calibration] skipped; the default path is unchanged.");
         }
 
@@ -252,6 +258,7 @@ namespace Signspace.Hands
             }
 
             Debug.Log("[Calibration] " + Report);
+            OnFinished?.Invoke();
         }
 
         void ComputeScales()

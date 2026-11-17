@@ -257,6 +257,12 @@ namespace Signspace.Editor
             // here so the saved scene is the whole wiring.
             A11yBuilder.BuildAccessibility();
 
+            // ---- P7: what polish needs in the scene ----------------------------------------
+            // Sound, the performance switches, the boot probe, the hostile-condition table and the one
+            // spatial onboarding cue. Runs last because it looks up components every earlier builder
+            // created (matcher, shelf, reference hand, calibration, gaze, HUD, reflow, tray).
+            PolishBuilder.BuildPolish();
+
             // ---- P4.5: the passthrough comparison switch ----------------------------------
             // One key, and only in a development build: the pair of clips has to be the same scene
             // with one variable changed, not two staged shots. DevOnly removes it from a release

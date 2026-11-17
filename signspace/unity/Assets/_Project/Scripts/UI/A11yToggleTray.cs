@@ -5,6 +5,7 @@ using Signspace.Core;
 using Signspace.Gaze;
 using Signspace.Hands;
 using Signspace.Matching;
+using Signspace.Spatial;
 
 namespace Signspace.UI
 {
@@ -37,6 +38,21 @@ namespace Signspace.UI
         public float spacing = 0.047f;
         public float rowSpacing = 0.058f;
         public int columns = 4;
+
+        [Header("Narrow-field-of-view pose (P7.3)")]
+        [Tooltip("At the 70°×66° glasses profile the comfortable pose is 40° off-centre: too far around " +
+                 "and too far down to be seen without turning the head. These pull the tray into the " +
+                 "55° safe cone. Measured in P7Checks, not guessed.")]
+        public float narrowForward = 0.38f;
+        public float narrowDown = 0.08f;
+        public float narrowRight = 0.05f;
+        [Tooltip("Below this horizontal FoV the narrow pose applies. Matches ShelfReflow.narrowFovDegrees.")]
+        public float narrowFovDegrees = 85f;
+
+        [Tooltip("Optional. When wired, the tray poses itself for the current field of view.")]
+        public ShelfReflow reflow;
+
+        public bool IsNarrowPose { get; private set; }
 
         /// <summary>Built blocks, including the calibrate block. The check asserts on this.</summary>
         public int BlockCount { get; private set; }
@@ -89,6 +105,15 @@ namespace Signspace.UI
 
         void PlaceInFrontOfUser()
         {
+            float horizontalFov = reflow != null && reflow.HorizontalFovDegrees > 0f
+                ? reflow.HorizontalFovDegrees
+                : 110f;
+            ApplyFov(horizontalFov);
+
+            float useForward = IsNarrowPose ? narrowForward : forward;
+            float useDown = IsNarrowPose ? narrowDown : down;
+            float useRight = IsNarrowPose ? narrowRight : right;
+
             var cam = Camera.main;
             if (cam == null)
             {
@@ -100,12 +125,33 @@ namespace Signspace.UI
             }
 
             var t = cam.transform;
-            transform.position = t.position + t.forward * forward - Vector3.up * down + t.right * right;
+            transform.position = t.position + t.forward * useForward - Vector3.up * useDown + t.right * useRight;
 
             // Face the user, then tilt back so the plate is a tray rather than a wall.
             Vector3 toUser = transform.position - t.position;
             transform.rotation = Quaternion.LookRotation(toUser.normalized, Vector3.up) *
                                  Quaternion.Euler(52f, 0f, 0f);
+        }
+
+        /// <summary>Chooses the wide or narrow pose. Pure, so the check can exercise both profiles.</summary>
+        public bool ApplyFov(float horizontalFovDegrees)
+        {
+            IsNarrowPose = horizontalFovDegrees > 0f && horizontalFovDegrees < narrowFovDegrees;
+            return IsNarrowPose;
+        }
+
+        /// <summary>
+        /// The worst-case angular offset of any part of the tray from the forward axis, in degrees.
+        /// The block grid is 4 x 2 at most, plus half a plate either side; the pose numbers are the ones
+        /// `PlaceInFrontOfUser` uses, so this measures the thing that ships.
+        /// </summary>
+        public float MaxAngleDegrees(float horizontalFovDegrees)
+        {
+            bool narrow = horizontalFovDegrees > 0f && horizontalFovDegrees < narrowFovDegrees;
+            float z = narrow ? narrowForward : forward;
+            float y = (narrow ? narrowDown : down) + rowSpacing;
+            float x = (narrow ? narrowRight : right) + (columns - 1) * 0.5f * spacing + 0.018f;
+            return Mathf.Atan2(Mathf.Sqrt(x * x + y * y), z) * Mathf.Rad2Deg;
         }
 
         GameObject MakePlate(string name, int index)
