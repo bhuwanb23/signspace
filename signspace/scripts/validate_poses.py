@@ -36,6 +36,9 @@ SKIP = {"set-meta.json", "index.json", "probe-meta.json"}
 
 DEFAULT_FOLDERS = (
     REPO_ROOT / "unity" / "Assets" / "StreamingAssets" / "Signs",
+    # Authored-but-not-shipped candidates (P5.4): validated by the same rules as the shipped six,
+    # so promoting one in P5.6 cannot promote an unvalidated pose.
+    REPO_ROOT / "unity" / "Assets" / "StreamingAssets" / "Signs" / "deferred",
     REPO_ROOT / "unity" / "Assets" / "StreamingAssets" / "Probe",
     REPO_ROOT / "unity" / "Assets" / "StreamingAssets" / "Facing",
 )

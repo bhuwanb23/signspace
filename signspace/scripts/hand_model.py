@@ -363,6 +363,87 @@ SHAPES = {
     },
 }
 
+#: The six shapes authored for the 12-shape protocol but NOT shipped in the four-day build
+#: (SIGNSET section 1.5). They are validated content candidates, kept out of `SHAPES` on purpose:
+#: every simulator, the tuner and the shipped index iterate `SHAPES`, and adding unmeasured shapes
+#: there would silently change the six-shape commitment and every number measured against it.
+#:
+#: Angles are the same ones the P1.5 probe authored (`make_probe_poses.py`), so the probe's
+#: measurement and the candidate content describe the same hand.
+DEFERRED_SHAPES = {
+    "A": {
+        "family": "closure",
+        "description": "Fist with the thumb alongside, not across. The ambiguity is thumb "
+                       "position: alongside and across both read as a closed hand.",
+        "fingers": {
+            "index":  _finger(flex_base=86.0, flex_prox=100.0, flex_inter=68.0, flex_distal=8.0, abd=+1.0),
+            "middle": _finger(flex_base=88.0, flex_prox=100.0, flex_inter=70.0, flex_distal=8.0),
+            "ring":   _finger(flex_base=88.0, flex_prox=100.0, flex_inter=70.0, flex_distal=8.0, abd=-2.0),
+            "little": _finger(flex_base=86.0, flex_prox=100.0, flex_inter=68.0, flex_distal=8.0, abd=-4.0),
+        },
+        "thumb": _thumb(flex_base=12.0, flex_prox=18.0, flex_distal=8.0, abd=+14.0, opp=18.0),
+    },
+    "D": {
+        "family": "spread",
+        "description": "Index extended; middle, ring and little curved to meet the thumb tip. "
+                       "Two contacts the sensor cannot resolve.",
+        "fingers": {
+            "index":  _finger(flex_base=4.0, abd=+2.0),
+            "middle": _finger(flex_base=44.0, flex_prox=58.0, flex_inter=40.0, flex_distal=14.0),
+            "ring":   _finger(flex_base=46.0, flex_prox=60.0, flex_inter=42.0, flex_distal=14.0, abd=-3.0),
+            "little": _finger(flex_base=48.0, flex_prox=62.0, flex_inter=44.0, flex_distal=16.0, abd=-6.0),
+        },
+        "thumb": _thumb(flex_base=42.0, flex_prox=48.0, flex_distal=20.0, abd=-6.0, opp=64.0),
+    },
+    "I": {
+        "family": "spread",
+        "description": "Little finger extended; the other three folded; thumb across them.",
+        "fingers": {
+            "index":  _finger(flex_base=88.0, flex_prox=100.0, flex_inter=70.0, flex_distal=8.0, abd=+1.0),
+            "middle": _finger(flex_base=88.0, flex_prox=100.0, flex_inter=70.0, flex_distal=8.0),
+            "ring":   _finger(flex_base=88.0, flex_prox=100.0, flex_inter=70.0, flex_distal=8.0, abd=-2.0),
+            "little": _finger(flex_base=2.0, abd=-4.0),
+        },
+        "thumb": _thumb(flex_base=40.0, flex_prox=44.0, flex_distal=22.0, abd=-12.0, opp=76.0),
+    },
+    "L": {
+        "family": "spread",
+        "description": "Index up, thumb out at right angles to it; the other three folded.",
+        "fingers": {
+            "index":  _finger(flex_base=2.0, abd=+4.0),
+            "middle": _finger(flex_base=88.0, flex_prox=100.0, flex_inter=70.0, flex_distal=8.0),
+            "ring":   _finger(flex_base=88.0, flex_prox=100.0, flex_inter=70.0, flex_distal=8.0, abd=-2.0),
+            "little": _finger(flex_base=88.0, flex_prox=100.0, flex_inter=70.0, flex_distal=8.0, abd=-4.0),
+        },
+        "thumb": _thumb(flex_base=4.0, flex_prox=6.0, flex_distal=4.0, abd=+44.0, opp=4.0),
+    },
+    "Y": {
+        "family": "spread",
+        "description": "Thumb and little extended, the middle three folded. Two ends of the "
+                       "hand at once.",
+        "fingers": {
+            "index":  _finger(flex_base=88.0, flex_prox=100.0, flex_inter=70.0, flex_distal=8.0, abd=+1.0),
+            "middle": _finger(flex_base=88.0, flex_prox=100.0, flex_inter=70.0, flex_distal=8.0),
+            "ring":   _finger(flex_base=88.0, flex_prox=100.0, flex_inter=70.0, flex_distal=8.0, abd=-2.0),
+            "little": _finger(flex_base=2.0, abd=-16.0),
+        },
+        "thumb": _thumb(flex_base=4.0, flex_prox=6.0, flex_distal=4.0, abd=+42.0, opp=6.0),
+    },
+    "F": {
+        "family": "closure",
+        "description": "Index tip meets the thumb tip in a ring; middle, ring and little stay "
+                       "extended. The index-thumb contact makes the index look shorter.",
+        "fingers": {
+            "index":  _finger(flex_base=34.0, flex_prox=46.0, flex_inter=36.0, flex_distal=20.0, abd=+2.0),
+            "middle": _finger(flex_base=2.0, abd=0.0),
+            "ring":   _finger(flex_base=2.0, abd=-3.0),
+            "little": _finger(flex_base=2.0, abd=-6.0),
+        },
+        "thumb": _thumb(flex_base=36.0, flex_prox=46.0, flex_distal=26.0, abd=-8.0, opp=74.0),
+    },
+}
+
+
 #: The four deliberate near-miss pairs, with the feature that separates them.
 NEAR_MISS_PAIRS = {
     ("C", "O"): "curvature and thumb contact",
@@ -409,8 +490,25 @@ def _resolve_shape(shape):
     they are references for measuring the sensor, not content, and putting them in
     SHAPES would make make_pose.py ship them into index.json. Passing a dict through
     the same maths keeps one authoring path and one set of conventions.
+
+    DEFERRED_SHAPES are content candidates that are authored and validated but not
+    shipped in the four-day build; resolving them here keeps one authoring path for
+    all twelve shapes without changing what `SHAPES` means to the simulators.
     """
-    return SHAPES[shape] if isinstance(shape, str) else shape
+    if not isinstance(shape, str):
+        return shape
+    if shape in SHAPES:
+        return SHAPES[shape]
+    return DEFERRED_SHAPES[shape]
+
+
+def shape_spec(shape_id):
+    """The spec for a shipped or deferred shape."""
+    return _resolve_shape(shape_id)
+
+
+def is_deferred(shape_id):
+    return shape_id in DEFERRED_SHAPES
 
 
 def shape_deltas(shape_id):

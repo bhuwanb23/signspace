@@ -187,6 +187,12 @@ namespace Signspace.UI
                     // a decision is worth reading; a general "the cameras are limited" is worth nothing.
                     for (int i = 0; i < ids.Count; i++)
                         sb.AppendLine(ids[i] + "   " + Trackability.ReasonFor(Data, ids[i]));
+
+                    // What would change it, with no date attached (P5.7). A panel about what the hardware
+                    // cannot do is allowed to say what would fix it; it is not allowed to promise when.
+                    string forward = Trackability.ForwardLine(Data);
+                    if (!string.IsNullOrEmpty(forward))
+                        sb.AppendLine().Append(forward);
                 }
 
                 if (!_loaded) sb.AppendLine().Append("Reading the shapes...");

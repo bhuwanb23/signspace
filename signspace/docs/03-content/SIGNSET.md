@@ -37,6 +37,12 @@ Three rules decided this set, in order:
 
 **Deferred to the next build:** A, D, I, L, Y, F (the extension family) and the blind-spot set M, N, T, R, S, E — the latter still captured *correctly* for the honest-mirror panel.
 
+**Status of the six deferred shapes (P5.4/P5.6, 16 Nov 2026):** A, D, I, L, Y and F are now
+authored and schema-validated as pose files in `unity/Assets/StreamingAssets/Signs/deferred/`, but
+they are **not shipped** and are not in `index.json`. The trackability probe has not run, so the
+70% cut rule cannot promote them; see [`final-set-decision.md`](../../phases/p5-content/final-set-decision.md)
+for the per-shape reason and the measured pair distances.
+
 
 ---
 
@@ -52,6 +58,8 @@ Three rules decided this set, in order:
 
 **The lesson this family teaches:** *spread is a phoneme.* U and V are different words with identical finger selection. No video makes that legible; a rotatable reference makes it obvious.
 
+**Shipped in this build:** B, U, V, W. **Deferred:** D, I, L, Y (authored and validated, not in `index.json`).
+
 ---
 
 ## 3. FAMILY 2 — CLOSURE & CURVATURE
@@ -66,6 +74,8 @@ Three rules decided this set, in order:
 
 **The lesson:** *the difference between C and O is 10–15° of curvature.* That is precisely the difference a flat video cannot show and a match meter can measure.
 
+**Shipped in this build:** C, O. **Deferred:** A, F, and the blind-spot shapes M, N, T, R, S, E (the latter captured for the honest mirror, not taught).
+
 ---
 
 ## 4. FAMILY 3 — EXTENSION & SELECTION
@@ -79,6 +89,8 @@ Three rules decided this set, in order:
 | 12 | **F** | Thumb and index meeting, other three extended | Selection *plus* contact — cross-family difficulty |
 
 **The lesson:** *selection is arbitrary and therefore must be learned.* Which finger you raise is the whole content of the shape.
+
+**Shipped in this build:** none of this family. **Deferred:** I, L, Y, F (authored and validated, not in `index.json`).
 
 ---
 

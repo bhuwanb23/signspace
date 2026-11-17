@@ -313,6 +313,39 @@ what this panel exists to replace.
 | Use red, a cross, or a verdict word | `scripts/lint_copy.py`, 0 violations over 66 literals in 9 files |
 | Be a settings screen | a setting is something you configure; this is something you walk up to |
 
+### 4.6 The blind-spot copy (P5.7)
+
+The panel's words are engineering, not marketing: what is out, why, and what would change it. One
+sentence per excluded shape, from `trackability.json`'s `note`; never a category sentence, never an
+apology.
+
+**As shipped, verbatim:**
+
+> **Four handshapes stay out of this build because the cameras cannot see them. Here is why.**
+>
+> Not measured on every hand yet.
+>
+> M   three fingertips sit on the thumb: a finger hides behind a finger
+> N   two fingertips on the thumb; differs from M by one stacked finger
+> R   crossing is not a joint angle the tracker reports
+> T   the thumb is between two fingers: hidden, not bent
+>
+> Hand tracking that reports the depth between fingers, not only their joint angles, would change this.
+
+**Why each sentence is the one it is:**
+
+| Sentence | What it refuses to do |
+|---|---|
+| "a finger hides behind a finger" | blames the shape, not the user, and names the mechanism |
+| "crossing is not a joint angle the tracker reports" | says what the format cannot express, not that R is hard |
+| "the thumb is between two fingers: hidden, not bent" | separates occlusion from articulation — the two get confused constantly |
+| "Hand tracking that reports the depth between fingers… would change this" | looks forward without a date, because a promised date in an honesty panel is the one claim this product cannot afford to miss |
+
+**Signer review: owed.** The wording was drafted by the team because the session has not happened yet
+(P5.1/P5.3). P5.7's done-when requires the signer to read it and rewrite anything that sounds like an
+excuse or a simplification. The rewrite is a one-file edit — `trackability.json`'s `note` and
+`forwardLine` — and the panel picks it up without a rebuild of the copy.
+
 ## 5. What this document must never contain
 
 | | |

@@ -491,6 +491,48 @@ dark-room plinth, and visual legibility of the tray. G4 does not close on desk e
 
 ---
 
+### 8.12 Phase 5 as work — P5.1 to P5.7 🟡 FIVE OF SEVEN DONE, SIGNER STILL MISSING
+
+Phase 5 is the legitimacy phase: every shipped handshape traced to a named, credited Deaf signer. The
+one thing it cannot do from a desk is meet the signer, so the work split cleanly into what could be
+built and what is genuinely blocked.
+
+| Task | Status | What exists |
+|---|---|---|
+| **P5.1** recruit + consent | 🟡 | consent, compensation, credit-option and brief documents in `assets/masters/`; contact log `phases/p0-foundation/signer-pipeline.md`; the send/book/sign steps are human |
+| **P5.2** protocol | ✅ | `docs/03-content/CAPTURE-PROTOCOL.md` complete and printable: one-pager, 12+6 shapes, 3 vantages, 3 s holds, naming, manifest row per take, retake rule, 90-minute schedule |
+| **P5.3** capture session | ⛔ | `phases/p5-content/session-kit.md` (pre-flight, call plan, 18-shape take sheet, approval table, signer-words sheet, playback); the session needs a person and did not run |
+| **P5.4** retarget/clean | 🟡 | all **12** poses authored and validated; six shipped, six deferred in `StreamingAssets/Signs/deferred/`; retarget of real takes and vantage renders blocked |
+| **P5.5** credits | 🟡 | `Credits.prefab`, `CreditsPanel` + `CreditsHandle`, bead on the shelf, opens itself once at 20 s, wording read from `set-meta.json`; `P5.5 Check credits` **PASS**; signer approval owed |
+| **P5.6** final set | ✅ | 6 shipped / 6 deferred, reason per shape, pairs measured with metric v3 (`phases/p5-content/final-set-decision.md`) |
+| **P5.7** blind-spot copy | 🟡 | copy shipped in the panel and documented verbatim in `TRACKABILITY.md` §4.6, forward line with no promised date; signer rewrite owed |
+
+**The set decision (P5.6), and why it is six.** The 70% cut rule cannot fire because `trackability.json`
+is still `measured: false`. A rule that needs a measurement cannot promote a shape on a guess, so the
+six design-`fine` shapes ship and the six `may-resolve` shapes stay authored, validated and out of
+`index.json`. Measured with metric v3 on the actual pose files: **U↔V 26.0°** (exactly on the 26°
+threshold), **C↔O 65.0°**, V↔W 118.1°, B↔U 117.0°. All four shipped pairs survive the cut; the deferred
+pairs (A↔O 116.7°, I↔Y 133.8°, L↔Y 115.3°, D↔F 133.5°) are not claimed.
+
+**What the credits object does, and does not.** It shows a name only when `set-meta.json` carries one
+*and* the state is `signer-verified`; today it shows the state-B sentence instead, which is the truth.
+The fixed sentence *"This is practice software, not a replacement for a Deaf teacher."* is appended if
+the data omits it, and the check fails if it is missing. The panel is not a settings screen; it rides
+the shelf and is opened by pinching its bead.
+
+**Checks run:** compile 0 errors; `P5.5 Check credits` PASS; `validate_poses.py` **34 shapes, 0
+problems** (adds `Signs/deferred` to the validated set); `check_trackability.py` 0 violations;
+`lint_copy.py` 70 literals in 9 files, 0 violations; scene rebuilt with `Credits` following the shelf.
+
+**Build:** APK 64,470,027 bytes,
+`sha256 10aac7e46b645f8809504017e0e24103abd70fff9a017e49e1bec2e9709d9b7d`.
+
+**Not run, and not implied:** the signer session, consent signature, compensation payment, credit
+wording approval, the signer's descriptions, the signer's rewrite of the blind-spot copy, the vantage
+renders, the joint-flip preview, and every device row. G5 stays open; it is the kill-condition gate.
+
+---
+
 ## 9. What is next
 
 1. **Headset (or simulator) session** — measure σ per joint (P1.5), then re-run `tune_match.py

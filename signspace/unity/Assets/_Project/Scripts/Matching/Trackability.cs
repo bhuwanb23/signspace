@@ -37,6 +37,12 @@ namespace Signspace.Matching
         public string device;
         public string conditions;
         public string note;
+        /// <summary>
+        /// The forward-looking sentence the panel prints under the reasons: what would change the
+        /// exclusion, with no promised date. Read from the file so the panel and TRACKABILITY.md
+        /// cannot drift, and so the signer's rewrite is a one-file edit.
+        /// </summary>
+        public string forwardLine;
         public List<TrackabilityVariant> variants = new List<TrackabilityVariant>();
     }
 
@@ -196,6 +202,17 @@ namespace Signspace.Matching
                        + "; the range is " + (inDoubt == 1 ? "that shape" : "those shapes") + ".";
             }
             return "Not measured on every hand yet.";
+        }
+
+        /// <summary>
+        /// What would change the exclusion. One sentence, no date promised (P5.7): a roadmap date in a
+        /// panel about honesty is the one kind of claim this product cannot afford to miss.
+        /// </summary>
+        public static string ForwardLine(TrackabilityData data)
+        {
+            if (data != null && !string.IsNullOrEmpty(data.forwardLine)) return data.forwardLine;
+            return "Hand tracking that reports the depth between fingers, not only their joint angles, " +
+                   "would change this.";
         }
 
         /// <summary>

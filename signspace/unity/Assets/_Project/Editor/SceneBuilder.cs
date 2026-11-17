@@ -244,6 +244,12 @@ namespace Signspace.Editor
             // re-homes the plinth onto the shelf.
             HonestMirrorBuilder.BuildHonestMirror();
 
+            // ---- P5.5: the credits, on the shelf --------------------------------------
+            // Credit is content, not small print: a bead on the shelf opens it, and the panel shows
+            // itself once in the first minute of the first launch. Runs after the shelf exists so the
+            // object can follow it, and after the honest mirror so the two beads do not collide.
+            CreditsBuilder.BuildCredits();
+
             // ---- P4.5: the passthrough comparison switch ----------------------------------
             // One key, and only in a development build: the pair of clips has to be the same scene
             // with one variable changed, not two staged shots. DevOnly removes it from a release

@@ -56,7 +56,7 @@ Eleven days, eleven phases. Hours are estimates for one full-time person; halve 
 | **P2** | Core loop | Day 3 (Mon 9) | 10 | Reference hand → rotate → match → lock | **G2 one shape lockable** |
 | **P3** | Feedback layer | Day 4 (Tue 10) | 8 | Near-miss, bands, confidence, honest mirror | **G3 the hook works** |
 | **P4** | Spatial shelf | Day 5 (Wed 11) | 8 | MRUK-anchored shelf, persistence, passthrough | **G4 survives relaunch** |
-| **P5** | Content & capture | Days 5–7 (Wed 11–Fri 13) | 12 | 12 signs, 3 families, capturer pipeline, credits | **G5 signs are legitimately sourced** |
+| **P5** | Content & capture | Days 5–7 (Wed 11–Fri 13) | 12 | 6 shipped + 6 deferred validated poses, protocol, credits object, blind-spot copy | **G5 signs are legitimately sourced** — 🟡 5/7 done as work; P5.1/P5.3 blocked on the signer |
 | **P6** | Gaze & accessibility | Day 7 (Fri 13) | 7 | Gaze highlight, eyes-only dwell, 5 toggles, hand calibration | **G6 every path playable** |
 | **P7** | Polish | Day 8 (Sat 14) | 8 | Sound, FoV reflow, zero-text onboarding, 72 fps verified | **G7 external-stranger test** |
 | **P8** | Playtest & iterate | Day 9 (Sun 15) | 6 | 3 uncoached testers, fix list, top 3 fixed | **G8 stranger reaches first lock <75 s** |

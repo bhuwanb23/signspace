@@ -24,4 +24,4 @@
 | Date evaluated | |
 | Evaluated by | |
 | Evidence (screenshot / log / recording) | |
-| Notes | |
+| Notes | Desk evidence for five of the seven tasks (P5.2, P5.4, P5.5, P5.6, P5.7): protocol printable, 12 validated poses (6 shipped / 6 deferred), credits object on the shelf with `P5.5` check PASS, final set decision with measured pair distances, blind-spot copy in the panel and the doc with `P5.7` check PASS. **No criterion closes without the signer**: consent, compensation, credit approval, the capture session, the signer's descriptions and their rewrite of the blind-spot copy are all still owed. G5 is the kill-condition gate and stays open. |

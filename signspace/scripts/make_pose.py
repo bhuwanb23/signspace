@@ -54,7 +54,7 @@ NOTES = (
 
 
 def build_payload(shape_id, neutral=None):
-    shape = hm.SHAPES[shape_id]
+    shape = hm.shape_spec(shape_id)
     flat = hm.serialize(shape_id, neutral)
     return ps.build_payload(
         shape_id=shape_id,
@@ -109,16 +109,26 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--shapes", default=None,
                     help="comma separated subset, default all")
+    ap.add_argument("--deferred", action="store_true",
+                    help="write the six deferred (authored, not shipped) shapes instead; "
+                         "default output is Signs/deferred and the shipped index is untouched")
     args = ap.parse_args()
 
     neutral = load_neutral(args.neutral) if args.neutral else None
     out_dir = pathlib.Path(args.out)
-    shape_ids = args.shapes.split(",") if args.shapes else list(hm.SHAPES.keys())
+    if args.deferred:
+        # The deferred set is validated content, not shipped content: a separate folder and index
+        # keeps index.json (and therefore the six-shape commitment) exactly as it was.
+        if args.out == str(DEFAULT_OUT):
+            out_dir = DEFAULT_OUT / "deferred"
+        shape_ids = args.shapes.split(",") if args.shapes else list(hm.DEFERRED_SHAPES.keys())
+    else:
+        shape_ids = args.shapes.split(",") if args.shapes else list(hm.SHAPES.keys())
 
     errors = []
     written = []
     for shape_id in shape_ids:
-        if shape_id not in hm.SHAPES:
+        if shape_id not in hm.SHAPES and shape_id not in hm.DEFERRED_SHAPES:
             print(f"unknown shape '{shape_id}'", file=sys.stderr)
             return 2
         payload = build_payload(shape_id, neutral)
@@ -133,7 +143,7 @@ def main():
             (out_dir / name).write_text(body + "\n")
             written.append(name)
             print(f"wrote {out_dir / name}  ({len(payload['rot'])} floats, "
-                  f"{payload['jointCount']} joints, {hm.SHAPES[shape_id]['family']})")
+                  f"{payload['jointCount']} joints, {hm.shape_spec(shape_id)['family']})")
 
     # index.json -- a zip archive cannot be listed at runtime, so the loader is
     # told what is in the folder. SignSetLoader reads this first.

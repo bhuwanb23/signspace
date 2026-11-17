@@ -4,6 +4,7 @@
   "measuredUtc": "",
   "device": "Quest 3S",
   "conditions": "normal light",
+  "forwardLine": "Hand tracking that reports the depth between fingers, not only their joint angles, would change this.",
   "note": "The shipped numbers for the honest mirror. 'measured' flips to true only when P1.5's probe has run and every 'status' below is a real lock rate - never before. 'expected' is the design decision from SIGNSET.md section 6 and is what the panel shows while the probe is out.",
   "variants": [
     { "id": "B", "expected": "fine",           "status": "unmeasured", "lockRate": -1, "note": "baseline" },
