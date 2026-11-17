@@ -531,6 +531,45 @@ problems** (adds `Signs/deferred` to the validated set); `check_trackability.py`
 wording approval, the signer's descriptions, the signer's rewrite of the blind-spot copy, the vantage
 renders, the joint-flip preview, and every device row. G5 stays open; it is the kill-condition gate.
 
+### 8.13 Phase 6 as work — P6.1 to P6.7 ✅ DESK-VERIFIED, DEVICE OWED
+
+**What was built.** The gaze layer (`EyeTrackingProbe`, `GazeHighlighter`, `FingerTarget`, `FingerTargetsBuilder`, `DwellSelector`, `DwellAction`, `EyesOnlyRouter`, `GazeCaption`), the accessibility owner
+(`A11ySettings`), the calibration (`Calibration`), the seven-switch tray (`A11yToggleTray`, `A11yToggleBlock`, `CalibrationHandle`), the audio captions (`A11yCaptionPanel`), the HUD (`A11yHud`), and the
+scene wiring (`A11yBuilder`). Two new save fields sets: the six switches plus `SaveData.calibration`.
+
+**Three decisions worth reading.**
+
+1. **Not the ISDK building block.** Its `EyeGazeInteractor` needs an eye pose; on Quest 3/3S there is
+   none, so it would fall back silently — the exact failure P6.2 is about. The picking is 120 lines we
+   own and can make honest.
+2. **Eye mode without an eye pose is refused.** The probe may say "eye tracking is enabled" while this
+   project binds no eye anchor. `GazeHighlighter.BindProbe` keeps the head ray and says why, so the
+   product cannot claim an eye path it is not running.
+3. **Calibration stretches the rotation, not the distance.** The first implementation multiplied the
+   per-finger mismatch by the calibration factor; a 45°-away hand became 90° away, not 0. The stretch
+   now happens to the user's joint rotation before comparison (`Matcher.ScaleRotation`), and the check
+   proves a half-range hand reads 0.00° against a 90° target. `bandScale` widens the band ≤1.35 for
+   the noise the stretch also enlarges.
+
+**Eyes-only stops short, on purpose.** Dwell reaches every control; it does not lock. A gaze-only
+unlock would bank a shape the hand never made. Stated in `ACCESSIBILITY.md` §5/§7, `GAZE-INPUT.md` §5,
+and the task's build-status block.
+
+**Checks run:** compile 0 errors; `P6Checks.CheckAll` **106 passed, 0 failed** (gaze 15, honesty 10,
+eyes-only 9, calibration 13, toggles 32, reduced motion 11, doc 16). Regressions on the changed matcher
+and payoff: `P5.5 Check credits`, `P5.7 Check blind-spot copy`, `ShelfCheck`, `HandRigCheck`,
+`PersistenceP43Checks` all pass. Scene rebuilt: `Accessibility` object, 8 tray blocks, 5 fingertip
+targets, both panel handles gaze-reachable.
+
+**Build:** APK 64,516,403 bytes,
+`sha256 c71b9d26df9838b2eee4698bf6e748722b22fe8dd03f8195be1a920f18f83e4f`.
+
+**Not run, and not implied:** the 0.4 m/0.6 m finger-precision test, the eyes-still/head-still
+discriminator, the eyes-only recording, the restricted-hand calibration video, the per-switch loop
+recordings, the reduced-motion recording, the 5-minute quiet session, and the frame-rate target. Every
+one is enumerated with its acceptance test in **`docs/00-plan/HUMAN-TASKS.md`** (H14–H22), which is now
+the single place the human work lives.
+
 ---
 
 ## 9. What is next

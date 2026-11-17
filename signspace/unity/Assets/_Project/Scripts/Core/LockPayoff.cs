@@ -87,6 +87,9 @@ namespace Signspace.Core
         [Tooltip("Start the arc this far along the object's formation, so it flies while it is still growing.")]
         public float arcStartFraction = 0f;
 
+        [Tooltip("P6.6: replace the arc and the scale with a short cross-fade. Set by A11ySettings.")]
+        public bool reducedMotion;
+
         public float LastPayoffSeconds { get; private set; }
         public int PayoffCount { get; private set; }
         public bool IsPlaying => _playing;
@@ -98,7 +101,36 @@ namespace Signspace.Core
         float _scale = 1f;
 
         /// <summary>The planned duration of the next payoff, in seconds. Used by the timing check.</summary>
-        public float TotalSeconds => Scale(settleEnd + handReturnSeconds);
+        public float TotalSeconds => Scale(PlannedSeconds);
+
+        /// <summary>
+        /// What the next payoff will actually take, with the reduced-motion branch applied. Public so the
+        /// P6 check can assert the path is shorter without running a coroutine in batch mode.
+        /// </summary>
+        public float PlannedSeconds
+        {
+            get
+            {
+                float dissolve = dissolveSeconds;
+                float formStart = objectFormStart;
+                float formSeconds = objectFormSeconds;
+                float arc = arcSeconds;
+                float settle = settleSeconds;
+                float ret = handReturnSeconds;
+
+                if (reducedMotion)
+                {
+                    dissolve *= 0.25f;
+                    formStart = 0f;
+                    formSeconds *= 0.35f;
+                    arc = 0f;
+                    settle *= 0.15f;
+                    ret *= 0.15f;
+                }
+
+                return Mathf.Max(formStart + arc, dissolve) + settle + ret;
+            }
+        }
 
         float settleEnd => Mathf.Max(objectFormStart + arcSeconds, dissolveSeconds) + settleSeconds;
 
@@ -143,6 +175,19 @@ namespace Signspace.Core
             float arc = arcSeconds * k;
             float settle = settleSeconds * k;
             float returnSeconds = handReturnSeconds * k;
+            if (reducedMotion)
+            {
+                // P6.6: the motion is replaced by a cross-fade - the reward still arrives, but as a
+                // change of state rather than a flight. Nothing here is camera-relative, so the
+                // only thing to remove is the arc, the spin and the shrink.
+                dissolve *= 0.25f;
+                formStart = 0f;
+                formSeconds *= 0.35f;
+                arc = 0f;
+                settle *= 0.15f;
+                returnSeconds *= 0.15f;
+            }
+
             float total = Mathf.Max(formStart + arc, dissolve) + settle + returnSeconds;
 
             var handRenderers = referenceHandVisual != null
@@ -182,10 +227,19 @@ namespace Signspace.Core
                 {
                     float d = Mathf.Clamp01(elapsed / Mathf.Max(0.01f, dissolve));
                     float e = EaseIn(d);
-                    _scale = Mathf.Lerp(1f, 0.12f, e);
-                    referenceHandVisual.transform.localScale = handStart * _scale;
-                    referenceHandVisual.transform.localRotation = Quaternion.Euler(0f, 12f * e, 0f);
-                    SetAlpha(handRenderers, 1f - e, Mathf.Lerp(0f, 1.6f, e));
+                    if (reducedMotion)
+                    {
+                        // Cross-fade only: no shrink, no spin. The hand is still hidden at the end.
+                        _scale = 1f;
+                        SetAlpha(handRenderers, 1f - d, 1f);
+                    }
+                    else
+                    {
+                        _scale = Mathf.Lerp(1f, 0.12f, e);
+                        referenceHandVisual.transform.localScale = handStart * _scale;
+                        referenceHandVisual.transform.localRotation = Quaternion.Euler(0f, 12f * e, 0f);
+                        SetAlpha(handRenderers, 1f - e, Mathf.Lerp(0f, 1.6f, e));
+                    }
                     if (d >= 1f) referenceHandVisual.SetActive(false);
                 }
 
