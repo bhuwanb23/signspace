@@ -1,0 +1,6 @@
+APK: Builds/Android/signspace.apk
+package: com.signspace.signspace
+version: 0.9.0 (bundle version code 13)
+sha256: 6a62ced4b81a9ab4112b07a9a64d5a66a149d2d52ebc49611dec5df1ae84f41f
+frozen at: 2026-11-17T17:03:42.7934147Z
+commit: 

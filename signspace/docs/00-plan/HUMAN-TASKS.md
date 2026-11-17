@@ -99,7 +99,7 @@ retune of `scripts/make_sfx.py` plus a re-run of the check — the wiring does n
 |---|---|
 | content / signer | `python scripts/validate_poses.py` and `python scripts/check_trackability.py` |
 | gaze / accessibility | `SIGNSPACE/P6 Check all` in Unity (106 assertions) |
-| polish (sound, text, FoV, perf posture, boot probe, crash posture) | `SIGNSPACE/P7 Check all` (128 assertions) |
+| polish (sound, text, FoV, perf posture, boot probe, crash posture) | `SIGNSPACE/P7 Check all` (131 assertions) |
 | shelf / persistence | `SIGNSPACE/P4.3 Persistence checks` and `SIGNSPACE/Shelf check` |
 | credits / copy | `SIGNSPACE/P5.5 Check credits` and `SIGNSPACE/P5.7 Check blind-spot copy` |
 | any code change at all | `SIGNSPACE/Build main scene`, then the checks above, then rebuild the APK and update the sha here |

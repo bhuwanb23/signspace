@@ -318,16 +318,16 @@ Update this table at the end of every working day. It is the only place progress
 
 | Phase | Status | Started | Completed | Notes |
 |---|---|---|---|---|
-| P0 Foundation | 🔄 In progress — **4 of 9 gate criteria met** | 14 Nov | — | Toolchain installed on E: · SDK v207.0.0 pinned · 6 shapes authored · metric fixed. **Blocked on: a Unity licence, the headset, the Meta dashboard.** |
-| P1 De-risk spike | ⬜ Not started | | | P1.5 needs a headset in hand. Everything else can be rehearsed in Meta XR Simulator |
-| P2 Core loop | 🟡 Built, not yet on a device | 15 Nov | — | Matcher, pose format, loader and shapes exist and are measured offline. **The metric had to change — v1 could not see finger spread** |
-| P3 Feedback layer | 🟡 Rule implemented | 15 Nov | — | The near-miss now enforces "ambiguity is not a diagnosis" (strictly closer than the runner-up, and by a margin) — the v1 code did not |
-| P4 Spatial shelf | 🟡 Built and desk-verified — **P4.1–P4.6**, G4 open | 16 Nov | — | Save schema 3 restores across five processes and survives a leave/return; plinth + pinch-only surface offer; dev-only passthrough switch; measured FoV reflow. **Owed: headset relaunch/reboot, real MRUK rooms, the two clips, the FoV capture** |
-| P5 Content & capture | 🔄 Re-scoped | 14 Nov | — | **Poses authored from published references today, so the signer call is ONE call, not two** (ADR-007) |
-| P6 Gaze & accessibility | ⬜ Not started | | | **No eye tracking on Quest 3/3S** — gaze is evidenced through the VR Glasses simulator profile |
-| P7 Polish | ⬜ Not started | | | |
-| P8 Playtest | ⬜ Not started | | | Needs a headset |
-| P9 Submission | ⬜ Not started | | | Build is now a command, not a checklist |
+| P0 Foundation | 🔄 **6 of 9 gate criteria met** | 14 Nov | — | **The Unity project exists, compiles with 0 errors and 0 warnings, and builds a 62 MB APK.** Licence verified. Blocked on: the headset, and the App ID |
+| P1 De-risk spike | 🟡 **Desk-verified, 0 of 9 gate criteria met on device** | 15 Nov | — | Every probe is instrumented. P1.5 needs a headset. **Check `OVRManager → Hand Skeleton Version = Default (OpenXR)` first** |
+| P2 Core loop | 🟡 **Desk-verified, 5 of 8 gate criteria ticked** | 15 Nov | — | Matcher, pose format, loader and shapes exist and are **measured offline**: U-V separation 3.1° → 26.0°. The metric had to change |
+| P3 Feedback layer | 🟡 **Desk-verified, 4 of 7 gate criteria ticked** | 15 Nov | — | The near-miss now enforces "ambiguity is not a diagnosis" (strictly closer than the runner-up, and by a margin) — the v1 code did not |
+| P4 Spatial shelf | 🟡 **Desk-verified, G4 open** | 16 Nov | — | Save schema 3 restores across five processes and survives a leave/return; plinth + pinch-only surface offer; dev-only passthrough switch; measured FoV reflow. **Owed: headset relaunch/reboot, real MRUK rooms, the two clips, the FoV capture** |
+| P5 Content & capture | 🔄 **Re-scoped** | 14 Nov | — | **The six poses are authored from published references, so the signer call is ONE call, not two** (ADR-007) |
+| P6 Gaze & accessibility | 🟡 **Desk-verified, 106/106 checks pass** | 15 Nov | — | **No eye tracking on Quest 3/3S** — gaze is evidenced through the VR Glasses simulator profile |
+| P7 Polish | 🟡 **Desk-verified, 131/131 checks pass** | 15 Nov | — | Sound 16 clips, text 0 instructional words, FoV 19.0° at 70°×66°, perf posture clean. **Owed: sustained 72 fps, thermal, 20 launches, chime fatigue** |
+| P8 Playtest | 🟡 **Instrumenting** | 17 Nov | — | `PlaytestProbe`, `PlaytestTimeline`, `playtest_report.py` exist and compile. `P8Checks` = 47/47. **Owed: the actual sessions** |
+| P9 Submission | 🟡 **The build is a command** | 15 Nov | — | `BuildScript.BuildAndroid` → 62 MB APK, SHA-256 logged, bundle version code auto-increments. `P9Checks.CheckAll` = freeze record written |
 | P10 Post | ⬜ Not started | | | |
 
 ---
