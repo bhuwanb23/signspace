@@ -623,6 +623,28 @@ namespace Signspace.Editor
             Require(data.captionsOn, "captions are on by default after the polish pass");
             Require(!data.eyesOnly && !data.oneHanded, "the opt-in paths still default off");
 
+            // High contrast, end to end: the switch used to reach only the captions, so this asserts the
+            // three consumers P7 added actually receive it (and let go of it).
+            var hud = UnityEngine.Object.FindFirstObjectByType<A11yHud>();
+            var nearMiss = UnityEngine.Object.FindFirstObjectByType<NearMissDisplay>();
+            Require(hud != null && nearMiss != null, "the HUD and the near-miss panel are in the scene");
+            if (settings != null && tray != null && hud != null && nearMiss != null)
+            {
+                tray.Build();
+                hud.Build();
+                var previous = settings.Data.highContrast;
+
+                settings.Set(A11yToggle.HighContrast, true);
+                Require(tray.HighContrast && hud.HighContrast && nearMiss.plainText,
+                        "high contrast reaches the tray, the HUD and the near-miss copy");
+
+                settings.Set(A11yToggle.HighContrast, false);
+                Require(!tray.HighContrast && !hud.HighContrast && !nearMiss.plainText,
+                        "and switching it off puts all three back");
+
+                settings.Set(A11yToggle.HighContrast, previous);
+            }
+
             // The calibration math is the one thing polish could silently break by touching the matcher.
             var scale = Calibration.ComputeScales(
                 new[] { 0f, 0f, 0f, 0f, 0f }, new[] { 45f, 45f, 45f, 45f, 45f },

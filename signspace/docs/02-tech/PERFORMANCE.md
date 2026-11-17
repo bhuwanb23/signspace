@@ -96,7 +96,7 @@ what the build *stops paying for*; it cannot prove a frame rate, and it does not
 
 **What is still missing, and must not be inferred from the table above:** the 15-minute 3S run, the
 1% low, the thermal onset, the 4×-vs-2× comparison and the `RISKS.md` R10 trigger are all
-**NOT RUN**. They need the headset. `HUMAN-TASKS` H23.
+**NOT RUN**. They need the headset. `HUMAN-TASKS` H35.
 
 ## 3. The measured table
 

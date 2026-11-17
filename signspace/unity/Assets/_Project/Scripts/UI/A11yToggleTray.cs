@@ -64,8 +64,9 @@ namespace Signspace.UI
         readonly List<Text> _labels = new List<Text>(24);
 
         /// <summary>
-        /// High contrast (P6.5). Until P7 this switch persisted and changed nothing, which is worse than
-        /// not having it: a switch that does nothing is a lie told to the user who needs it most.
+        /// High contrast (P6.5). Until P7 this switch reached only the caption panel and the gaze caption:
+        /// the HUD lines, this tray and the near-miss copy ignored it, which is the worst of both — a
+        /// switch that half works teaches the user it does nothing.
         ///
         /// It makes the plates near-black and the text pure white, which is the largest luminance
         /// separation available without colour. It is a palette swap, not a filter, because a post

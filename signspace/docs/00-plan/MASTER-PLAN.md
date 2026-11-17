@@ -58,7 +58,7 @@ Eleven days, eleven phases. Hours are estimates for one full-time person; halve 
 | **P4** | Spatial shelf | Day 5 (Wed 11) | 8 | MRUK-anchored shelf, persistence, passthrough | **G4 survives relaunch** |
 | **P5** | Content & capture | Days 5–7 (Wed 11–Fri 13) | 12 | 6 shipped + 6 deferred validated poses, protocol, credits object, blind-spot copy | **G5 signs are legitimately sourced** — ✅ 7/7 built as work; signer rows open (`HUMAN-TASKS` H1–H7) |
 | **P6** | Gaze & accessibility | Day 7 (Fri 13) | 7 | Gaze highlight, dwell, 6 toggles + reduced motion, hand calibration | **G6 every path playable** — ✅ built, 106/106 desk checks; ⬜ device playthroughs NOT RUN (`HUMAN-TASKS` H14–H22) |
-| **P7** | Polish | Day 8 (Sat 14) | 8 | Sound, FoV reflow, zero-text onboarding, 72 fps verified | **G7 external-stranger test** |
+| **P7** | Polish | Day 8 (Sat 14) | 7 | Audio, zero-text cue, FoV geometry, perf posture, boot probe, hostile conditions, a11y regression | **G7 first five minutes** — 🟡 built, 131/131 desk checks; ⬜ device rows NOT RUN (`HUMAN-TASKS` H34–H40) |
 | **P8** | Playtest & iterate | Day 9 (Sun 15) | 6 | 3 uncoached testers, fix list, top 3 fixed | **G8 stranger reaches first lock <75 s** |
 | **P9** | Submission | Days 10–11 (Mon 16–Tue 17) | 10 | Video, copy, APK frozen, form submitted, invite URL verified | **G9 submitted + verified** |
 | **P10** | Post-submission | Wed 18 → 11 Dec | — | Judging prep, clean-account re-verification, launch plan | — |
@@ -208,13 +208,13 @@ The legitimacy phase. **If this slips, we submit a smaller set — we never fake
 
 | Sub | Task | Exit criterion |
 |---|---|---|
-| P7.1 | Sound design: every state change has a sound; no music bed | Sound map documented |
-| P7.2 | Zero-text onboarding pass — every remaining sentence replaced by a spatial cue | ≤3 words of text in the first five minutes |
-| P7.3 | FoV reflow verified in the VR Glasses profile | Nothing critical outside the safe cone |
-| P7.4 | **Perf hardening on Quest 3S:** fixed foveated rendering, MSAA, no realtime shadows, LOD, texture audit | ≥72 fps over a **15-minute thermal run**, recorded |
-| P7.5 | Cold-boot time to first interaction | <15 s |
-| P7.6 | Crash sweep: 20 cold launches, 5 mid-session backgroundings | Zero crashes |
-| P7.7 | Accessibility regression pass after every change | No toggles broken |
+| P7.1 | Sound design: every state change has a sound | 16 clips, 12 cues, all ≤ −6 dBFS |
+| P7.2 | The zero-text onboarding pass | 0 instructional words + one spatial cue |
+| P7.3 | Verify the FoV reflow in the VR Glasses profile | 19.0° worst slot at 70°, tray 26.0°; device pass NOT RUN |
+| P7.4 | Performance hardening on Quest 3S | 0 lights / 0 shadows / MSAA 2× / FFR medium; fps NOT RUN |
+| P7.5 | Cold boot and stability sweep | probe + static splash; 5 launches NOT RUN |
+| P7.6 | Crash sweep | 5 hostile conditions answered; 20 launches NOT RUN |
+| P7.7 | Accessibility regression pass | P6 suite inline (106) + high-contrast reach; recordings NOT RUN |
 
 > **Gate G7:** a friend who has never touched a headset gets from launch to their first mastered sign without you saying a word.
 

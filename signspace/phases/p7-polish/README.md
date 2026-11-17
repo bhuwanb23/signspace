@@ -1,7 +1,7 @@
 # P7 — Polish
 
 **Day 8 (Sat 14 Nov) · Budget 8 h · Gate:** G7 — Does someone who has never touched a headset get from launch to their first mastered shape without you saying a word?
-**Status:** 🟡 Built and desk-verified · device rows NOT RUN (`HUMAN-TASKS` H23–H28)
+**Status:** 🟡 Built and desk-verified · device rows NOT RUN (`HUMAN-TASKS` H34–H40)
 
 ## Objective
 Turn a working build into a finished one: sound, zero-text onboarding, verified FoV, measured performance, and a build that cannot crash in front of a judge.
@@ -39,14 +39,14 @@ Polish is 25% of the score and it is the cheapest 25% in the competition. This p
 
 | Row | Value | Evidence |
 |---|---|---|
-| Headless checks | **128 passed, 0 failed** | `SIGNSPACE/P7 Check all` |
+| Headless checks | **131 passed, 0 failed** | `SIGNSPACE/P7 Check all` |
 | Sound | 16 clips, 596 kB, every peak ≤ −6 dBFS | `P7.1`, `SOUND-MAP.md` §6.1 |
 | Instructional words | 0 | `text-budget.md` |
 | Worst shelf slot at 70°×66° | 19.0° off-axis | `P7.3`, `MRUK-SHELF.md` §7.1 |
 | Narrow-profile tray | 26.0° (1.5° spare) | `P7.3` |
 | Realtime lights / shadow casters / MSAA | 0 / 0 / 2× | `P7.4`, `PERFORMANCE.md` §2.2 |
-| APK | 64,584,319 B, `sha256 299ad042…398e` | this build |
-| Sustained fps, thermal, cold boot, 20 launches, spoken onboarding | **NOT RUN** | `HUMAN-TASKS` H23–H28 |
+| APK | 64,584,347 B, `sha256 6a62ced4…41f` | this build |
+| Sustained fps, thermal, cold boot, 20 launches, spoken onboarding | **NOT RUN** | `HUMAN-TASKS` H34–H40 |
 
 ## Gate
 [`gate.md`](gate.md) — Does someone who has never touched a headset get from launch to their first mastered shape without you saying a word?

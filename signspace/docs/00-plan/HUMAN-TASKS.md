@@ -2,7 +2,7 @@
 
 **Status:** living document · **Owner:** you · **Last updated:** 2026-11-17
 
-> **Read this first.** Every phase from P3 to P6 is implemented, compiled, and desk-checked. The rows
+> **Read this first.** Every phase from P3 to P7 is implemented, compiled, and desk-checked. The rows
 > below are the ones that need a **body, a headset, a Deaf signer, or a stranger** — nothing on this
 > page can be completed by a script, and the docs deliberately do **not** claim any of them.
 >
@@ -10,8 +10,8 @@
 > already point at, so finishing a row is "do the thing, save the file, tick the box".
 
 **Build under test:** `unity/Builds/Android/signspace.apk`
-· 64,510,983 bytes
-· `sha256 54d6858a0daee6a755e4bb2a9943e5c4291ea4c2aaa28b43cf2a1b80bd087fce`
+· 64,584,347 bytes
+· `sha256 6a62ced4b81a9ab4112b07a9a64d5a66a149d2d52ebc49611dec5df1ae84f41f`
 · built 2026-11-17 from `main`
 
 ---
@@ -55,7 +55,26 @@ Install with `adb install -r unity/Builds/Android/signspace.apk`. Record with th
 | H23 | **First-five-minutes timing** | a fresh profile reaches a first lock in under 75 s | stopwatch note + capture | ⬜ |
 | H24 | **Frame rate on the 3S** | sustained ≥72 fps in the loop | `docs/02-tech/PERFORMANCE.md` | ⬜ |
 
-## 3. Strangers (P8) — needs three people who are not you
+## 3. Polish (P7) — needs the headset, a clock, and ears
+
+`SIGNSPACE/P7 Check all` proves the wiring, the mix ceiling, the text count, the safe-cone geometry and
+the hostile-condition answers. None of the rows below can be produced by a check: they are a frame
+rate, a stopwatch, twenty launches and a judgement about a sound.
+
+| # | Task | Steps | Done when | Evidence | Status |
+|---|---|---|---|---|---|
+| H34 | **P7.3: the loop in the VR Glasses profile** | set the simulator to 70°×66° (or the glasses, if they exist); play the full loop; watch the edges, not the centre | no critical element leaves the 55° cone; the reflow triggers and reverses cleanly; gaze still picks a fingertip at the edge | `assets/raw/video/fov-split.mp4` | ⬜ |
+| H35 | **P7.4: 15 minutes at the frame rate** | OVR Metrics Tool running; both hands tracked; 12 shelf objects; passthrough on; 20 s warmup excluded | ≥72 fps sustained, 1% low recorded, thermal onset noted; also run one block at MSAA 4× to make the 2× choice evidence | `docs/02-tech/PERFORMANCE.md` §3 | ⬜ |
+| H36 | **P7.5: five cold boots** | force-stop, relaunch, five times, one after a reboot; then background/foreground five times mid-session | median `interactive_ms` < 15000 in `boot-times.csv`; 5/5 resumes; shelf and calibration restored | `phases/p7-polish/boot-times.csv` | ⬜ |
+| H37 | **P7.6: twenty launches and the hostile conditions** | the script in `crash-sweep.md` ×20; then no surface (MRUK denied), tracking lost 60 s, room changed, device sleep ×2, reboot ×1 | 0 crashes anywhere; every misbehaviour written down | `phases/p7-polish/crash-sweep.md` | ⬜ |
+| H38 | **P7.1: the chime, by ear** | play the lock 50 times in a row; then the near-miss 20 times, interleaved | you are not tired of it; the near-miss reads as a question, not a verdict. If not, retune `make_sfx.py` and re-run `P7.1 Check sound` | a note in `SOUND-MAP.md` §9 | ⬜ |
+| H39 | **P7.2: cold start to first interaction** | fresh install, stopwatch from tapping the icon to the first frame where the hand responds | under 15 s | a row in `boot-times.csv` | ⬜ |
+| H40 | **P7.7: refresh the eight accessibility recordings** | re-record any path whose behaviour changed — high contrast now visibly changes the HUD and the near-miss copy | eight clips exist for the post-polish build | `phases/p6-accessibility/toggle-matrix.md` | ⬜ |
+
+**The sound row is the only one that needs taste rather than a device.** If H38 fails, the fix is a
+retune of `scripts/make_sfx.py` plus a re-run of the check — the wiring does not change.
+
+## 4. Strangers (P8) — needs three people who are not you
 
 | # | Task | Acceptance | Evidence | Status |
 |---|---|---|---|---|
@@ -65,7 +84,7 @@ Install with `adb install -r unity/Builds/Android/signspace.apk`. Record with th
 | H28 | **Friction log, then fix only the top three** | three fixes, each with a before/after note | same | ⬜ |
 | H29 | **Re-test with one fresh stranger** | the three fixes hold | same | ⬜ |
 
-## 4. Submission (P9) — needs accounts, a camera and a clean device
+## 5. Submission (P9) — needs accounts, a camera and a clean device
 
 | # | Task | Acceptance | Evidence | Status |
 |---|---|---|---|---|
@@ -74,12 +93,13 @@ Install with `adb install -r unity/Builds/Android/signspace.apk`. Record with th
 | H32 | **Clean-device install test** | a second Meta account installs from the invite URL with no help | screen recording | ⬜ |
 | H33 | **Submit the form and confirm by email** | confirmation email on file | `phases/p9-submission/` | ⬜ |
 
-## 5. How to verify a row before ticking it
+## 6. How to verify a row before ticking it
 
 | If the row is… | Run this first |
 |---|---|
 | content / signer | `python scripts/validate_poses.py` and `python scripts/check_trackability.py` |
 | gaze / accessibility | `SIGNSPACE/P6 Check all` in Unity (106 assertions) |
+| polish (sound, text, FoV, perf posture, boot probe, crash posture) | `SIGNSPACE/P7 Check all` (128 assertions) |
 | shelf / persistence | `SIGNSPACE/P4.3 Persistence checks` and `SIGNSPACE/Shelf check` |
 | credits / copy | `SIGNSPACE/P5.5 Check credits` and `SIGNSPACE/P5.7 Check blind-spot copy` |
 | any code change at all | `SIGNSPACE/Build main scene`, then the checks above, then rebuild the APK and update the sha here |

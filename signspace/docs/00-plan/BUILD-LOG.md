@@ -570,6 +570,53 @@ recordings, the reduced-motion recording, the 5-minute quiet session, and the fr
 one is enumerated with its acceptance test in **`docs/00-plan/HUMAN-TASKS.md`** (H14–H22), which is now
 the single place the human work lives.
 
+### 8.14 Phase 7 as work — P7.1 to P7.7 🟡 DESK-VERIFIED, DEVICE ROWS OWED
+
+**What was built.** A 16-clip sound set synthesised from SOUND-MAP by `scripts/make_sfx.py` (596 kB,
+every peak measured at or under −6 dBFS) with `SoundDirector` playing twelve cues from three pooled
+sources; the one spatial onboarding cue (`OnboardingCue`); `PerfSettings` (72 fps target, no shadows, no
+reflection probes, FFR medium + dynamic via `OVRManager` reflection) plus MSAA 4× → 2× and every
+renderer switched to `ShadowCastingMode.Off`; `BootProbe` writing a real `boot-times.csv` on device;
+`HostileGuard` with five written answers (no camera, no surface, no eye tracking, tracking lost, room
+changed); the near-miss panel finally placed in the scene; `P7Checks` (131 assertions); and the phase's
+three evidence files (`text-budget.md`, `boot-times.csv`, `crash-sweep.md`).
+
+**Four defects the phase found, all fixed.**
+
+1. **The chime was over the map's own ceiling** at −4.1 dBFS, and **ten states were silent**. Ten of
+   SOUND-MAP's rows had no clip at all; the chime was a bare tone with no wooden partials and no tail.
+2. **The accessibility tray did not know about the field of view.** At 70°×66° it sat ~40° off-axis in
+   two directions — reachable by hand, invisible without turning the head, which defeats the eyes-only
+   user it exists for. It now has a narrow pose at 26.0°, and `P7.3` measures both profiles.
+3. **The near-miss had no object in the scene.** The component, the copy template and eight authored
+   hint pairs existed; nothing instantiated them, so the product's signature sentence could not appear.
+4. **High contrast was half-wired.** It changed the caption panel and the gaze caption, and nothing
+   else — not the HUD lines, not the tray, not the near-miss copy. P7 connected all three and `P7.7`
+   asserts the switch reaches them and releases them.
+
+**Also hardened.** The tray's shader lookup could throw `new Material(null)` at `Start` on a stripped
+shader; the boot probe's CSV write is wrapped so a probe cannot be the crash it measures; the splash is
+static (Unity's logo cannot be removed on this licence, but it can stop animating).
+
+**Checks run:** compile 0 errors; `P7Checks.CheckAll` **131 passed, 0 failed** — which includes the whole
+P6 suite inline (106 assertions) — plus `P5.5`, `P5.7`, `ShelfCheck`, `HandRigCheck`, `PersistenceP43`
+green in the P6 run. Scene rebuilt with `Polish_Sound`, `Polish_Performance`, `Polish_Boot`,
+`Polish_HostileGuard`, `Polish_OnboardingCue`, `NearMiss`.
+
+**Measured on the desk:** 0 realtime lights; 0 shadow-casting renderers; 48 renderers / 24,130 vertices;
+biggest texture 64 px; MSAA 2×; worst shelf slot 24.3° at 110° and 19.0° at 70°; narrow tray 26.0°
+(1.5° spare); HUD 19.2°; **0 instructional words**; 16/16 clips within the mix ceiling.
+
+**Build:** APK 64,584,347 bytes,
+`sha256 6a62ced4b81a9ab4112b07a9a64d5a66a149d2d52ebc49611dec5df1ae84f41f` (version code 14).
+
+**Not run, and not implied:** the 15-minute 3S frame-rate run and 1% low, the thermal curve and the
+overlay recording, the 4×-vs-2× comparison, five cold boots and five background cycles, twenty launches
+and the hostile conditions on hardware, the VR Glasses loop and the split-screen capture, the chime
+heard 50 times, the recorded wooden timbre, and the eight refreshed accessibility recordings. All of
+them are **H34–H40** in `docs/00-plan/HUMAN-TASKS.md`. G7 stays unevaluated: six of its seven criteria
+are device rows.
+
 ---
 
 ## 9. What is next

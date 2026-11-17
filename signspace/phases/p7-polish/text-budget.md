@@ -54,7 +54,7 @@ All three are in the build and all three are asserted by the check.
 | Row | Value | Evidence |
 |---|---|---|
 | Editor play-mode to first interactive frame | not a cold boot; deliberately excluded from the CSV | `BootProbe` skips `Application.isEditor` |
-| Device cold boot, median of 5 | **NOT RUN** | needs the headset, `HUMAN-TASKS` H24 |
+| Device cold boot, median of 5 | **NOT RUN** | needs the headset, `HUMAN-TASKS` H36 |
 | Splash animation | static (one frame, no dolly, no zoom) | `SplashSettings.IsStatic`, asserted by `P7.5 Check boot readiness` |
 | Boot timeline source | `BootProbe` writes `startup_ms, hands_ms, interactive_ms` per launch | `Application.persistentDataPath/boot-times.csv` |
 

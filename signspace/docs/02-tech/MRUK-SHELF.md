@@ -304,7 +304,7 @@ and the check measures both.
 
 **NOT RUN:** that the reflow is *comfortable* at 70° in the glasses, that gaze targets at the edges
 still acquire at that profile (the geometry is checked, the eye is not), and the split-screen capture.
-`HUMAN-TASKS` H23.
+`HUMAN-TASKS` H34.
 
 ## 8. The test matrix
 
