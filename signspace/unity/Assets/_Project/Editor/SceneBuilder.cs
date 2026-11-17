@@ -250,6 +250,13 @@ namespace Signspace.Editor
             // object can follow it, and after the honest mirror so the two beads do not collide.
             CreditsBuilder.BuildCredits();
 
+            // ---- P6: the accessibility layer -----------------------------------------------
+            // Wired last: it needs the camera, the matcher, the save system, the reference hand, the
+            // shelf's idle motion and the payoff, all of which exist by this point. It adds the gaze
+            // rig, the finger targets, the caption HUD and the toggle tray; every reference is assigned
+            // here so the saved scene is the whole wiring.
+            A11yBuilder.BuildAccessibility();
+
             // ---- P4.5: the passthrough comparison switch ----------------------------------
             // One key, and only in a development build: the pair of clips has to be the same scene
             // with one variable changed, not two staged shots. DevOnly removes it from a release

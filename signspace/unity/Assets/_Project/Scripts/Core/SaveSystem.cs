@@ -22,6 +22,32 @@ namespace Signspace.Matching
         public string unlockedUtc = "";
     }
 
+    /// <summary>
+    /// The user's measured range, per finger, in the same degrees the matcher works in.
+    ///
+    /// Stored as raw measurements rather than as a derived scale so a later version can change how the
+    /// scale is computed without asking the user to recalibrate. `valid` is the only flag anything reads.
+    /// </summary>
+    [Serializable]
+    public class CalibrationRecord
+    {
+        public bool valid = false;
+        public float[] min = new float[5];
+        public float[] max = new float[5];
+        public float[] canonical = new float[5];
+        public string capturedUtc = "";
+
+        public bool HasUsableRange
+        {
+            get
+            {
+                if (!valid || min == null || max == null || min.Length < 5 || max.Length < 5) return false;
+                for (int i = 0; i < 5; i++) if (max[i] - min[i] < 4f) return false;
+                return true;
+            }
+        }
+    }
+
     [Serializable]
     public class SaveData
     {
@@ -68,6 +94,24 @@ namespace Signspace.Matching
         /// phase that has not run yet.
         /// </summary>
         public bool nearMissEnabled = true;
+
+        // ---- P6.5: the six accessibility toggles, persisted so the choice survives a relaunch ----
+        //
+        // Defaults are the safe path, not the neutral one: captions ON because a Deaf user who cannot
+        // hear the chime must not have to find a switch before the first lock; everything else OFF
+        // because the default experience is the one the content was tuned against.
+        public bool captionsOn = true;
+        public bool highContrast = false;
+
+        /// <summary>Hold/dwell multiplier. 1 = normal, 1.5 = relaxed (more time to make a shape).</summary>
+        public float speedScale = 1f;
+
+        public bool oneHanded = false;
+        public bool eyesOnly = false;
+        public bool reducedMotion = false;
+
+        /// <summary>P6.4. Empty/invalid means the user has not calibrated, and the default path runs.</summary>
+        public CalibrationRecord calibration = new CalibrationRecord();
     }
 
     public class SaveSystem : MonoBehaviour
