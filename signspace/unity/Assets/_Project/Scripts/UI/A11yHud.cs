@@ -42,6 +42,27 @@ namespace Signspace.UI
         public Text ModeLine { get; private set; }
         public Text AudioCaption { get; private set; }
 
+        public bool HighContrast { get; private set; }
+
+        /// <summary>
+        /// High contrast (P6.5, given an effect in P7): every HUD line becomes pure white at full alpha,
+        /// and the fallback explanation stops being amber. The HUD sits over passthrough, so it has no
+        /// panel behind it — the fix is maximum luminance on the text and nothing else to read.
+        /// </summary>
+        public void SetHighContrast(bool on)
+        {
+            HighContrast = on;
+            var strong = on ? Color.white : new Color(0.72f, 0.78f, 0.86f, 0.95f);
+            var caption = on ? Color.white : new Color(0.96f, 0.96f, 1f, 0.95f);
+            var explanation = on ? Color.white : new Color(1f, 0.92f, 0.72f, 0.95f);
+
+            if (ModeLine != null) ModeLine.color = strong;
+            if (AudioCaption != null) AudioCaption.color = caption;
+            if (Explanation != null) Explanation.color = explanation;
+            if (FingerLabel != null) FingerLabel.color = on ? Color.white : new Color(1f, 1f, 1f, 0.96f);
+            if (DwellRing != null) DwellRing.color = on ? Color.white : new Color(1f, 1f, 1f, 0.85f);
+        }
+
         bool _built;
 
         void Start()
@@ -88,6 +109,8 @@ namespace Signspace.UI
             ModeLine.color = new Color(0.72f, 0.78f, 0.86f, 0.95f);
             AudioCaption.color = new Color(0.96f, 0.96f, 1f, 0.95f);
             Explanation.color = new Color(1f, 0.92f, 0.72f, 0.95f);
+            if (settings == null) settings = A11ySettings.Instance;
+            SetHighContrast(settings != null && settings.Get(A11yToggle.HighContrast));
 
             DwellRing = MakeRing(canvasGo.transform, new Vector2(0f, -70f));
 

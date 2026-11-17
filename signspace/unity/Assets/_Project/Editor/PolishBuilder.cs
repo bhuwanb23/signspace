@@ -7,6 +7,7 @@ using Signspace.Spatial;
 using Signspace.UI;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Signspace.Editor
 {
@@ -100,6 +101,33 @@ namespace Signspace.Editor
             var onboarding = FindOrAdd<OnboardingCue>(cueGo);
             onboarding.referenceHand = reference;
 
+            // ---- the near-miss line (P2.6 copy, never placed in the scene until P7) ----------------
+            // The signature behaviour had a component, a copy template and eight authored hints, and no
+            // object in the scene: it could not appear. It is built here as an empty label, so it adds
+            // no words to the first five minutes until a near-miss actually fires.
+            var nearMiss = BuildNearMiss(matcher, shelf, reference);
+            if (settings != null)
+            {
+                settings.nearMiss = nearMiss;
+                settings.hud = UnityEngine.Object.FindFirstObjectByType<A11yHud>();
+                settings.tray = UnityEngine.Object.FindFirstObjectByType<A11yToggleTray>();
+            }
+
+            // ---- P7.4: every renderer stops casting shadows -------------------------------------
+            // QualitySettings turns the shadow pass off at runtime, but a renderer left on
+            // ShadowCastingMode.On is a per-frame culling cost for a pass that does not run, and the
+            // audit reads the serialised value. There is no light in the scene, so nothing is lost.
+            int casters = 0;
+            foreach (var meshRenderer in UnityEngine.Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
+            {
+                if (meshRenderer.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off) continue;
+                meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                casters++;
+            }
+            Debug.Log("[PolishBuilder] shadow casting switched off on " + casters + " renderers");
+
+            SetPipelineMsaa(2);
+
             // The tray has to know the field of view to pose itself inside the safe cone at 70°.
             var tray = UnityEngine.Object.FindFirstObjectByType<A11yToggleTray>();
             if (tray != null) tray.reflow = reflow;
@@ -111,6 +139,71 @@ namespace Signspace.Editor
                       perf.foveation + ", boot probe " + boot.budgetSeconds + " s budget, " +
                       HostileGuard.Table.Length + " hostile conditions documented, onboarding cue on " +
                       (reference != null ? reference.name : "NOTHING"));
+        }
+
+        static NearMissDisplay BuildNearMiss(Matcher matcher, ShelfAnchor shelf, ReferenceHand reference)
+        {
+            var existing = UnityEngine.Object.FindFirstObjectByType<NearMissDisplay>();
+            if (existing != null)
+            {
+                existing.matcher = matcher;
+                return existing;
+            }
+
+            var go = new GameObject("NearMiss");
+            var canvasGo = new GameObject("NearMissCanvas", typeof(RectTransform), typeof(Canvas),
+                                          typeof(CanvasGroup));
+            canvasGo.transform.SetParent(go.transform, false);
+            canvasGo.transform.localScale = Vector3.one * 0.0006f;
+
+            var canvas = canvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            var rect = canvasGo.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(620f, 120f);
+
+            var textGo = new GameObject("Line", typeof(RectTransform), typeof(Text));
+            textGo.transform.SetParent(canvasGo.transform, false);
+            var textRect = textGo.GetComponent<RectTransform>();
+            textRect.sizeDelta = new Vector2(620f, 120f);
+            var text = textGo.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = 46;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.white;
+            text.raycastTarget = false;
+            text.text = "";   // silence until a near-miss actually fires
+
+            var group = canvasGo.GetComponent<CanvasGroup>();
+            group.alpha = 0f;
+
+            var display = go.AddComponent<NearMissDisplay>();
+            display.matcher = matcher;
+            display.label = text;
+            display.group = group;
+
+            // Above the shelf and facing the user, so the line appears where the object would have
+            // landed rather than in the middle of the room.
+            go.transform.position = shelf != null
+                ? shelf.transform.position + Vector3.up * 0.32f
+                : (reference != null ? reference.transform.position + Vector3.up * 0.25f
+                                     : new Vector3(0f, 1.5f, 0.5f));
+            go.transform.rotation = Quaternion.identity;
+
+            return display;
+        }
+
+        static void SetPipelineMsaa(int samples)
+        {
+            var pipeline = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset>(
+                "Assets/_Project/Rendering/SignSpacePipeline.asset");
+            if (pipeline == null)
+            {
+                Debug.LogWarning("[PolishBuilder] URP asset missing; MSAA unchanged");
+                return;
+            }
+            pipeline.msaaSampleCount = samples;
+            EditorUtility.SetDirty(pipeline);
+            Debug.Log("[PolishBuilder] MSAA " + samples + "x");
         }
 
         static SoundDirector.Slot Slot(SoundDirector.Cue cue, string file, bool spatial, float volume)

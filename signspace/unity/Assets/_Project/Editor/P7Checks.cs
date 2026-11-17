@@ -262,10 +262,11 @@ namespace Signspace.Editor
             // The three survivors the task names, each present in the build.
             var credits = UnityEngine.Object.FindFirstObjectByType<CreditsPanel>();
             Require(credits != null, "the credit block exists (survivor 1)");
-            var mirrorText = texts.Any(t => t != null &&
-                PathOf(t.transform).Contains("HonestMirror") &&
-                t.text.IndexOf("replacement", StringComparison.OrdinalIgnoreCase) >= 0);
-            Require(mirrorText, "the 'not a replacement' line exists (survivor 2)");
+            // The fixed sentence is built at runtime by CreditsPanel, so it is asserted from the constant
+            // the panel actually renders rather than from a Text that does not exist until Start.
+            Require(!string.IsNullOrEmpty(CreditsPanel.FixedLine) &&
+                    CreditsPanel.FixedLine.IndexOf("not a replacement", StringComparison.OrdinalIgnoreCase) >= 0,
+                    "the 'not a replacement' line exists (survivor 2)");
             var nearMiss = UnityEngine.Object.FindFirstObjectByType<NearMissDisplay>();
             Require(nearMiss != null, "the near-miss template exists (survivor 3)");
 
@@ -326,6 +327,28 @@ namespace Signspace.Editor
             Require(hud != null, "the accessibility HUD is in the scene");
             if (reflow == null || tray == null) { Finish("P7.3"); return; }
 
+            // Stage a known head/shelf pose. In a saved scene the shelf has never been placed (that
+            // happens at runtime), so measuring the saved transforms would measure (0,0,0) and report a
+            // cone violation that does not exist. This is the pose the shelf resolves to for a standing
+            // user: 0.45 m in front, just below eye level.
+            var head = reflow.head != null ? reflow.head : (reflow.shelf != null ? reflow.shelf.userHead : null);
+            if (head == null)
+            {
+                var headGo = new GameObject("P7HeadProbe");
+                head = headGo.transform;
+                reflow.head = head;
+            }
+            Vector3 shelfPosition = reflow.shelf.transform.position;
+            Quaternion shelfRotation = reflow.shelf.transform.rotation;
+            Vector3 headPosition = head.position;
+            Quaternion headRotation = head.rotation;
+
+            head.position = new Vector3(0f, 1.60f, 0f);
+            head.rotation = Quaternion.identity;
+            reflow.shelf.transform.position = new Vector3(0f, 1.35f, 0.45f);
+            reflow.shelf.transform.rotation = Quaternion.LookRotation(
+                reflow.shelf.transform.position - head.position, Vector3.up);
+
             // The reflow decision itself, at both profiles, through its own code path.
             reflow.overrideHorizontalFovDegrees = 110f;
             reflow.Evaluate();
@@ -357,6 +380,11 @@ namespace Signspace.Editor
             Info("wide tray worst corner is " + wideAngle.ToString("0.0") +
                  "° — below the eye line by design, reached by looking down, not part of the loop");
             Require(wideAngle <= 45f, "wide tray is within a comfortable look-down angle");
+
+            reflow.shelf.transform.position = shelfPosition;
+            reflow.shelf.transform.rotation = shelfRotation;
+            head.position = headPosition;
+            head.rotation = headRotation;
 
             float hudAngle = Mathf.Atan2(
                 Mathf.Sqrt(Mathf.Pow(700f * hud.pixelsToMetres * 0.5f, 2f) +
@@ -514,10 +542,16 @@ namespace Signspace.Editor
             try
             {
                 var guard = guardGo.AddComponent<HostileGuard>();
+                var sceneCamera = Camera.main;
+                bool cameraWasEnabled = sceneCamera != null && sceneCamera.enabled;
+                if (sceneCamera != null) sceneCamera.enabled = false;   // the no-camera build, simulated
+
                 var found = guard.Inspect();
                 Require((found & HostileGuard.Condition.NoCamera) != 0,
                         "a build with no camera reports NoCamera instead of throwing");
                 Require(!string.IsNullOrEmpty(guard.Report), "the guard reports a state");
+
+                if (sceneCamera != null) sceneCamera.enabled = cameraWasEnabled;
             }
             catch (Exception error)
             {

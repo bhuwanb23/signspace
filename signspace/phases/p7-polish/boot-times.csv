@@ -1,0 +1,9 @@
+# P7.5 cold boot + background cycles. Filled from Application.persistentDataPath/boot-times.csv
+# on the device (see boot-times-notes.md). Every row below is NOT RUN until a headset writes it.
+utc,startup_ms,hands_ms,interactive_ms,resumes,resume_ms,notes
+NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,launch 1 cold after reboot
+NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,launch 2 warm
+NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,launch 3 warm
+NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,launch 4 warm
+NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,launch 5 warm
+NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,NOT RUN,median target interactive_ms < 15000

@@ -60,6 +60,35 @@ namespace Signspace.UI
         public string Report { get; private set; } = "not built";
 
         readonly List<GameObject> _blocks = new List<GameObject>(10);
+        readonly List<Material> _plateMaterials = new List<Material>(10);
+        readonly List<Text> _labels = new List<Text>(24);
+
+        /// <summary>
+        /// High contrast (P6.5). Until P7 this switch persisted and changed nothing, which is worse than
+        /// not having it: a switch that does nothing is a lie told to the user who needs it most.
+        ///
+        /// It makes the plates near-black and the text pure white, which is the largest luminance
+        /// separation available without colour. It is a palette swap, not a filter, because a post
+        /// effect would also change the passthrough the user is looking through.
+        /// </summary>
+        public void SetHighContrast(bool on)
+        {
+            var plate = on ? new Color(0.03f, 0.03f, 0.035f, 1f) : new Color(0.30f, 0.33f, 0.36f, 1f);
+            foreach (var material in _plateMaterials)
+            {
+                if (material == null) continue;
+                if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", plate);
+                if (material.HasProperty("_Color")) material.SetColor("_Color", plate);
+            }
+
+            var text = on ? Color.white : new Color(0.92f, 0.93f, 0.96f, 1f);
+            foreach (var label in _labels)
+                if (label != null) label.color = text;
+
+            HighContrast = on;
+        }
+
+        public bool HighContrast { get; private set; }
 
         void Start()
         {
@@ -98,6 +127,11 @@ namespace Signspace.UI
             _blocks.Add(cal);
 
             BlockCount = _blocks.Count;
+
+            // Apply the saved palette last, so a scene built with high contrast on does not start in the
+            // default colours and only correct itself on the first toggle.
+            SetHighContrast(settings != null && settings.Get(A11yToggle.HighContrast));
+
             Report = BlockCount + " switch blocks (" + all.Length + " toggles + calibrate)";
             Debug.Log("[A11yToggleTray] " + Report);
             return BlockCount;
@@ -180,6 +214,7 @@ namespace Signspace.UI
                 if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", new Color(0.30f, 0.33f, 0.36f, 1f));
                 if (mat.HasProperty("_Color")) mat.SetColor("_Color", new Color(0.30f, 0.33f, 0.36f, 1f));
                 if (renderer != null) renderer.sharedMaterial = mat;
+                _plateMaterials.Add(mat);
             }
             else
             {
@@ -233,6 +268,8 @@ namespace Signspace.UI
             value.text = valueText;
             title.color = new Color(0.92f, 0.93f, 0.96f, 1f);
             value.color = new Color(0.78f, 0.82f, 0.88f, 1f);
+            _labels.Add(title);
+            _labels.Add(value);
             return (title, value);
         }
 

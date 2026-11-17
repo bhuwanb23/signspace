@@ -110,14 +110,7 @@ namespace Signspace.UI
             if (calibration == null) calibration = FindFirstObjectByType<Calibration>();
             if (settings == null) settings = A11ySettings.Instance;
 
-            _byCue.Clear();
-            if (cues != null)
-            {
-                for (int i = 0; i < cues.Length; i++)
-                {
-                    if (!_byCue.ContainsKey(cues[i].cue)) _byCue.Add(cues[i].cue, cues[i]);
-                }
-            }
+            IndexCues();
 
             _body = MakeSource("SFX_Body", 0f);
             _room = MakeSource("SFX_Room", 1f);
@@ -183,12 +176,25 @@ namespace Signspace.UI
 
         // ------------------------------------------------------------------ cue plumbing
 
-        public bool HasClip(Cue cue) => _byCue.TryGetValue(cue, out var slot) && slot.clip != null;
+        /// <summary>
+        /// Builds the cue lookup on demand. Awake does this in a running scene; the editor checks run
+        /// outside play mode, where Awake never fires, and a check that reads "no clip" because the
+        /// table was not indexed yet would report a missing clip that is present.
+        /// </summary>
+        void IndexCues()
+        {
+            if (_byCue.Count > 0 || cues == null) return;
+            for (int i = 0; i < cues.Length; i++)
+                if (!_byCue.ContainsKey(cues[i].cue)) _byCue.Add(cues[i].cue, cues[i]);
+        }
 
-        public AudioClip ClipFor(Cue cue) => _byCue.TryGetValue(cue, out var slot) ? slot.clip : null;
+        public bool HasClip(Cue cue) { IndexCues(); return _byCue.TryGetValue(cue, out var slot) && slot.clip != null; }
+
+        public AudioClip ClipFor(Cue cue) { IndexCues(); return _byCue.TryGetValue(cue, out var slot) ? slot.clip : null; }
 
         public void Play(Cue cue, Vector3? position = null)
         {
+            IndexCues();
             if (!_byCue.TryGetValue(cue, out var slot) || slot.clip == null) return;
 
             var source = slot.spatial ? _room : _body;

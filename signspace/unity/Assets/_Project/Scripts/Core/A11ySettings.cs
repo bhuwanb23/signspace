@@ -53,6 +53,11 @@ namespace Signspace.Core
         public LockPayoff payoff;
         public ReferenceHand referenceHand;
 
+        [Header("High contrast targets (P7: the switch used to persist and do nothing)")]
+        public UI.A11yHud hud;
+        public UI.A11yToggleTray tray;
+        public UI.NearMissDisplay nearMiss;
+
         /// <summary>Selected by the speed block. One value, not a slider: two states are testable.</summary>
         public float relaxedSpeedScale = 1.5f;
 
@@ -328,6 +333,14 @@ namespace Signspace.Core
             if (referenceHand != null) referenceHand.oneHanded = d.oneHanded;
 
             if (payoff != null) payoff.reducedMotion = d.reducedMotion;
+
+            // High contrast: the HUD goes white, the tray goes black-on-white, and the near-miss drops
+            // its dash and degree number. The plain form is not a preference: a low-vision user reading
+            // "That's O — 3° away" needs the symbol and the number to be legible, and the plain line is
+            // the one that still reads at arm's length.
+            if (hud != null) hud.SetHighContrast(d.highContrast);
+            if (tray != null) tray.SetHighContrast(d.highContrast);
+            if (nearMiss != null) nearMiss.plainText = d.highContrast;
         }
 
         float relaxing(SaveData d)
@@ -348,6 +361,9 @@ namespace Signspace.Core
             if (referenceHand == null) referenceHand = FindFirstObjectByType<ReferenceHand>();
             if (payoff == null) payoff = FindFirstObjectByType<LockPayoff>();
             if (save == null) save = FindFirstObjectByType<SaveSystem>();
+            if (hud == null) hud = FindFirstObjectByType<UI.A11yHud>();
+            if (tray == null) tray = FindFirstObjectByType<UI.A11yToggleTray>();
+            if (nearMiss == null) nearMiss = FindFirstObjectByType<UI.NearMissDisplay>();
         }
     }
 }
