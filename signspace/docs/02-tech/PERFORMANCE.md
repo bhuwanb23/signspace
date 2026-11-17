@@ -78,6 +78,26 @@ scene would produce a nicer number and a useless one.
 `perf-baseline.md` §5 in the same session, in the order the budget table implies: MSAA/render scale,
 the hand pipeline, then the passthrough layer.
 
+### 2.2 The desk audit (P7.4) — a posture, not a frame rate
+
+`SIGNSPACE/P7.4 Check performance posture` reads the saved scene and the pipeline asset. It proves
+what the build *stops paying for*; it cannot prove a frame rate, and it does not try.
+
+| Row | Measured on the desk | Verdict |
+|---|---|---|
+| Realtime lights in the scene | **0** | no lighting pass |
+| Shadow-casting renderers | **0** (47 renderers switched off) | no shadow pass, no culling for one |
+| Mesh renderers / vertices | 48 / ~24,000 | far inside the ≤120 draw call / ≤150k triangle budget |
+| Biggest texture in `Assets/_Project` | 64 px | no texture above 512, let alone a hero |
+| URP MSAA | **2×** (was 4×) | half the bandwidth of 4× on a passthrough scene |
+| Fixed foveated rendering | **Medium + dynamic**, applied by `PerfSettings` each scene start | resolution spent where the eye is |
+| Frame-rate target | 72 | `Application.targetFrameRate`, vSync off |
+| Realtime reflection probes | off | nothing reflective ships |
+
+**What is still missing, and must not be inferred from the table above:** the 15-minute 3S run, the
+1% low, the thermal onset, the 4×-vs-2× comparison and the `RISKS.md` R10 trigger are all
+**NOT RUN**. They need the headset. `HUMAN-TASKS` H23.
+
 ## 3. The measured table
 
 **Empty. It gets filled on the device, and the video overlay carries the same number.**
@@ -95,7 +115,8 @@ judging criterion (the rubric names Quest 3S explicitly) and it is `RISKS.md` R1
 **What we do instead, in order:**
 
 1. **Hold to 3S-conservative settings anyway** — no realtime shadows, no realtime lights, FFR on,
-   MSAA 4×, ≤120 draw calls, ≤150k triangles, ≤12 materials. Build to the *spec* of the 3S even
+   MSAA 2× (dropped from 4× in P7.4; 2× is the documented choice, and the 4-vs-2 comparison is a
+   device row), ≤120 draw calls, ≤150k triangles, ≤12 materials. Build to the *spec* of the 3S even
    when we can only test on the 3.
 2. **Lower the claim to what was measured.** If the 3 held 72 fps, the description says *"72 fps on a
    Quest 3"* — not "on a Quest 3S". Never claim the device we did not test.

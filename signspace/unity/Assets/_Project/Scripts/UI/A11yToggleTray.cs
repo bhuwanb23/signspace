@@ -44,8 +44,8 @@ namespace Signspace.UI
                  "and too far down to be seen without turning the head. These pull the tray into the " +
                  "55° safe cone. Measured in P7Checks, not guessed.")]
         public float narrowForward = 0.38f;
-        public float narrowDown = 0.08f;
-        public float narrowRight = 0.05f;
+        public float narrowDown = 0.075f;
+        public float narrowRight = 0.04f;
         [Tooltip("Below this horizontal FoV the narrow pose applies. Matches ShelfReflow.narrowFovDegrees.")]
         public float narrowFovDegrees = 85f;
 

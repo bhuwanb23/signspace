@@ -281,6 +281,12 @@ namespace Signspace.Editor
             // answer P1.2's question.
             GrabTestBuilder.BuildGrabTest();
 
+            // ---- P7.4: nothing in the finished scene casts a shadow -------------------------
+            // Run last, after every builder that creates a renderer, because a builder that runs after
+            // this one would reintroduce a caster. There is no light in the scene, so this is culling
+            // cost removed, not an image change.
+            PolishBuilder.DisableShadowCasting();
+
             // ---- scene settings ---------------------------------------------
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(0.35f, 0.35f, 0.40f);

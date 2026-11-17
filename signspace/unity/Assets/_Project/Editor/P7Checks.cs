@@ -346,14 +346,19 @@ namespace Signspace.Editor
             head.position = new Vector3(0f, 1.60f, 0f);
             head.rotation = Quaternion.identity;
             reflow.shelf.transform.position = new Vector3(0f, 1.35f, 0.45f);
+            // The shelf faces the user: forward is from the shelf toward the head. (Reversing this puts
+            // the head *behind* the shelf, the forward distance collapses to its 0.05 m floor, and every
+            // slot then measures at ~70° — a check bug that looks exactly like a geometry failure.)
             reflow.shelf.transform.rotation = Quaternion.LookRotation(
-                reflow.shelf.transform.position - head.position, Vector3.up);
+                head.position - reflow.shelf.transform.position, Vector3.up);
 
             // The reflow decision itself, at both profiles, through its own code path.
             reflow.overrideHorizontalFovDegrees = 110f;
             reflow.Evaluate();
             Require(!reflow.IsTray && reflow.CurrentColumns == reflow.wideColumns,
                     "at 110° the shelf is a " + reflow.CurrentColumns + "-column grid");
+            Info("110°: worst slot edge " + reflow.MaxSlotAngleDegrees.ToString("0.0") +
+                 "° off-axis, grid " + reflow.AngularWidthDegrees.ToString("0.0") + "° wide");
             Require(reflow.AllSlotsInsideSafeCone,
                     "at 110° every slot is inside the " + (reflow.safeConeDegrees * 0.5f) + "° half-cone");
 
@@ -362,6 +367,8 @@ namespace Signspace.Editor
             Require(reflow.IsTray, "at 70° the shelf reflows to the tray");
             Require(reflow.CurrentColumns == reflow.trayColumns,
                     "at 70° the tray has " + reflow.CurrentColumns + " columns");
+            Info("70°: worst slot edge " + reflow.MaxSlotAngleDegrees.ToString("0.0") +
+                 "° off-axis, grid " + reflow.AngularWidthDegrees.ToString("0.0") + "° wide");
             Require(reflow.AllSlotsInsideSafeCone,
                     "at 70° every slot is inside the safe cone (worst " +
                     reflow.MaxSlotAngleDegrees.ToString("0.0") + "°)");
@@ -371,6 +378,9 @@ namespace Signspace.Editor
             bool narrow = tray.ApplyFov(70f);
             Require(narrow, "the tray switches to its narrow pose at 70°");
             float narrowAngle = tray.MaxAngleDegrees(70f);
+            Info("narrow tray worst corner " + narrowAngle.ToString("0.0") + "° (" +
+                 tray.narrowForward + " m, " + tray.narrowDown + " m down, " + tray.narrowRight +
+                 " m right)");
             Require(narrowAngle <= 28f,
                     "narrow tray worst corner is " + narrowAngle.ToString("0.0") +
                     "° off-axis (half-cone 27.5°)");

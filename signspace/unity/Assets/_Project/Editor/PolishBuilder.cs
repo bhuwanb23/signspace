@@ -192,6 +192,21 @@ namespace Signspace.Editor
             return display;
         }
 
+        /// <summary>Turns shadow casting off on every renderer in the scene. Idempotent; called last.</summary>
+        public static int DisableShadowCasting()
+        {
+            int changed = 0;
+            foreach (var meshRenderer in UnityEngine.Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
+            {
+                if (meshRenderer.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off) continue;
+                meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                changed++;
+            }
+            if (changed > 0)
+                Debug.Log("[PolishBuilder] shadow casting off on " + changed + " late renderers");
+            return changed;
+        }
+
         static void SetPipelineMsaa(int samples)
         {
             var pipeline = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset>(

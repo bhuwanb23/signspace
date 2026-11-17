@@ -283,6 +283,29 @@ cropping the reward.
 **The FoV pair is shot 12 of the video** — the same frame at both field sizes, side by side. The
 narrow one must have *everything critical inside the ~55° cone*.
 
+### 7.1 What P7.3 re-measured on the desk
+
+`SIGNSPACE/P7.3 Check field of view` stages a standing user (head at 1.60 m) and the shelf in its
+resolved pose (0.45 m in front, 1.35 m high, facing the user), then runs the reflow's own `Evaluate`
+at both profiles and measures the worst angular offset of any slot edge — not just the slot centre.
+
+| Row | 110° profile | 70°×66° profile |
+|---|---|---|
+| Layout chosen | 6-column grid | 4-column tray, tilted 20° |
+| Grid angular width | 45.8° | 30.9° |
+| Worst slot edge | **24.3°** (3.2° spare) | **19.0°** (8.5° spare) |
+| Accessibility tray pose | 39.4° below the axis — **by design**: it is a look-down settings tray, not part of the loop | pulled to 0.38 m forward, 0.075 m down, 0.04 m right: worst corner **26.0°** (1.5° spare) |
+| HUD worst corner (0.55 m, 700 px canvas) | 19.2° | 19.2° |
+
+**That tray row is a fix, not a note.** Before P7.3 the tray had one pose: 0.42 m forward, 0.20 m
+down, 0.14 m right. At the glasses profile that is ~40° off-axis in two directions at once — reachable
+by hand, invisible without turning the head, which defeats an eyes-only user. It now has a narrow pose
+and the check measures both.
+
+**NOT RUN:** that the reflow is *comfortable* at 70° in the glasses, that gaze targets at the edges
+still acquire at that profile (the geometry is checked, the eye is not), and the split-screen capture.
+`HUMAN-TASKS` H23.
+
 ## 8. The test matrix
 
 Every row must behave. No row may show an error.

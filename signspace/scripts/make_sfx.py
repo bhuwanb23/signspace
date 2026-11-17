@@ -193,16 +193,16 @@ def object_settle():
 
 def near_miss():
     # THE QUESTION: a falling third, soft. Must not be the chime's interval, must not be a buzzer.
-    buf = silence(0.42)
-    buf = mix(buf, tone(659.25, 0.20, 0.28, decay=0.09), 1.0, 0.00)
-    buf = mix(buf, tone(523.25, 0.24, 0.24, decay=0.11), 1.0, 0.18)
+    buf = silence(0.40)
+    buf = mix(buf, tone(659.25, 0.18, 0.28, decay=0.08), 1.0, 0.00)
+    buf = mix(buf, tone(523.25, 0.22, 0.24, decay=0.10), 1.0, 0.17)
     return room_tail(buf, delay=0.045, gain=0.10, taps=1)
 
 
 def surface_found():
     # A very quiet low rumble with a soft edge, 500 ms: the shelf has a floor under it.
-    rumble = lowpass(noise(0.50, 0.55, seed=13), 130)
-    return fade(rumble, attack=0.120, release=0.200)
+    rumble = lowpass(noise(0.40, 0.55, seed=13), 130)
+    return fade(rumble, attack=0.100, release=0.180)
 
 
 def band_close():
@@ -235,9 +235,9 @@ def calibrate_start():
 
 def calibrate_done():
     # Two notes rising: the calibration closed, and the next shape will be judged to your hand.
-    buf = silence(0.50)
-    buf = mix(buf, tone(392.00, 0.22, 0.30, decay=0.10), 1.0, 0.00)
-    return mix(buf, tone(523.25, 0.28, 0.28, decay=0.13), 1.0, 0.14)
+    buf = silence(0.40)
+    buf = mix(buf, tone(392.00, 0.20, 0.30, decay=0.09), 1.0, 0.00)
+    return mix(buf, tone(523.25, 0.22, 0.28, decay=0.11), 1.0, 0.14)
 
 
 # name -> (builder, target peak). Every peak is <= 0.5 = -6 dBFS, the map's ceiling.
@@ -247,7 +247,8 @@ CLIPS = [
     ("grab_click", grab_click, 0.34),
     ("release_click", release_click, 0.18),
     ("rotate_texture", rotate_texture, 0.10),
-    ("lock_chime", lock_chime, 0.50),
+    # 0.48, not 0.50: 16-bit quantisation and the reverb tap put a nominal -6.0 dBFS clip at -5.9.
+    ("lock_chime", lock_chime, 0.48),
     ("shelf_full", shelf_full, 0.20),
     ("object_settle", object_settle, 0.28),
     ("near_miss", near_miss, 0.28),

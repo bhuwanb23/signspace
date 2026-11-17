@@ -42,6 +42,10 @@
 | **Surface found (MRUK)** | a very quiet low rumble with a soft edge, 500 ms | yes, at the surface | grounding | the shelf has a floor under it |
 | **Shelf full** | the lock chime, but one octave up and 60% quieter | yes | small | the last slot. It should be a variation of the reward, not a new sound |
 | **Credits opened** | nothing | — | — | reading is silent |
+| **Honest-mirror panel opened** | nothing | — | — | reading is silent (§5) |
+| **A switch flips** *(added P6.5/P7.1)* | a 36 ms click, 1600 Hz, −14 dBFS | no | tactile | a switch has a click; this is the same "a choice was made" sound as a fired dwell |
+| **Calibration starts** *(added P6.4/P7.1)* | a soft 330 Hz tone, 160 ms | no | quiet | it is a transition into a measuring mode, not a reward |
+| **Calibration ends** *(added P6.4/P7.1)* | two notes rising, 392→523 Hz, 400 ms | no | settled | the profile is now the user's own hand |
 
 ## 3. The lock chime
 
@@ -96,6 +100,45 @@ you are turning it.
 | **Mixing** | every sound is a one-shot on a pooled source. No two sounds fight |
 | **Files** | short WAVs, mono, 44.1 kHz, under 300 kB each. **Total under 2 MB** |
 | **Where** | `unity/Assets/_Project/Audio/SFX/` |
+| **Generated, not hunted** | `scripts/make_sfx.py` writes all sixteen clips from this table |
+| **The owner** | `Scripts/UI/SoundDirector.cs` (room/body/rotate sources) + `BandAudio.cs` (bands) |
+
+### 6.1 What actually ships (P7.1)
+
+Sixteen mono 44.1 kHz WAVs, **596 kB total** against the 2 MB budget. Every clip is synthesised by
+`scripts/make_sfx.py`, so the frequency, envelope and target peak of each are a line of code and the
+whole set can be retuned in one command — a binary in a repository is a sound nobody can adjust.
+
+**Every peak is at or under −6 dBFS**, measured from the imported clips by `P7.1 Check sound`, not
+from the generator's intent. The first real measurement found the old chime at **−4.1 dBFS** (over
+the map's own ceiling) and ten states silent; both are fixed.
+
+| Cue | Clip | Peak | Length | Spatial |
+|---|---|---|---|---|
+| Hands found | `boot_hands` | −10.5 | 180 ms | no |
+| Reference hand appears | `hand_appear` | −18.4 | 300 ms | yes |
+| Grab | `grab_click` | −9.4 | 90 ms | yes |
+| Release | `release_click` | −14.9 | 80 ms | yes |
+| Rotate | `rotate_texture` (loop, speed-driven volume) | −20.0 | 1.0 s | yes |
+| Band warming → close | `band_close` | −10.5 | 340 ms | no |
+| Band close → locked | `band_lock_in` | −9.4 | 120 ms | no |
+| Band locked → warming | `band_release` | −15.9 | 300 ms | no |
+| **Lock — the payoff** | `lock_chime` (C5–G5–C6, 120 ms apart, wooden partials, small-room tail) | **−6.4** | 1.72 s | yes, at the slot |
+| Object settles | `object_settle` | −11.1 | 144 ms | yes |
+| Shelf full | `shelf_full` (octave up, quieter) | −14.0 | 1.2 s | yes |
+| Near-miss | `near_miss` (falling third) | −11.1 | 400 ms | no |
+| Surface found | `surface_found` | −15.9 | 400 ms | yes |
+| Switch flip / dwell fire | `toggle_click` | −14.0 | 36 ms | no |
+| Calibration start | `calibrate_start` | −15.9 | 160 ms | no |
+| Calibration end | `calibrate_done` | −10.5 | 400 ms | no |
+
+**The chime is the loudest thing in the app and it is −6.4 dBFS.** The near-miss is 5 dB below it and
+a falling third rather than a rising fifth; the check verifies that the two are not the same interval
+by comparing their spectral ratio, so a later "tidier" rewrite of the near-miss cannot quietly make it
+a transposed chime.
+
+**Silences are listed in code** (`SoundDirector.DocumentedSilences`), not only in this document, so a
+missing clip on a real cue cannot be excused as a deliberate silence.
 
 **One audio source per kind of sound, pooled.** A new `AudioSource` per event is a per-frame
 allocation waiting to happen, and `PERFORMANCE.md` §5 says allocations are the first thing to check.
@@ -127,5 +170,10 @@ the cold open at 0:00)
 - [x] the spatialisation rules
 - [x] the silence policy
 - [x] the priority order for cutting
-- [ ] **the sounds exist and are wired**
-- [ ] **the lock chime has been listened to six times in a row and is not annoying**
+- [x] **the sounds exist and are wired** — 16 clips, 12 cues into `SoundDirector`, 3 bands into
+      `BandAudio`, 0 cues without a clip, every peak measured at or under −6 dBFS (`P7.1 Check sound`)
+- [ ] **the lock chime has been listened to six times in a row and is not annoying** — **NOT RUN**.
+      The synthesiser can prove the interval, the length and the peak; it cannot judge fatigue. This is
+      an ears row, and it is `HUMAN-TASKS` H28.
+- [ ] **the real wooden timbre** — the clips are spec-shaped placeholders (see §6.1). Replacing them is
+      a clip swap and no code change, which is why the wiring was worth doing first.
