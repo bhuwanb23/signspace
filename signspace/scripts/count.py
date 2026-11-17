@@ -5,7 +5,7 @@ import re, sys, pathlib
 LIMITS = {"tagline": 140, "description": 500}
 
 def main(doc="docs/06-submission/SUBMISSION-COPY.md"):
-    t = pathlib.Path(doc).read_text()
+    t = pathlib.Path(doc).read_text(encoding="utf-8")
     desc = t.split("## 3. DESCRIPTION")[1].split("\n---")[0]
     body = "\n".join(l for l in desc.split("\n")[2:] if l.strip() and not l.startswith("*limit"))
     words = len(body.split())
