@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using Signspace.Matching;
 using UnityEditor;
@@ -81,6 +82,11 @@ namespace Signspace.Editor
             Debug.Log("[BuildScript] building " + apkPath);
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
+
+            if (summary.result == BuildResult.Succeeded)
+            {
+                Strip32BitAssets(apkPath);
+            }
 
             Debug.Log($"[BuildScript] result   : {summary.result}");
             Debug.Log($"[BuildScript] size     : {summary.totalSize / (1024 * 1024)} MB");
@@ -266,6 +272,53 @@ namespace Signspace.Editor
                 Debug.LogWarning("[BuildScript] could not read the package name file: " + e.Message);
             }
             return PackageName;
+        }
+
+        /// <summary>
+        /// Removes 32-bit native libraries from the APK's assets/lib/armeabi-v7a/ directory.
+        ///
+        /// Meta's upload validator rejects APKs that contain both 32-bit and 64-bit
+        /// libraries: "This app contains both 32-bit (armeabi-v7a) and 64-bit
+        /// (arm64-v8a) libraries. This consumes extra storage and increases download
+        /// times. Consider updating your build to target 64-bit only."
+        ///
+        /// The app targets ARM64 only (PlayerSettings.Android.targetArchitectures =
+        /// AndroidArchitecture.ARM64), and the lib/ directory already contains only
+        /// arm64-v8a. But the Meta SDK bundles 32-bit copies of its internal
+        /// native libraries (folly, perflogger, zstd) as Android ASSETS in
+        /// assets/lib/armeabi-v7a/, and those are not controlled by the architecture
+        /// setting. They are never loaded on a 64-bit device.
+        ///
+        /// This method removes them from the APK after the build completes. The APK
+        /// is a zip archive, so the entries are deleted directly.
+        /// </summary>
+        static void Strip32BitAssets(string apkPath)
+        {
+            try
+            {
+                using (var archive = System.IO.Compression.ZipFile.Open(apkPath, System.IO.Compression.ZipArchiveMode.Update))
+                {
+                    var toRemove = new System.Collections.Generic.List<System.IO.Compression.ZipArchiveEntry>();
+                    foreach (var entry in archive.Entries)
+                    {
+                        if (entry.FullName.StartsWith("assets/lib/armeabi-v7a/", StringComparison.Ordinal))
+                        {
+                            toRemove.Add(entry);
+                        }
+                    }
+
+                    foreach (var entry in toRemove)
+                    {
+                        entry.Delete();
+                    }
+
+                    Debug.Log("[BuildScript] stripped " + toRemove.Count + " 32-bit asset entries from the APK");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[BuildScript] could not strip 32-bit assets: " + e.Message);
+            }
         }
 
         public static string Sha256(string path)
