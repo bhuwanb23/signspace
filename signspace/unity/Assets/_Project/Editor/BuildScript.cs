@@ -123,6 +123,14 @@ namespace Signspace.Editor
             // linear colour space is correct for Quest
             PlayerSettings.colorSpace = ColorSpace.Linear;
 
+            // Meta's upload validator requires landscape orientation and auto install location.
+            // Without these the upload is rejected before it even starts.
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
+            PlayerSettings.Android.preferredInstallLocation = AndroidPreferredInstallLocation.Auto;
+            PlayerSettings.allowedAutorotateToPortrait = false;
+            PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = true;
+            PlayerSettings.allowedAutorotateToLandscapeRight = true;
             // ISDK needs the new input system. Unity 6 exposes no public setter for this, so it is
             // read back from the serialised project and the build refuses to run if it drifted.
             // (A patch of ProjectSettings.asset here would race the asset database.)

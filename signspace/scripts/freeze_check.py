@@ -52,6 +52,15 @@ def git(*args):
         return ""
 
 
+def git_ok(*args):
+    """True when git exits 0 (merge-base --is-ancestor reports by status, not stdout)."""
+    try:
+        return subprocess.run(["git", "-C", PROJECT] + list(args),
+                              capture_output=True, text=True, timeout=30).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 def sha256(path):
     digest = hashlib.sha256()
     with open(path, "rb") as handle:
@@ -185,17 +194,26 @@ def main():
     row(rows, "tag %s exists" % args.tag, PASS if tag_commit else FAIL,
         "a tag at the submitted commit", tag_commit[:12] if tag_commit else "no such tag")
 
+    # The record must name the commit that produced the APK, not HEAD. A freeze is a point in
+    # history; later commits are a separate failure (reported below). What makes the record
+    # trustworthy is that the named commit still exists, still sits on main, and carries the tag.
     head = git("rev-parse", "HEAD")
-    if tag_commit and head:
-        row(rows, "tag is HEAD", PASS if tag_commit == head else FAIL,
-            tag_commit[:12], head[:12])
+    record_commit = record["commit"].split()[0] if record["commit"] else ""
+    resolved = git("rev-parse", "--verify", record_commit + "^{commit}") if record_commit else ""
 
-    if record["commit"]:
-        row(rows, "record commit is HEAD", PASS if record["commit"].startswith(head[:7]) else FAIL,
-            record["commit"][:12], head[:12] or "no HEAD")
+    if record_commit and resolved:
+        on_main = bool(head) and git_ok("merge-base", "--is-ancestor", resolved, "HEAD")
+        row(rows, "record commit is on main", PASS if on_main else FAIL,
+            "an ancestor of HEAD",
+            resolved[:12] + ("" if on_main else " (not reachable from HEAD)"))
+        if tag_commit:
+            row(rows, "tag is the record commit", PASS if tag_commit == resolved else FAIL,
+                resolved[:12], tag_commit[:12])
     else:
-        row(rows, "record commit is HEAD", FAIL,
-            "a commit hash in apk-hash.txt", "the record says 'commit: ' (empty)")
+        row(rows, "record commit is on main", FAIL,
+            "a commit hash in apk-hash.txt",
+            "the record says 'commit: ' (empty)" if not record_commit
+            else "cannot resolve " + record_commit[:12])
 
     frozen_at = record["frozen_at"]
     if frozen_at:

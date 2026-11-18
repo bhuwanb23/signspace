@@ -56,7 +56,10 @@ $patches = @(
     @{ name = 'activeInputHandler';    value = '2'; was = '0'; why = 'Both - the Meta XR SDK needs the new input system' },
     @{ name = 'enableFrameTimingStats'; value = '1'; was = '0'; why = 'so the perf probe can report a CPU/GPU split' },
     @{ name = 'metroPackageName';       value = 'com.signspace.signspace'; was = 'signspace-template-6000.3.28f1'; why = 'the template left its own name behind' },
-    @{ name = 'metroApplicationDescription'; value = 'SIGNSPACE'; was = 'signspace-template-6000.3.28f1'; why = 'the template left its own name behind' }
+    @{ name = 'metroApplicationDescription'; value = 'SIGNSPACE'; was = 'signspace-template-6000.3.28f1'; why = 'the template left its own name behind' },
+    @{ name = 'AndroidPreferredInstallLocation'; value = '0'; was = '1'; why = 'auto - Meta requires auto, internalOnly is rejected' },
+    @{ name = 'androidAutoRotationBehavior'; value = '0'; was = '1'; why = 'disabled - Meta requires locked landscape' },
+    @{ name = 'defaultScreenOrientation'; value = '4'; was = '4'; why = 'LandscapeLeft - Meta requires landscape' }
 )
 
 $text = [System.IO.File]::ReadAllText($file)

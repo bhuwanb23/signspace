@@ -119,20 +119,62 @@ namespace Signspace.Editor
             }
         }
 
+        /// <summary>
+        /// The commit the build came from.
+        ///
+        /// WHY THIS WALKS UP
+        /// -----------------
+        /// Unity's working directory is <c>unity/</c>, and the repository root is its parent. The
+        /// first version of this looked for <c>./.git</c> and silently returned an empty string,
+        /// which is how the freeze record came to say <c>commit:</c> with nothing after it. A reader
+        /// that cannot find the repository must not look like a repository with no commits.
+        /// </summary>
         static string ReadCommitHash()
         {
             try
             {
-                string gitDir = Path.Combine(Directory.GetCurrentDirectory(), ".git");
-                string head = File.Exists(Path.Combine(gitDir, "HEAD")) ? File.ReadAllText(Path.Combine(gitDir, "HEAD")).Trim() : "";
-                if (head.StartsWith("ref: "))
+                var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+                for (int depth = 0; dir != null && depth < 8; depth++, dir = dir.Parent)
                 {
-                    string refPath = Path.Combine(gitDir, head.Substring(5));
-                    if (File.Exists(refPath)) return File.ReadAllText(refPath).Trim();
+                    string dotGit = Path.Combine(dir.FullName, ".git");
+                    if (!Directory.Exists(dotGit) && !File.Exists(dotGit)) continue;
+
+                    string gitDir = dotGit;
+                    if (File.Exists(dotGit))
+                    {
+                        // worktree or submodule: .git is a file pointing at the real directory
+                        string pointer = File.ReadAllText(dotGit).Trim();
+                        if (!pointer.StartsWith("gitdir:")) continue;
+                        gitDir = pointer.Substring("gitdir:".Length).Trim();
+                        if (!Path.IsPathRooted(gitDir)) gitDir = Path.GetFullPath(Path.Combine(dir.FullName, gitDir));
+                    }
+
+                    string head = File.Exists(Path.Combine(gitDir, "HEAD"))
+                        ? File.ReadAllText(Path.Combine(gitDir, "HEAD")).Trim()
+                        : "";
+                    if (head.StartsWith("ref: "))
+                    {
+                        string reference = head.Substring(5).Trim();
+                        string refPath = Path.Combine(gitDir, reference.Replace('/', Path.DirectorySeparatorChar));
+                        if (File.Exists(refPath)) return File.ReadAllText(refPath).Trim();
+
+                        // packed refs: the branch has no loose file once gc has run
+                        string packed = Path.Combine(gitDir, "packed-refs");
+                        if (File.Exists(packed))
+                        {
+                            foreach (string line in File.ReadAllLines(packed))
+                            {
+                                var parts = line.Split(' ');
+                                if (parts.Length == 2 && parts[1].Trim() == reference) return parts[0].Trim();
+                            }
+                        }
+                        return "";
+                    }
+                    return head;
                 }
-                return head;
+                return "";
             }
-            catch { return "unknown"; }
+            catch { return ""; }
         }
     }
 }
