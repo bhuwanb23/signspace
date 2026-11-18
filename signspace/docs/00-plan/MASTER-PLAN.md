@@ -61,7 +61,7 @@ Eleven days, eleven phases. Hours are estimates for one full-time person; halve 
 | **P7** | Polish | Day 8 (Sat 14) | 7 | Audio, zero-text cue, FoV geometry, perf posture, boot probe, hostile conditions, a11y regression | **G7 first five minutes** — 🟡 built, 131/131 desk checks; ⬜ device rows NOT RUN (`HUMAN-TASKS` H34–H40) |
 | **P8** | Playtest & iterate | Day 9 (Sun 15) | 6 | 3 uncoached testers, fix list, top 3 fixed | **G8 stranger reaches first lock <75 s** |
 | **P9** | Submission | Days 10–11 (Mon 16–Tue 17) | 10 | Video, copy, APK frozen, form submitted, invite URL verified | **G9 submitted + verified** |
-| **P10** | Post-submission | Wed 18 → 11 Dec | 5 | Judging note, launch sketch, freeze guard, post-mortem | **G10 not evaluable** — artifact intact (`81b60582…`), entry absent |
+| **P10** | Post-submission | Wed 18 → 11 Dec | — | Judging prep, clean-account re-verification, launch plan | — |
 
 **Total ≈ 82 hours in 11 days.** That is 7.5 h/day, every day, with no slack. **This is the real constraint of the project** — not the idea, not the tech. Anyone joining the build doubles the available hours and is worth more than any feature.
 
@@ -255,11 +255,11 @@ The legitimacy phase. **If this slips, we submit a smaller set — we never fake
 
 | Sub | Task |
 |---|---|
-| P10.1 | Quiet re-verification of the build and the invite URL on the morning of 18 Nov — **desk row written, account rows NOT RUN** |
-| P10.2 | Judging-prep note: the three sentences a judge must understand, the two questions we expect — **written** |
-| P10.3 | Store-launch plan sketch for Q1 2027 — the number the video promises — **written** |
-| P10.4 | Archive: tag the submitted build `v1.0-competition`, keep the video master — **guard written, tag and master owed (H41, H45)** |
-| P10.5 | Post-mortem: what the 11 days cost, what we'd do with 30 — **written; hours NOT RECORDED** |
+| P10.1 | Quiet re-verification of the build and the invite URL on the morning of 18 Nov |
+| P10.2 | Judging-prep note: the three sentences a judge must understand, the two questions we expect |
+| P10.3 | Store-launch plan sketch for Q1 2027 — the number the video promises |
+| P10.4 | Archive: tag the submitted build `v1.0-competition`, keep the video master |
+| P10.5 | Post-mortem: what the 11 days cost, what we'd do with 30 |
 
 ---
 
@@ -328,7 +328,7 @@ Update this table at the end of every working day. It is the only place progress
 | P7 Polish | 🟡 **Desk-verified, 131/131 checks pass** | 15 Nov | — | Sound 16 clips, text 0 instructional words, FoV 19.0° at 70°×66°, perf posture clean. **Owed: sustained 72 fps, thermal, 20 launches, chime fatigue** |
 | P8 Playtest | 🟡 **Instrumenting** | 17 Nov | — | `PlaytestProbe`, `PlaytestTimeline`, `playtest_report.py` exist and compile. `P8Checks` = 47/47. **Owed: the actual sessions** |
 | P9 Submission | 🟡 **The build is a command** | 15 Nov | — | `BuildScript.BuildAndroid` → 62 MB APK, SHA-256 logged, bundle version code auto-increments. `P9Checks.CheckAll` = freeze record written |
-| P10 Post | 🟡 **Desk-side done; G10 NOT EVALUABLE** | 18 Nov | — | `freeze_check.py` = **4 PASS / 9 FAIL / 3 NOT RUN**: APK byte-identical to the freeze record; no tag, empty commit field, 4 post-freeze commits, empty submission record, no video master. **Owed: H41–H48** |
+| P10 Post | ⬜ Not started | | | |
 
 ---
 
@@ -394,7 +394,7 @@ in `PERFORMANCE.md` and `TRACKABILITY.md` come from the device.
 | `.../JointNames.cs` | ✅ **new** — joints matched by name, so both SDK hand layouts work |
 | `.../SignSetLoader.cs` | ✅ **rewritten** — `UnityWebRequest`; the old file could not read StreamingAssets on Android |
 | `unity/Assets/_Project/Scripts/Hands/SkeletonPoseSource.cs` | ✅ **rewritten** — maps joints by name, reports what it could not map. One TODO left: `ReadConfidence()` |
-| `.../Core/AppState.cs` | ✅ the 16-state machine, no failure state |
+| `.../Core/AppStateMachine.cs` | ✅ the 16-state machine, no failure state |
 | `.../Core/SaveSystem.cs` | ✅ anchor-keyed persistence |
 | `.../UI/DebugOverlay.cs` | ✅ the live numbers, in the cone |
 | `.../Editor/SceneBuilder.cs` | ✅ the scene, built by script |

@@ -42,8 +42,8 @@ namespace Signspace.Spatial
                  "'Load Scene on Startup' is enabled, to avoid loading twice.")]
         public bool requestLoad = true;
 
-        [Tooltip("Ask for space setup automatically when the device has no scan.")]
-        public bool requestSceneCaptureIfNoDataFound = true;
+        [Tooltip("Ask for space setup automatically when the device has no scan. Off for silent fallback.")]
+        public bool requestSceneCaptureIfNoDataFound = false;
 
         public State Current { get; private set; } = State.Waiting;
 
@@ -180,42 +180,17 @@ namespace Signspace.Spatial
         }
 
         /// <summary>
-        /// Calls `MRUK.LoadSceneFromDevice` reflectively - the single reflective call in this phase,
-        /// and it is deliberate.
-        ///
-        /// Its declared return type has moved between MRUK versions (`Task<LoadDeviceResult>` in the
-        /// v207 reference, `void` in older docs and in community samples), and nothing in this
-        /// repository has ever been compiled - there is no Unity editor in the environment it was
-        /// written in. A compile error on this one line would cost the whole phase its first build,
-        /// while a missing call costs nothing: MRUK's prefab loads the scene on startup by default,
-        /// and step 3 waits for the room either way. So: call it if it is there, poll it if it is a
-        /// Task, and carry on if it is neither.
+        /// Start the device load using the pinned MRUK v207 API. Its third SceneModel argument is
+        /// optional; reflection lookup for only one or two bools does not match that signature.
+        /// A direct call also gives the IL2CPP linker a real reference to the API.
         /// </summary>
-        bool TryRequestDeviceLoad(object mrukSingleton, out string why)
+        bool TryRequestDeviceLoad(Meta.XR.MRUtilityKit.MRUK mrukSingleton, out string why)
         {
             why = "";
             if (mrukSingleton == null) { why = "no MRUK instance"; return false; }
-
             try
             {
-                var method = mrukSingleton.GetType().GetMethod("LoadSceneFromDevice",
-                    new[] { typeof(bool), typeof(bool) })
-                    ?? mrukSingleton.GetType().GetMethod("LoadSceneFromDevice", new[] { typeof(bool) })
-                    ?? mrukSingleton.GetType().GetMethod("LoadSceneFromDevice", Type.EmptyTypes);
-
-                if (method == null) { why = "no LoadSceneFromDevice overload found"; return false; }
-
-                object[] args = method.GetParameters().Length == 2
-                    ? new object[] { requestSceneCaptureIfNoDataFound, true }
-                    : method.GetParameters().Length == 1
-                        ? new object[] { requestSceneCaptureIfNoDataFound }
-                        : new object[0];
-
-                object result = method.Invoke(mrukSingleton, args);
-
-                // a Task that is already done still counts: the room usually arrives through
-                // RegisterSceneLoadedCallback, which MRUK fires immediately when it is loaded.
-                _loadInFlight = result as System.Threading.Tasks.Task;
+                _loadInFlight = mrukSingleton.LoadSceneFromDevice(requestSceneCaptureIfNoDataFound, true);
                 return true;
             }
             catch (Exception e)

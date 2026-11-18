@@ -27,7 +27,7 @@ table in §5 is empty on purpose and is the part that closes the task
 ## 2. The SDK facts this is built on (verified 15 Nov 2026, MRUK v207)
 
 Every member below was read from Meta's reference before it was used. The first draft of
-`SurfaceFinder.cs` carried four `[VERIFY]` markers because those names were guesses; all four resolved
+`MrUkSurfaceFinder.cs` carried four `[VERIFY]` markers because those names were guesses; all four resolved
 correctly, but checking them is what exposed the three problems in §3.
 
 | Member | What it is | Why it is load-bearing here |

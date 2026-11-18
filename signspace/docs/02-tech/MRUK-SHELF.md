@@ -19,7 +19,7 @@
 | Persistence | keyed to the **MRUK anchor**, never a world position |
 
 **Where it sits is a rule, not a guess** — the selection contract is §3.1, and the code that implements
-it is `Scripts/Spatial/SurfaceFinder.cs` (`MrUkSurfaceFinder`). Two numbers in that rule were wrong until
+it is `Scripts/Spatial/MrUkSurfaceFinder.cs` (`MrUkSurfaceFinder`). Two numbers in that rule were wrong until
 P4.1's simulation found them; both are recorded in §3.1 rather than quietly fixed.
 
 **The rule that matters:** a world position survives the app but not the room. If the shelf is stored

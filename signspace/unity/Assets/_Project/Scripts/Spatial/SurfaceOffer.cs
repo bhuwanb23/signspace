@@ -52,7 +52,11 @@ namespace Signspace.Spatial
 
         void Update()
         {
-            if (shelf == null) return;
+            if (shelf == null || visual == null)
+            {
+                if (visual != null && visual.activeSelf) visual.SetActive(false);
+                return;
+            }
 
             bool offered = shelf.HasPendingSurfaceOffer;
             if (visual != null && visual.activeSelf != offered) visual.SetActive(offered);

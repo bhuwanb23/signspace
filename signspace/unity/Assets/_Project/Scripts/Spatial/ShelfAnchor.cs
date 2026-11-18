@@ -325,6 +325,8 @@ namespace Signspace.Spatial
         /// </summary>
         public void PollNow()
         {
+            if (_finder == null || save == null || save.WritesBlocked || OnSurface)
+                _pendingSurfaceOffer = false;
             if (_finder == null || save == null || save.WritesBlocked) return;
 
             if (!OnSurface) PollSurfaceOffer();
@@ -670,6 +672,8 @@ namespace Signspace.Spatial
         /// </summary>
         public void PollSurfaceOffer()
         {
+            // Offers describe the current candidate, not a previously observed surface.
+            _pendingSurfaceOffer = false;
             if (_finder == null || save == null || save.WritesBlocked) return;
             if (OnSurface || !string.IsNullOrEmpty(save.Data.anchorId)) return;
             SurfaceCandidate surface;
@@ -947,6 +951,9 @@ namespace Signspace.Spatial
 
         public void AcceptSurfaceOffer()
         {
+            if (!_pendingSurfaceOffer) return;
+            // The candidate or save can change between the poll and the pinch.
+            PollSurfaceOffer();
             if (!_pendingSurfaceOffer) return;
             _pendingSurfaceOffer = false;
             Place(offerOnly: false);

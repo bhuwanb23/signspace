@@ -69,6 +69,9 @@ namespace Signspace.Editor
                           "' (the P1.6 rig was not in this scene)");
             }
 
+            // Older scenes may have the previous serialized true value; keep the product fallback silent.
+            if (!includeProbe) boot.requestSceneCaptureIfNoDataFound = false;
+
             var head = FindHead();
             if (finder.headOverride == null) finder.headOverride = head;
 

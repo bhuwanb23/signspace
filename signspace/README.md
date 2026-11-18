@@ -2,7 +2,7 @@
 
 > **Every app that teaches sign language is a video with extra steps. This one tells you which sign you accidentally made.**
 
-A seated, hands-only 3D handshape practice space for sign language. You grab a Deaf signer's hand, **turn it with your own wrist** to see the depth a video can never show, match it with your hand — and when you're close to a *different* sign, the app tells you which one you actually made.
+A seated, hands-only 3D ASL handshape practice prototype. Turn a 3D reference hand with your wrist, match it with your hand, and receive near-miss feedback. The checked-in poses are reference-authored; Deaf signer review and consent are not evidenced in this repository.
 
 **Entry:** Meta VR Start Developer Competition 2026 · **Track:** Productivity / New Experience · **Deadline:** 19 Nov 2026, 01:30 IST
 
@@ -12,12 +12,11 @@ A seated, hands-only 3D handshape practice space for sign language. You grab a D
 
 | | |
 |---|---|
-| **Phase** | P0 — Foundation & compliance (not started) |
-| **Days remaining** | 11 (Sat 7 Nov → Tue 17 Nov) |
-| **Concept** | ✅ decided — 1 of 26, scoring 82.9/100 on a 30-metric benchmark |
-| **Novelty** | ✅ decided — 8 prior projects audited, 5 unclaimed moves identified |
-| **Build** | ⬜ nothing built yet |
-| **Kill condition** | 🔴 **No Deaf signer captured by Day 5 → the concept is replaced** |
+| **Project** | Unity code, scenes, prefabs and offline tests exist; see the [repository audit](docs/05-build/REPOSITORY-AUDIT.md) |
+| **Active content** | Six reference-authored shapes: B, U, V, W, C, O; `Signs/index.json` is the runtime list |
+| **Evidence** | Local static tests pass; Unity compile and device behavior were not verified in this audit |
+| **Phase gates** | Repository gate files remain open; signer, device and submission evidence may be stored outside git |
+| **Signer rule** | Do not claim Deaf signer approval or release unverified content without confirmed consent, review and agreed credit |
 
 ---
 
@@ -33,7 +32,7 @@ A seated, hands-only 3D handshape practice space for sign language. You grab a D
 | 5 | [`docs/02-tech/TECH-STACK.md`](docs/02-tech/TECH-STACK.md) | Every package, every rejection, the performance budget |
 | 6 | [`docs/03-content/SIGNSET.md`](docs/03-content/SIGNSET.md) | The 12 shapes, the 3 families, the deliberate exclusions |
 | 7 | [`docs/05-build/RISKS.md`](docs/05-build/RISKS.md) | 12 risks and the one that can kill the project |
-| 8 | [`docs/06-submission/SUBMISSION-COPY.md`](docs/06-submission/SUBMISSION-COPY.md) | Tagline, 494-word description, verified against the limits |
+| 8 | [`docs/06-submission/SUBMISSION-COPY.md`](docs/06-submission/SUBMISSION-COPY.md) | Submission copy; run `scripts/count.py` for current limits |
 
 ## Repository map
 

@@ -34,7 +34,7 @@ Import **Meta XR All-in-One v207**. Record the resolved versions in `docs/02-tec
 | 3 | **ReferenceHand** | A second instance of the hand mesh, positioned ~0.4 m in front, not driven by tracking. This is the shape the user rotates |
 | 4 | **SkeletonPoseSource (right)** | Assign the tracked hand's joint transforms **in SDK order, wrist first**. Assign `matcher` reference |
 | 5 | **SignSetLoader** | Assign `matcher`. Leave `folder = Signs` |
-| 6 | **Matcher** | Add the component. Set `palmJointIndex = 0`. Populate the proximal/mid/distal/thumb joint index arrays (see §4) |
+| 6 | **Matcher** | Add the component and assign `Weights.asset`; joints are mapped by name (see §4) |
 | 7 | **DebugOverlay** | A world-space canvas inside the 55° cone showing: current distance in degrees, best-other distance, band, hold progress. **Build this before anything visual** — you cannot tune what you cannot see |
 | 8 | **ShelfAnchor** | Empty GameObject with the MRUK anchor logic (P4.1). For P1, just a test cube |
 
@@ -77,7 +77,7 @@ read in world instead of local, or the rig's rest pose not being identity (dump 
 `RestPoseDump` and regenerate the poses with `make_pose.py --neutral`). Fix in that order.
 
 **If step 7 fails** and step 3 passes, the metric is fine and the near-miss rule is mis-tuned —
-check `nearMissMaxDeg` (26) against the distance shown for the wrong shape.
+inspect the actual `NearMiss.Evaluate` lock-band, ambiguity and stable-window conditions against the measured distances.
 
 ## 6. What exists in code already
 
@@ -89,10 +89,10 @@ check `nearMissMaxDeg` (26) against the distance shown for the wrong shape.
 | `Scripts/Matching/JointNames.cs` | ✅ | **new** — name-based joint alignment for both SDK layouts |
 | `Scripts/Matching/SignSetLoader.cs` | ✅ | **rewritten** — `UnityWebRequest`, works inside the apk on Android |
 | `Scripts/Hands/SkeletonPoseSource.cs` | ✅ | Reads local rotations, maps joints by name. **One TODO**: `ReadConfidence()` |
-| `Scripts/Core/AppState.cs` | ✅ | The 16-state machine |
+| `Scripts/Core/AppStateMachine.cs` | ✅ | The 16-state machine |
 | `Scripts/Core/SaveSystem.cs` | ✅ | Anchor-keyed persistence |
 | `Scripts/UI/DebugOverlay.cs` | ✅ | The live numbers, in the cone |
-| `Scripts/Gaze/*`, `Spatial/*` | ⬜ | P4 and P6 |
+| `Scripts/Gaze/*`, `Spatial/*` | implemented | P4/P6 code exists; device verification remains open |
 | `Editor/SceneBuilder.cs` | ✅ | **new** — builds the scene from a script |
 | `Editor/BuildScript.cs` | ✅ | **new** — every Player setting as code, plus the APK hash |
 | `Editor/RestPoseDump.cs` | ✅ | **new** — dumps the rig rest pose |

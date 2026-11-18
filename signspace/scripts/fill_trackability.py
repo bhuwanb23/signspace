@@ -6,7 +6,7 @@ reads the probe's own `*.jsonl` output and writes `unity/Assets/StreamingAssets/
 which is the only file the panel reads. Three rules are enforced rather than documented:
 
   1. **`measured` flips only when every one of the twenty shapes has a result.** A half-run probe
-     produces a file that still says "not measured", plus a checklist of what is missing.
+     reports missing rows and refuses to modify the data or document.
   2. **`expected` is never written.** It is the design decision and it is compared before and after;
      the script fails loudly rather than let the two get edited together.
   3. **A shape whose repeated holds disagree becomes a range, not a rounding.** Two holds at 0.62 and
@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import math
 import pathlib
 import sys
 
@@ -36,7 +37,8 @@ DOC = ROOT / "docs" / "03-content" / "TRACKABILITY.md"
 FLOOR = 0.70           # the decision rule: below ~70% lock rate the shape leaves the build
 DISAGREE = 0.20        # spread between repeated holds that makes a shape a range, not a number
 STATUS_LOCKS = "tracks-and-locks"
-STATUS_FAIL = "not-resolvable"
+# A low lock fraction does not establish that a camera cannot see the shape.
+STATUS_FAIL = "tracks-never-locks"
 STATUS_UNMEASURED = "unmeasured"
 
 DOC_BEGIN_31 = "<!-- trackability:3.1:begin -->"
@@ -48,36 +50,45 @@ DOC_END_LINE = "<!-- trackability:line:end -->"
 
 
 def load_rows(paths):
-    """Every probe row, tagged with the condition and hand its file name declares."""
+    """Read probe files; malformed rows and mislabeled conditions are not measurements."""
     rows = []
+    valid_conditions = {"daylight", "lamplight"}
+    valid_hands = {"dominant", "other"}
     for path in paths:
+        if not path.exists():
+            raise ValueError(f"input does not exist: {path}")
         for file in ([path] if path.is_file() else sorted(path.glob("*.jsonl"))):
-            parts = file.stem.split("-")          # probe-<condition>-<hand>
-            condition = parts[1] if len(parts) > 2 else "unknown"
-            hand = parts[2] if len(parts) > 2 else "unknown"
-            for lineno, line in enumerate(file.read_text().splitlines(), 1):
-                line = line.strip()
-                if not line:
+            parts = file.stem.split("-")
+            if (len(parts) != 3 or parts[0] != "probe" or
+                parts[1] not in valid_conditions or parts[2] not in valid_hands):
+                raise ValueError(f"unexpected probe filename: {file.name}")
+            condition, hand = parts[1:]
+            for lineno, line in enumerate(file.read_text(encoding="utf-8").splitlines(), 1):
+                if not line.strip():
                     continue
+                where = f"{file.name}:{lineno}"
                 try:
                     row = json.loads(line)
                 except json.JSONDecodeError as e:
-                    print(f"  skip {file.name}:{lineno} - {e}")
-                    continue
+                    raise ValueError(f"{where}: malformed JSON ({e})") from e
+                if not isinstance(row, dict) or not isinstance(row.get("shape"), str) or not row["shape"]:
+                    raise ValueError(f"{where}: missing shape")
+                value = row.get("lockedFrames")
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= 1:
+                    raise ValueError(f"{where}: lockedFrames must be a finite fraction in [0,1]")
+                if row.get("holdSeconds") != 10:
+                    raise ValueError(f"{where}: a completed 10-second hold is required")
                 row["_condition"], row["_hand"], row["_file"] = condition, hand, file.name
                 rows.append(row)
     return rows
 
 
 def aggregate(rows):
-    """{shape: {"cells": {(condition, hand): [lockedFrames...]}}}"""
+    """{shape: {cells: {(condition, hand): [lockedFrames...]}}}."""
     cells = {}
     for row in rows:
-        shape = row.get("shape")
-        if not shape:
-            continue
         key = (row["_condition"], row["_hand"])
-        cells.setdefault(shape, {}).setdefault(key, []).append(float(row.get("lockedFrames", 0.0)))
+        cells.setdefault(row["shape"], {}).setdefault(key, []).append(float(row["lockedFrames"]))
     return cells
 
 
@@ -93,7 +104,7 @@ def measured_note(shape_cells):
 
     note = f"locked {mean*100:.0f}% of a 10 s hold"
     if len(per_cell) > 1:
-        note += " (" + ", ".join(f"{c} {r*100:.0f}%" for (c, _h), r in sorted(per_cell.items())) + ")"
+        note += " (" + ", ".join(f"{c}/{h} {r*100:.0f}%" for (c, h), r in sorted(per_cell.items())) + ")"
     if len(holds) > 1:
         note += f"; {len(holds)} holds"
     return note
@@ -119,6 +130,9 @@ def decide(data, cells, require_all=True):
 
         variant["lockRate"] = round(rate, 3)
         variant["rates"] = rates
+        variant["holdCount"] = len(holds)
+        variant["holdMin"] = min(holds)
+        variant["holdMax"] = max(holds)
         variant["status"] = STATUS_LOCKS if rate >= FLOOR else STATUS_FAIL
         # Borderline means the holds genuinely straddle the decision, not merely that they wobbled:
         # at least one hold above the floor and one below. That is the only case where rounding either
@@ -144,14 +158,13 @@ def count_line(data):
     total = len(data["variants"])
     if not data.get("measured"):
         excluded = sum(1 for v in data["variants"] if v["expected"] == "not-resolvable")
-        words = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"]
+        words = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"]
         figure = words[excluded] if 0 <= excluded < len(words) else excluded
-        return (f"{figure} handshape{'s' if excluded != 1 else ''} stay out of this build because the "
-                f"cameras cannot see {'it' if excluded == 1 else 'them'}. Here is why.")
+        return f"{figure} handshape{'s' if excluded != 1 else ''} excluded by design, pending tracking measurements."
     robust = sum(1 for v in data["variants"] if v["status"] == STATUS_LOCKS and not v.get("borderline"))
     in_doubt = sum(1 for v in data["variants"] if v.get("borderline"))
     figure = f"{robust} to {robust + in_doubt}" if in_doubt else str(robust)
-    return (f"{figure} of {total} handshape variants are robustly trackable today — measured "
+    return (f"{figure} of {total} handshape variants met the lock-rate threshold — measured "
             f"{data['measuredUtc']} on {data['device']}, {data['conditions']}.")
 
 
@@ -160,10 +173,12 @@ def emit_doc(data, doc_path=DOC):
     rows31 = ["| Shape | Lock rate | 10 s hold behaviour | Category | Shipped? |", "|---|---|---|---|---|"]
     rows32 = ["| Shape | daylight / dominant | lamplight / dominant | daylight / other | lamplight / other |",
               "|---|---|---|---|---|"]
+    signs_index = ROOT / "unity/Assets/StreamingAssets/Signs/index.json"
+    shipped_ids = set(json.loads(signs_index.read_text(encoding="utf-8"))["shapes"])
     for v in data["variants"]:
         rate = "not measured" if v["lockRate"] < 0 else f"{v['lockRate']*100:.0f}%"
         cat = v["status"] if v["status"] != STATUS_UNMEASURED else v["expected"]
-        shipped = "yes" if v["id"] in ("B", "U", "V", "W", "C", "O") else "—"
+        shipped = "yes" if v["id"] in shipped_ids else "—"
         note = (v.get("note") or "").replace("|", "/")
         rows31.append(f"| {v['id']} | {rate} | {note} | {cat} | {shipped} |")
         rates = v.get("rates", {})
@@ -200,6 +215,11 @@ def main():
     ap.add_argument("--conditions", default="normal light")
     args = ap.parse_args()
 
+    try:
+        dt.date.fromisoformat(args.date)
+    except ValueError:
+        print("REFUSING: --date must be a real ISO date (YYYY-MM-DD)", file=sys.stderr)
+        return 2
     data_path = pathlib.Path(args.data)
     data = json.loads(data_path.read_text())
     before_expected = {v["id"]: v["expected"] for v in data["variants"]}
@@ -214,8 +234,17 @@ def main():
         print("no logs given - nothing to do. Pass the folder of probe-*.jsonl files.")
         return 2
 
-    rows = load_rows(paths)
-    cells = aggregate(rows)
+    try:
+        rows = load_rows(paths)
+        cells = aggregate(rows)
+    except (ValueError, OSError) as e:
+        print(f"REFUSING input: {e}", file=sys.stderr)
+        return 2
+    known_ids = {v["id"] for v in data["variants"]}
+    unknown = set(cells) - known_ids
+    if unknown:
+        print(f"REFUSING unknown shape IDs: {', '.join(sorted(unknown))}", file=sys.stderr)
+        return 2
     print(f"read {len(rows)} probe rows over {len(cells)} shapes from {len(paths)} location(s)")
 
     missing, disagreeing = decide(data, cells)
@@ -242,6 +271,9 @@ def main():
         if v["expected"] == "not-resolvable" and not (data["measured"] and v["status"] == STATUS_LOCKS):
             print(f"  {v['id']}  {v['note']}")
 
+    if not complete:
+        print("\nREFUSING incomplete measurement: no output files changed.")
+        return 2
     if args.dry_run:
         print("\ndry run: nothing written")
         return 0

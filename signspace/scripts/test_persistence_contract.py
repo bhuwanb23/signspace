@@ -31,7 +31,7 @@ class Contract(unittest.TestCase):
         self.assertLess(body.index('save.Data.roomId'), body.index('TryResolve'))
         for state in ('RoomNotFound', 'DifferentRoom', 'AnchorNotFound', 'UnsupportedLayout'):
             self.assertIn('Outcome.' + state, body)
-        finder = read('Scripts/Spatial/SurfaceFinder.cs')
+        finder = read('Scripts/Spatial/MrUkSurfaceFinder.cs')
         body = finder[finder.index('public bool TryResolve('):finder.index('static string AnchorUuidOf')]
         self.assertIn('GetCurrentRoom()', body)
         self.assertNotIn('GetAnchors()', body)

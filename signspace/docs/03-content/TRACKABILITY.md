@@ -7,6 +7,10 @@
 
 ---
 
+**Audit note:** the data is currently unmeasured. Existing per-shape explanations are design
+hypotheses, not established device findings. A schema/consistency check or a simulated pose is not
+proof of camera limits, signer approval, or product readiness.
+
 ## 1. Why it exists
 
 A sign-language app that teaches a shape the camera cannot see is worse than one that teaches
@@ -246,15 +250,16 @@ Two states, chosen by the data, never by the writer:
 
 | `measured` | The line |
 |---|---|
-| `false` *(today)* | **"Four handshapes stay out of this build because the cameras cannot see them. Here is why."** |
-| `true` | **"N of 20 handshape variants are robustly trackable today — measured {date} on Quest 3S, normal light."** |
+| `false` *(today)* | **"Four handshapes excluded by design, pending tracking measurements."** |
+| `true` | **"N of 20 handshape variants met the lock-rate threshold — measured {date} on Quest 3S, normal light."** |
 | `true`, with borderline shapes | **"N to N+k of 20 …"** — the range *is* the measurement. Under it: *"Repeated holds disagreed on two; the range is those shapes."* |
 
 and under it, while unmeasured: **"Not measured on every hand yet."**
 
-The unmeasured form deliberately does **not** say "trackable": that would be a tracking claim with no
-tracking behind it. It also does not say "4 of the 20 stay out of this build" — because fourteen of the
-twenty are not in the build, and only four are out *because the cameras cannot see them*. The first
+The unmeasured form reports a design exclusion, not a verified limitation of the cameras. A passing
+lock-rate threshold is also not proof of correct recognition; wrong-shape and dropout results need
+separate review. It also does not say "4 of the 20 stay out of this build" — because fourteen of the
+twenty are not in the build, and four are excluded by design pending measurement. The first
 version of this line said the fraction, and a judge could fairly have asked what happened to the other
 ten; the answer ("they were never in it") is true but it is not a count line's job to explain it. The moment `measured` flips, the same code produces the dated form, because a
 number without a date is a guess and a number without a wall is a lie. **This flag is the whole point
@@ -263,7 +268,7 @@ of the file**: it is cheaper to forget to measure than to forget to ship.
 **The line the panel is showing today, verbatim from the file:**
 
 <!-- trackability:line:begin -->
-> **"Four handshapes stay out of this build because the cameras cannot see them. Here is why."**
+> **"Four handshapes excluded by design, pending tracking measurements."**
 <!-- trackability:line:end -->
 
 ### 4.3 The reasons, verbatim from the file
@@ -321,7 +326,7 @@ apology.
 
 **As shipped, verbatim:**
 
-> **Four handshapes stay out of this build because the cameras cannot see them. Here is why.**
+> **Four handshapes excluded by design, pending tracking measurements.**
 >
 > Not measured on every hand yet.
 >

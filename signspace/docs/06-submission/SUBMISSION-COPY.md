@@ -125,7 +125,7 @@ Three strings ship, all data-driven. It is a panel, not a sentence: the count li
 
 | Slot | Today (`measured:false`) | When the probe has run |
 |---|---|---|
-| Count line | **"Four handshapes stay out of this build because the cameras cannot see them. Here is why."** | **"N of 20 handshape variants are robustly trackable today â€” measured {date} on Quest 3S, normal light."** â€” or **"N to N+k"** when holds disagreed |
+| Count line | **"Four handshapes excluded by design, pending tracking measurements."** | **"N of 20 handshape variants met the lock-rate threshold â€” measured {date} on Quest 3S, normal light."** â€” or **"N to N+k"** when holds disagreed |
 | Provenance | **"Not measured on every hand yet."** | *(dropped â€” the dated line carries its own provenance)*, unless a shape is borderline: *"Repeated holds disagreed on two; the range is those shapes."* |
 | Reasons Ã—4 | M Â· N Â· R Â· T, one line each from the file, e.g. **"R   crossing is not a joint angle the tracker reports"** | the same four slots, now carrying the measured result: *"locked 14% of a 10 s hold"* |
 

@@ -157,9 +157,9 @@ namespace Signspace.Matching
         /// <summary>
         /// The count line. Two shapes, and only one of them is allowed to mention tracking:
         ///
-        ///   measured   "4 of 20 handshape variants are robustly trackable today — measured 18 Nov 2026
+        ///   measured   "4 of 20 handshape variants met the lock-rate threshold — measured 18 Nov 2026
         ///               on Quest 3S, normal light."
-        ///   unmeasured "4 of the 20 handshapes we tested stay out of this build. Here is why."
+        ///   unmeasured "Four handshapes excluded by design, pending tracking measurements."
         ///
         /// A number without a date is a guess, so the dated form only appears when the file carries one.
         /// </summary>
@@ -176,17 +176,13 @@ namespace Signspace.Matching
                 string date = string.IsNullOrEmpty(data.measuredUtc) ? "an unrecorded date" : data.measuredUtc;
                 string device = string.IsNullOrEmpty(data.device) ? "the headset" : data.device;
                 string conditions = string.IsNullOrEmpty(data.conditions) ? "" : ", " + data.conditions;
-                return figure + " of " + total + " handshape variants are robustly trackable today — measured "
+                return figure + " of " + total + " handshape variants met the lock-rate threshold — measured "
                        + date + " on " + device + conditions + ".";
             }
 
-            // Precise, and deliberately not a fraction: 4 of the 20 are out because the cameras cannot see
-            // them, and another several were never going to be in the build. Saying "4 of the 20 stay out"
-            // invites the question "what about the other ten?" - and the honest answer is "they were never
-            // in it", which the panel should not have to explain in a count line.
+            // Before device measurement, exclusions are design decisions, not sensor findings.
             return Words(excluded) + " handshape" + (excluded == 1 ? "" : "s")
-                   + " stay out of this build because the cameras cannot see " + (excluded == 1 ? "it" : "them")
-                   + ". Here is why.";
+                   + " excluded by design, pending tracking measurements.";
         }
 
         /// <summary>

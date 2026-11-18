@@ -50,6 +50,16 @@ class ShelfWiring(unittest.TestCase):
         self.assertIn('RegisterIdle(go);', anchor)
         self.assertIn('shelf.Adopt(obj, shapeId)', payoff)
 
+    def test_offer_null_and_candidate_revalidation(self):
+        offer = text('Scripts/Spatial/SurfaceOffer.cs')
+        anchor = text('Scripts/Spatial/ShelfAnchor.cs')
+        self.assertIn('if (shelf == null || visual == null)', offer)
+        poll = anchor.split('public void PollSurfaceOffer()', 1)[1].split('static void DestroyObject', 1)[0]
+        self.assertLess(poll.index('_pendingSurfaceOffer = false;'), poll.index('TryGetPrimary'))
+        accept = anchor.split('public void AcceptSurfaceOffer()', 1)[1].split('static string Shorten', 1)[0]
+        self.assertIn('PollSurfaceOffer();', accept)
+        self.assertLess(accept.index('PollSurfaceOffer();'), accept.index('Place(offerOnly: false)'))
+
     def test_budget_positive_and_negative(self):
         script = ROOT / 'scripts/shelf_budget.py'
         for args, expected in [(['--check'], 0), (['--check', '--slots', '200'], 1)]:

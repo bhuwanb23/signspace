@@ -29,7 +29,7 @@ USER_FACING = [
     "UI/BandFeedback.cs",
     "UI/TrackingConfidence.cs",
     "UI/BandAudio.cs",
-    "Core/AppState.cs",
+    "Core/AppStateMachine.cs",
     "Core/LockPayoff.cs",
     "Hands/ReferenceHand.cs",
     "Matching/Trackability.cs",   # the honest mirror's count line is copy, so it is checked as copy

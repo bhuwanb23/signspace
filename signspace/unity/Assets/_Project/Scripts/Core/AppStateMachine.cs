@@ -67,7 +67,7 @@ namespace Signspace.Matching
             var back = Previous;
             Previous = Current;
             Current = back;
-            OnStateChanged?.Invoke(Current, Previous);
+            OnStateChanged?.Invoke(Previous, Current);
         }
 
         /// <summary>

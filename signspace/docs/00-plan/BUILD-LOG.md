@@ -617,42 +617,6 @@ heard 50 times, the recorded wooden timbre, and the eight refreshed accessibilit
 them are **H34–H40** in `docs/00-plan/HUMAN-TASKS.md`. G7 stays unevaluated: six of its seven criteria
 are device rows.
 
-### 8.15 Phase 10 as work — P10.1 to P10.5 🟡 DESK-SIDE DONE, GATE NOT EVALUABLE
-
-**What was built.** `scripts/freeze_check.py` — sixteen rows that compare the repository to the freeze
-record: APK bytes, version constants, tag, commits after the frozen-at timestamp, tree cleanliness,
-archive contents, submission record, video master — and print **NOT RUN** for the three questions that
-need an account and a browser. `phases/p10-post/reverify-log.md` with a real dated row. A one-page
-judging note. A one-page launch sketch. A post-mortem that does not have hour counts and says so first.
-`P10Checks` (41 assertions) guards the artefacts.
-
-**What the first run of the guard found — 4 PASS, 9 FAIL, 3 NOT RUN.**
-
-1. **The artifact is intact.** The APK still hashes to `81b60582…`, version name and code still match the
-   record, and nothing was rebuilt. This is the one thing G10 exists to protect and it is green.
-2. **The freeze record cannot name its own source.** `apk-hash.txt` was written with `commit: ` and
-   nothing after it. Root cause: `P9Checks.ReadCommitHash()` looks for `.git` in the current directory,
-   which is `unity/`, while the repository root is one level above. Deliberately **not fixed** — editing
-   the freeze tool after the artifact was built is the "one small fix" the archive rule forbids.
-3. **The freeze was respected in the bytes and violated in the letter.** Three commits landed after the
-   frozen-at timestamp before the phase started (`e232956`, `3f77e69`, `de3c160`) and a fourth
-   (`4dab82b`) carried these P10 artefacts, all paperwork, none touching the APK. There is
-   also no `v1.0-competition` tag. The log records both rather than reinterpreting them as fine.
-4. **There is no entry to protect.** `submitted.md` has no submission ID, invite URL or confirmation
-   email; the archive is a template; the only video is a previs. G9 and G10 are red for the same reason:
-   the build was scheduled first and the conversion work was budgeted last.
-5. **The description understates the build.** `SUBMISSION-COPY.md` says "6 shapes today"; the build ships
-   **twenty** (`StreamingAssets/Probe/index.json`: B U V W C O A M N T R S D E F G I L X Y`). Recorded as
-   an owner decision: fix before upload if not yet submitted, leave and note if it has been.
-
-**Checks run:** compiles with 0 errors; `P10Checks.CheckAll` green; `P7Checks` 131/131, `P6Checks`
-106/106 and `P8Checks` 47/47 unchanged, confirming the phase added no risk to the build. **No APK was
-rebuilt** — the artifact's hash and mtime are unchanged, which is the point of a freeze.
-
-**Not run, and not implied:** the channel listing, the invite URL from a clean account, whether the video
-is public, and the three weekly rows. All of them are **H41–H48** in `docs/00-plan/HUMAN-TASKS.md`. G10's
-verdict is **not evaluable**, which is not the same as failed: there is nothing submitted to measure.
-
 ---
 
 ## 9. What is next

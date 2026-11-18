@@ -2887,7 +2887,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Signspace.Spatial.MrukBoot
   timeoutSeconds: 20
   requestLoad: 1
-  requestSceneCaptureIfNoDataFound: 1
+  requestSceneCaptureIfNoDataFound: 0
 --- !u!114 &1146655174
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2897,7 +2897,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1146655172}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 1157667494}
+  m_Script: {fileID: 11500000, guid: adae90a614dbba64d8b7b8980f92a118, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Signspace.Spatial.MrUkSurfaceFinder
   minDistance: 0.3
@@ -2925,21 +2925,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!115 &1157667494
-MonoScript:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  serializedVersion: 7
-  m_DefaultReferences: {}
-  m_Icon: {fileID: 0}
-  m_Type: 0
-  m_ExecutionOrder: 0
-  m_ClassName: MrUkSurfaceFinder
-  m_Namespace: Signspace.Spatial
-  m_AssemblyName: Assembly-CSharp
 --- !u!1 &1218229594
 GameObject:
   m_ObjectHideFlags: 0

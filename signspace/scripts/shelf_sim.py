@@ -24,7 +24,7 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-FINDER = ROOT / "unity/Assets/_Project/Scripts/Spatial/SurfaceFinder.cs"
+FINDER = ROOT / "unity/Assets/_Project/Scripts/Spatial/MrUkSurfaceFinder.cs"
 
 UP = (0.0, 1.0, 0.0)
 
@@ -206,7 +206,7 @@ CAP_PAIR = (
 
 def main():
     print("=" * 78)
-    print("P4.1 shelf placement - constants read from SurfaceFinder.cs")
+    print("P4.1 shelf placement - constants read from MrUkSurfaceFinder.cs")
     print(f"  distance band {C['minDistance']:.2f}-{C['maxDistance']:.2f} m · cone {C['forwardConeDegrees']:.0f} deg "
           f"(yaw) · height {C['preferredHeight']:.2f} ± {C['heightTolerance']:.2f} m")
     print(f"  min extent {C['minExtent']} · comfortable extent {C['comfortableExtent']}")

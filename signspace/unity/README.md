@@ -1,8 +1,6 @@
 # unity/
 
-Unity project root. **Created at P0.4** — this folder is deliberately empty until then.
-
-Until the project exists, the canonical layout lives in `docs/02-tech/TECH-STACK.md` §5. Do not scatter scripts here by hand; the folder structure is part of the design.
+Unity project root: open this folder with Unity **6000.3.28f1**. Packages are pinned in `Packages/manifest.json`; `Assets/_Project/Scenes/Main.unity` is the main scene. Follow [SETUP.md](SETUP.md), and see [the repository audit](../docs/05-build/REPOSITORY-AUDIT.md) for unverified changes and required device tests.
 
 ## Non-negotiables
 - `Library/`, `Temp/`, `Build/`, `Logs/` are gitignored. Never commit them.

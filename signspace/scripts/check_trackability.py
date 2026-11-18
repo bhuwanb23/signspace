@@ -10,8 +10,8 @@ decides whether what is in it is publishable. It is a *floor*, in the same spiri
     file that claims nothing is honest, one that claims a bit is not;
   - **if `measured` is true, every status must be a measurement**, every lock rate must be in [0, 1],
     and `measuredUtc` must be a real ISO date with a device and a conditions string beside it;
-  - a `borderline` shape must actually have repeated holds behind it (`rates` with more than one entry)
-    and must sit inside 15 points of the floor - otherwise the range is decoration;
+  - a `borderline` shape must actually have repeated holds behind it (`rates` with `holdCount` at least two)
+    and have a recorded min/max that straddles the floor;
   - the count line the panel will print must appear **verbatim** in `TRACKABILITY.md`. If the doc and
     the panel disagree, this fails; the fix is the file, never the doc.
 
@@ -37,7 +37,6 @@ EXPECTED_VALUES = {"fine", "may-resolve", "not-resolvable", "out-of-scope"}
 STATUS_VALUES = {"unmeasured", "tracks-and-locks", "not-resolvable",
                  "flickers", "tracks-wrong-shape", "tracks-never-locks"}
 FLOOR = 0.70
-BORDERLINE_BAND = 0.15
 
 
 def count_line(data):
@@ -46,14 +45,13 @@ def count_line(data):
     total = len(data["variants"])
     if not data.get("measured"):
         excluded = sum(1 for v in data["variants"] if v["expected"] == "not-resolvable")
-        words = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"]
+        words = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"]
         figure = words[excluded] if 0 <= excluded < len(words) else excluded
-        return (f"{figure} handshape{'s' if excluded != 1 else ''} stay out of this build because the "
-                f"cameras cannot see {'it' if excluded == 1 else 'them'}. Here is why.")
+        return f"{figure} handshape{'s' if excluded != 1 else ''} excluded by design, pending tracking measurements."
     robust = sum(1 for v in data["variants"] if v["status"] == "tracks-and-locks" and not v.get("borderline"))
     in_doubt = sum(1 for v in data["variants"] if v.get("borderline"))
     figure = f"{robust} to {robust + in_doubt}" if in_doubt else str(robust)
-    return (f"{figure} of {total} handshape variants are robustly trackable today — measured "
+    return (f"{figure} of {total} handshape variants met the lock-rate threshold — measured "
             f"{data['measuredUtc']} on {data['device']}, {data['conditions']}.")
 
 
@@ -98,10 +96,12 @@ def main():
             if not (0.0 <= rate <= 1.0):
                 fail(shape, f"lockRate={rate} is not a fraction")
             if v.get("borderline"):
-                if len(v.get("rates", {})) < 2:
-                    fail(shape, "borderline with no repeated holds behind it")
-                if abs(rate - FLOOR) > BORDERLINE_BAND:
-                    fail(shape, f"borderline at {rate:.2f}, more than {BORDERLINE_BAND} from the floor")
+                if v.get("holdCount", 0) < 2:
+                    fail(shape, "borderline with fewer than two holds behind it")
+                lo, hi = v.get("holdMin"), v.get("holdMax")
+                if (not isinstance(lo, (int, float)) or not isinstance(hi, (int, float)) or
+                    not 0 <= lo < FLOOR <= hi <= 1 or hi - lo <= 0.20):
+                    fail(shape, "borderline requires a valid min/max straddling the floor with >20-point spread")
         try:
             dt.date.fromisoformat(data.get("measuredUtc", ""))
         except ValueError:

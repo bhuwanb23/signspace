@@ -22,7 +22,7 @@ feature. Everything here is conversion.
 | File | What it is | Verified |
 |---|---|---|
 | `Editor/P9Checks.cs` | `FreezeBuild()` — checks the APK exists, records SHA-256, checks the package name, reads the version code, writes `phases/p9-submission/apk-hash.txt`. `VerifyCopy()` — checks `SUBMISSION-COPY.md` exists and is non-empty. `CheckAll()` runs both. | ✅ compiles, runs, exits 0 |
-| `Editor/BuildScript.cs` | `Version = "1.0.0-competition"`, bundle version code auto-increments from `version-code.txt`, SHA-256 logged, active input handling verified | ✅ 0 errors, 0 warnings |
+| `Editor/BuildScript.cs` | `Version = "1.0.0-competition"`, bundle version code is hard-coded to 14 in `BuildScript.cs` (the separate `version-code.txt` contains 13); increment/check explicitly before an upload, SHA-256 logged, active input handling verified | ✅ 0 errors, 0 warnings |
 | `phases/p9-submission/submitted.md` | Template for the freeze record, submission ID, confirmation email, invite URL | ✅ written |
 | `phases/p9-submission/shot-list.csv` | 14 shots with timecodes, source, what each proves | ✅ written |
 | `phases/p9-submission/archive/ARCHIVE.md` | Archive template: freeze record, tag, rules | ✅ written |
