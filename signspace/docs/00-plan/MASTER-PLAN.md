@@ -328,7 +328,7 @@ Update this table at the end of every working day. It is the only place progress
 | P7 Polish | 🟡 **Desk-verified, 131/131 checks pass** | 15 Nov | — | Sound 16 clips, text 0 instructional words, FoV 19.0° at 70°×66°, perf posture clean. **Owed: sustained 72 fps, thermal, 20 launches, chime fatigue** |
 | P8 Playtest | 🟡 **Instrumenting** | 17 Nov | — | `PlaytestProbe`, `PlaytestTimeline`, `playtest_report.py` exist and compile. `P8Checks` = 47/47. **Owed: the actual sessions** |
 | P9 Submission | 🟡 **The build is a command** | 15 Nov | — | `BuildScript.BuildAndroid` → 62 MB APK, SHA-256 logged, bundle version code auto-increments. `P9Checks.CheckAll` = freeze record written |
-| P10 Post | 🟡 **Desk-side done; G10 NOT EVALUABLE** | 18 Nov | — | `freeze_check.py` = **4 PASS / 9 FAIL / 3 NOT RUN**: APK byte-identical to the freeze record; no tag, empty commit field, 3 post-freeze commits, empty submission record, no video master. **Owed: H41–H48** |
+| P10 Post | 🟡 **Desk-side done; G10 NOT EVALUABLE** | 18 Nov | — | `freeze_check.py` = **4 PASS / 9 FAIL / 3 NOT RUN**: APK byte-identical to the freeze record; no tag, empty commit field, 4 post-freeze commits, empty submission record, no video master. **Owed: H41–H48** |
 
 ---
 

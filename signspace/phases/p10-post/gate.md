@@ -5,7 +5,7 @@
 ## Criteria — all must be true
 - [ ] Morning-after verification passed — **run, and it is red**: 4 PASS / 9 FAIL / 3 NOT RUN (`reverify-log.md`)
 - [ ] Weekly re-verification logged until judging closes — **0 of 3 rows written** (25 Nov, 2 Dec, 9 Dec)
-- [ ] No commits landed on `main` after the freeze — **3 did** (`e232956`, `3f77e69`, `de3c160`); the APK bytes did not change
+- [ ] No commits landed on `main` after the freeze — **4 did** (`e232956`, `3f77e69`, `de3c160`, `4dab82b`); the APK bytes did not change
 - [x] Judging note ready — `judging-note.md`
 - [x] Launch sketch written — `launch-sketch.md`
 - [ ] Post-mortem written with real hour counts — **written, but hours are NOT RECORDED**; the document says so and uses measured commit data instead
@@ -17,7 +17,7 @@ There is no red here — only loss. If the channel breaks, fix it on a branch, r
 
 | Field | Value |
 |---|---|
-| Verdict | ⬜ NOT EVALUABLE (no ✅ PASS, no ✅ FAIL — there is nothing submitted to judge) |
+| Verdict | ⬜ NOT EVALUABLE (neither PASS nor FAIL — there is nothing submitted to judge) |
 | Date evaluated | 18 Nov 2026 (desk row) |
 | Evaluated by | `scripts/freeze_check.py` (mechanical) + P10.2–P10.5 documents |
 | Evidence (screenshot / log / recording) | `phases/p10-post/reverify-log.md` row 1 — 4 PASS / 9 FAIL / 3 NOT RUN |

@@ -624,7 +624,7 @@ record: APK bytes, version constants, tag, commits after the frozen-at timestamp
 archive contents, submission record, video master — and print **NOT RUN** for the three questions that
 need an account and a browser. `phases/p10-post/reverify-log.md` with a real dated row. A one-page
 judging note. A one-page launch sketch. A post-mortem that does not have hour counts and says so first.
-`P10Checks` (34 assertions) guards the artefacts.
+`P10Checks` (41 assertions) guards the artefacts.
 
 **What the first run of the guard found — 4 PASS, 9 FAIL, 3 NOT RUN.**
 
@@ -635,7 +635,8 @@ judging note. A one-page launch sketch. A post-mortem that does not have hour co
    which is `unity/`, while the repository root is one level above. Deliberately **not fixed** — editing
    the freeze tool after the artifact was built is the "one small fix" the archive rule forbids.
 3. **The freeze was respected in the bytes and violated in the letter.** Three commits landed after the
-   frozen-at timestamp (`e232956`, `3f77e69`, `de3c160`), all paperwork, none touching the APK. There is
+   frozen-at timestamp before the phase started (`e232956`, `3f77e69`, `de3c160`) and a fourth
+   (`4dab82b`) carried these P10 artefacts, all paperwork, none touching the APK. There is
    also no `v1.0-competition` tag. The log records both rather than reinterpreting them as fine.
 4. **There is no entry to protect.** `submitted.md` has no submission ID, invite URL or confirmation
    email; the archive is a template; the only video is a previs. G9 and G10 are red for the same reason:

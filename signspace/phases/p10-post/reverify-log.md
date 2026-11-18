@@ -94,6 +94,46 @@ trade a verified artifact for an unverified one.
 
 ---
 
+## Row 2 — 18 Nov 2026, later the same day · after the P10 artefacts were written
+
+**Command:** `python signspace/scripts/freeze_check.py` (exit 1)
+**Result:** **4 PASS · 9 FAIL · 3 NOT RUN — unchanged.**
+
+The counts are identical to row 1, and that is the intended outcome rather than a coincidence: the P10
+documents, `freeze_check.py` and `P10Checks.cs` are **untracked**, so they change the “working tree clean”
+row's *description* (1 file → 16) without changing its verdict, and they change nothing about the APK.
+
+The row exists because the log is append-only and the tree genuinely changed. Deleting row 2 and editing
+row 1 to say “16 files” would make the record tidier and less true.
+
+**What this means for the freeze:** P10's own paperwork is now part of the post-freeze drift the gate
+records. It must not be committed to `main` until judging closes; if it is committed, the honest move is
+a new row saying so, not a quiet amend.
+
+---
+
+## Row 3 — 18 Nov 2026, 21:53 UTC · a commit landed
+
+**Command:** `python signspace/scripts/freeze_check.py` (exit 1)
+**Result:** **4 PASS · 9 FAIL · 3 NOT RUN — same verdicts, one description changed.**
+
+A commit (`4dab82b`, *"feat: Add launch sketch and re-verification log for P10 phase"*) landed on `main`
+with the P10 artefacts in it. Row 2 said they were untracked and must stay that way; that sentence was
+true when it was written and is false now, so it is not edited — this row supersedes it.
+
+| Row | commits after freeze | tree |
+|---|---|---|
+| 1 | 3 | 1 untracked file |
+| 2 | 3 | 16 untracked files |
+| **3** | **4** | **4 modified files** |
+
+This is the freeze being violated by the project's own paperwork, in public, which is the point of an
+append-only log. Nothing in rows 1–3 changes the APK: its hash is still `81b60582…` and its mtime is still
+17 Nov 22:56. The remediation does not change either — the tag (H41) and the record's commit field (H42)
+are still the two things that turn “there is a hash” into “there is an identified entry”.
+
+---
+
 ## Weekly rows — one per week until judging closes
 
 Run the same command on the same weekday, append a row, and do not edit earlier ones. A week with no row
