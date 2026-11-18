@@ -617,6 +617,41 @@ heard 50 times, the recorded wooden timbre, and the eight refreshed accessibilit
 them are **H34–H40** in `docs/00-plan/HUMAN-TASKS.md`. G7 stays unevaluated: six of its seven criteria
 are device rows.
 
+### 8.15 Phase 10 as work — P10.1 to P10.5 🟡 DESK-SIDE DONE, GATE NOT EVALUABLE
+
+**What was built.** `scripts/freeze_check.py` — eighteen rows comparing the repository to the freeze
+record: APK bytes *and* packaged manifest, version constants, tag, commits after the frozen-at timestamp,
+tree state, archive contents, submission record, video master. `phases/p10-post/reverify-log.md` with four
+dated, append-only rows. A 675-word judging note. A one-page launch sketch. A post-mortem that has no hour
+counts and says so first. `P10Checks` (41 assertions).
+
+**What the guard found — 6 PASS, 9 FAIL, 3 NOT RUN.**
+
+1. **The artifact is intact.** APK hashes to `81b60582…`, mtime unchanged, never rebuilt.
+2. **Two checks were added after the first run, and they caught a false pass.** The record and
+   `version-code.txt` both said 13 because one was generated from the other; `aapt2 dump badging` and
+   `BuildScript.BundleVersionCode` both say **14**. The record understated the artifact's own version code.
+3. **The record cannot name its own source.** `commit:` is empty: `P9Checks.ReadCommitHash()` looks for
+   `.git` in `unity/`, one level below the repository root.
+4. **The freeze holds in bytes and not in the letter.** Commits landed after the frozen-at timestamp and
+   there is no tag; none of them touched the APK.
+5. **There is no entry to protect.** No submission ID, invite URL or confirmation email; the archive is a
+   template; the only video is a previs.
+
+**Also corrected, from the audit review.** The finder and state-machine "renames" were copies, so the
+project did not compile (`CS0101`/`CS0111`); stale originals were deleted and their GUIDs moved to the
+surviving files so the scene kept its references. The audit's own regression suite read UTF-8 files with
+the locale codec and scanned Unity's package cache, producing 4,611 false broken links; both were fixed.
+The copy's "6 shapes today" now reads "20 handshapes today", matching `Probe/index.json`.
+
+**Checks run:** compile 0 errors; `P10Checks` 41/41; `P7Checks` 131/131, `P6Checks` 106/106, `P8Checks`
+47/47, `CoreStateChecks` pass; `test_repo_integrity.py` 7/7 and the seven Python validators green.
+**No APK was rebuilt.**
+
+**Not run, and not implied:** channel listing, clean-account invite URL, public video, three weekly rows.
+All are **H41–H48** in `docs/00-plan/HUMAN-TASKS.md`. G10 stays **not evaluable** — there is nothing
+submitted to measure.
+
 ---
 
 ## 9. What is next

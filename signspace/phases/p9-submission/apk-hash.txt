@@ -1,6 +1,6 @@
 APK: Builds/Android/signspace.apk
 package: com.signspace.signspace
-version: 1.0.0-competition (bundle version code 13)
+version: 1.0.0-competition (bundle version code 14)
 sha256: 81b60582ed2feff6f719edba3796c60c49707f1b2065c79952a7c227be2cdb9d
 frozen at: 2026-11-17T17:27:09.3292996Z
 commit: 

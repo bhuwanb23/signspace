@@ -60,6 +60,31 @@ def sha256(path):
     return digest.hexdigest()
 
 
+def apk_version_code(apk):
+    """Read versionCode from the packaged manifest with aapt2, if the SDK ships one."""
+    import glob
+    patterns = [
+        os.environ.get("AAPT2", ""),
+        "/e/unity/Editors/*/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/build-tools/*/aapt2.exe",
+        os.path.expanduser("~/AppData/Local/Android/Sdk/build-tools/*/aapt2.exe"),
+    ]
+    for pattern in patterns:
+        if not pattern:
+            continue
+        for candidate in glob.glob(pattern):
+            if not os.path.isfile(candidate):
+                continue
+            try:
+                out = subprocess.run([candidate, "dump", "badging", apk],
+                                     capture_output=True, text=True, timeout=60).stdout
+            except (OSError, subprocess.SubprocessError):
+                continue
+            found = re.search(r"versionCode='(\d+)'", out)
+            if found:
+                return found.group(1)
+    return ""
+
+
 def parse_record(path):
     fields = {}
     with open(path, encoding="utf-8") as handle:
@@ -116,6 +141,15 @@ def main():
         actual_hash = sha256(apk)
         row(rows, "apk sha256", PASS if actual_hash == record["sha256"] else FAIL,
             record["sha256"][:16] + "…", actual_hash[:16] + "…")
+
+        manifest_code = apk_version_code(apk)
+        if manifest_code:
+            row(rows, "bundle version code (APK manifest)",
+                PASS if manifest_code == record["version_code"] else FAIL,
+                record["version_code"], manifest_code)
+        else:
+            row(rows, "bundle version code (APK manifest)", NOTRUN, record["version_code"],
+                "aapt2 not found; cannot read the packaged manifest")
     else:
         row(rows, "apk present", FAIL, record["apk"] or "a path in the record", "missing")
 
@@ -130,8 +164,21 @@ def main():
         version_code = open(VERSION_FILE, encoding="utf-8").readline().strip()
     row(rows, "version name", PASS if version_name == record["version_name"] else FAIL,
         record["version_name"], version_name or "not found")
-    row(rows, "bundle version code", PASS if version_code == record["version_code"] else FAIL,
+    row(rows, "bundle version code (record)",
+        PASS if version_code == record["version_code"] else FAIL,
         record["version_code"], version_code or "not found")
+
+    # The record and version-code.txt can agree with each other and still be wrong: the build path
+    # ignores that file and uses the const in BuildScript.cs. Check the const too, so a stale
+    # version-code.txt cannot certify itself.
+    build_code = ""
+    if os.path.isfile(BUILD_SCRIPT):
+        found_code = re.search(r"const int BundleVersionCode\s*=\s*(\d+)",
+                               open(BUILD_SCRIPT, encoding="utf-8").read())
+        build_code = found_code.group(1) if found_code else ""
+    row(rows, "bundle version code (build path)",
+        PASS if build_code == record["version_code"] else FAIL,
+        record["version_code"], build_code or "not found")
 
     # 3. the freeze, in git
     tag_commit = git("rev-list", "-n", "1", args.tag)

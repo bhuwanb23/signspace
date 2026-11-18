@@ -93,7 +93,23 @@ retune of `scripts/make_sfx.py` plus a re-run of the check — the wiring does n
 | H32 | **Clean-device install test** | a second Meta account installs from the invite URL with no help | screen recording | ⬜ |
 | H33 | **Submit the form and confirm by email** | confirmation email on file | `phases/p9-submission/` | ⬜ |
 
-## 6. How to verify a row before ticking it
+## 6. Post-submission (P10) — needs accounts, a video and a calendar
+
+| # | Task | Acceptance | Evidence | Status |
+|---|---|---|---|---|
+| H41 | **Tag the frozen build** | `git tag v1.0-competition <commit that produced 81b60582…>` and push | `git tag -l`; `freeze_check.py` tag row | ⬜ |
+| H42 | **Fix the record's commit field** | on a branch: point `P9Checks.ReadCommitHash()` at the repo root, then fill `commit:` from `git log` | record identifies the code | ⬜ |
+| H43 | **Channel listing** | `Competition` lists `1.0.0-competition` **code 14** built from `81b60582…`; screenshot saved | `archive/channel-state.png` | ⬜ |
+| H44 | **Fill the submission record** | submission ID, confirmation email, invite URL in `submitted.md` | `freeze_check.py` submission rows | ⬜ |
+| H45 | **Video master** | the captured entry video in `archive/video-master/` (or its URL in `submitted.md`) | `freeze_check.py` video row | ⬜ |
+| H46 | **Clean-account invite test** | a second Meta account with no developer login installs and launches | screen recording | ⬜ |
+| H47 | **Three weekly rows** | run `freeze_check.py` on 25 Nov, 2 Dec, 9 Dec; append, never edit | `reverify-log.md` | ⬜ |
+| H48 | **Reconcile the copy's shape count** | description now says "20 handshapes today", matching `Probe/index.json` | `count.py`: 499/500 words | ✅ done in repo |
+
+**H41 and H44 are the two that make the entry exist at all.** Until they are done, the guard reports the
+artifact intact and the submission absent — exactly what row 4 of `reverify-log.md` says.
+
+## 7. How to verify a row before ticking it
 
 | If the row is… | Run this first |
 |---|---|
@@ -102,7 +118,8 @@ retune of `scripts/make_sfx.py` plus a re-run of the check — the wiring does n
 | polish (sound, text, FoV, perf posture, boot probe, crash posture) | `SIGNSPACE/P7 Check all` (131 assertions) |
 | shelf / persistence | `SIGNSPACE/P4.3 Persistence checks` and `SIGNSPACE/Shelf check` |
 | credits / copy | `SIGNSPACE/P5.5 Check credits` and `SIGNSPACE/P5.7 Check blind-spot copy` |
-| any code change at all | `SIGNSPACE/Build main scene`, then the checks above, then rebuild the APK and update the sha here |
+| post-submission / freeze | `python scripts/freeze_check.py` (18 rows; account rows stay NOT RUN) |
+| any code change at all | `SIGNSPACE/Build main scene`, then the checks above, then rebuild the APK and update the sha here — **but not after the freeze**: a rebuild trades a verified artifact for an unverified one |
 
 **A row is only done when the evidence file exists.** Marking a row done without it would put this
 repository back in the state this document exists to prevent: a doc that describes an intention.

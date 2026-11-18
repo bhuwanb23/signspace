@@ -57,7 +57,7 @@ Sign language is three-dimensional. Almost every resource that teaches it is a f
 
 **What we don't claim.** We don't claim fluency. A 2020 RCT of 60 learners found no significant effect of VR platform on immediate ASL recall. We claim something narrower and testable: you can inspect a 3D handshape from any angle and be told which sign you actually produced. Neither is possible with video.
 
-**Integrity.** Handshapes are authored against published ASL references and reviewed by a Deaf signer before shipping. This is a handshape practice companion, not a replacement for a Deaf teacher. Facial and motion grammar are out of scope in v1. 6 shapes today; the engine is language-agnostic; 60 arrive at launch - **Q1 2027.**
+**Integrity.** Handshapes are authored against published ASL references and reviewed by a Deaf signer before shipping. This is a handshape practice companion, not a replacement for a Deaf teacher. Facial and motion grammar are out of scope in v1. 20 handshapes today; the engine is language-agnostic; 60 arrive at launch - **Q1 2027.**
 
 ---
 

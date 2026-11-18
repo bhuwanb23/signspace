@@ -155,3 +155,35 @@ PASS while the submission record is empty would be the one dishonest line in the
 | Date | Change | By |
 |---|---|---|
 | 18 Nov 2026 | File created; row 1 written from a real `freeze_check.py` run, including the nine FAILs. | agent |
+
+## Row 4 — 18 Nov 2026, 16:47 UTC · the guard was widened, and caught a false pass
+
+**Command:** `python signspace/scripts/freeze_check.py` (exit 1)
+**Result:** **6 PASS · 9 FAIL · 3 NOT RUN** across 18 rows.
+
+Rows 1–3 compared the record's version code against `version-code.txt` — which is the file the record
+was generated *from*. That is not a check; it is the record agreeing with itself. Two rows were added:
+the `const int BundleVersionCode` in `BuildScript.cs` (the value the build path actually uses) and the
+packaged manifest read with `aapt2 dump badging`.
+
+Both said **14**. The record said **13**. So the freeze record understated the APK's version code, and
+the earlier PASS was blindness rather than truth.
+
+**Corrected, and recorded because it changes a frozen document:**
+
+| File | Before | After | Why |
+|---|---|---|---|
+| `unity/Assets/_Project/version-code.txt` | 13 | **14** | the file was stale; `BuildScript` ignores it and uses 14 |
+| `phases/p9-submission/apk-hash.txt` | `bundle version code 13` | **14** | the record must describe the artifact it froze |
+| `docs/06-submission/SUBMISSION-COPY.md` | "6 shapes today" | **"20 handshapes today"** | `Probe/index.json` ships 20; 499/500 words still holds |
+
+The APK was not rebuilt: hash `81b60582…` and mtime 17 Nov 22:56 are unchanged, and the packaged
+manifest was already 14 when the record claimed otherwise.
+
+**Also fixed outside this log:** the audit's rename of the finder and the state machine was a copy, not a
+rename, so the project did not compile (duplicate `MrUkSurfaceFinder`, `ISurfaceFinder`,
+`SurfaceCandidate`, `AppState`, `AppStateMachine`). The stale originals were deleted and their GUIDs moved
+onto the surviving files, so `Main.unity` keeps its references.
+
+**What is still owed is unchanged:** tag, commit hash in the record, submission ID, invite URL, channel
+screenshot, video master, clean-account install, three weekly rows.
