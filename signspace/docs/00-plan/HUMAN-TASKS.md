@@ -93,7 +93,24 @@ retune of `scripts/make_sfx.py` plus a re-run of the check — the wiring does n
 | H32 | **Clean-device install test** | a second Meta account installs from the invite URL with no help | screen recording | ⬜ |
 | H33 | **Submit the form and confirm by email** | confirmation email on file | `phases/p9-submission/` | ⬜ |
 
-## 6. How to verify a row before ticking it
+## 6. Post-submission (P10) — needs accounts, a video and a calendar
+
+| # | Task | Acceptance | Evidence | Status |
+|---|---|---|---|---|
+| H41 | **Tag the frozen build** | `git tag v1.0-competition <the commit that produced 81b60582…>` and push; the tag names the APK's source | `git tag -l` shows it; `freeze_check.py` row 5 goes PASS | ⬜ |
+| H42 | **Fix the freeze record's commit field** | on a **branch** (not `main`): point `P9Checks.ReadCommitHash()` at the repo root, then fill `commit:` in `apk-hash.txt` from `git log` for the frozen time | record identifies the code; `freeze_check.py` row 6 PASS | ⬜ |
+| H43 | **Channel listing** | `Competition` channel lists `1.0.0-competition` (code 13) built from APK `81b60582…`; screenshot saved | `phases/p9-submission/archive/channel-state.png` | ⬜ |
+| H44 | **Fill the submission record** | submission ID, confirmation email, invite URL in `submitted.md` | `freeze_check.py` rows 10–12 PASS | ⬜ |
+| H45 | **Video master** | the captured entry video in `archive/video-master/` (or its URL in `submitted.md`) | `freeze_check.py` row 13 PASS | ⬜ |
+| H46 | **Clean-account invite test** | a second Meta account, no developer login, installs from the invite URL and launches | screen recording; `freeze_check.py` row 14 PASS | ⬜ |
+| H47 | **Three weekly re-verification rows** | run `freeze_check.py` on 25 Nov, 2 Dec and 9 Dec and append a row each time | `reverify-log.md` rows 2–4 | ⬜ |
+| H48 | **Reconcile the shape count before upload** | the description says 6 shapes; the build ships 20. Correct it **only if the entry is not yet submitted** | `SUBMISSION-COPY.md` §3 and `Probe/index.json` agree | ⬜ |
+
+**H41 and H44 are the two that make the entry exist at all.** Until they are done, `freeze_check.py`
+reports the artifact intact and the submission absent — which is exactly what row 1 of
+`reverify-log.md` says.
+
+## 7. How to verify a row before ticking it
 
 | If the row is… | Run this first |
 |---|---|
@@ -102,7 +119,8 @@ retune of `scripts/make_sfx.py` plus a re-run of the check — the wiring does n
 | polish (sound, text, FoV, perf posture, boot probe, crash posture) | `SIGNSPACE/P7 Check all` (131 assertions) |
 | shelf / persistence | `SIGNSPACE/P4.3 Persistence checks` and `SIGNSPACE/Shelf check` |
 | credits / copy | `SIGNSPACE/P5.5 Check credits` and `SIGNSPACE/P5.7 Check blind-spot copy` |
-| any code change at all | `SIGNSPACE/Build main scene`, then the checks above, then rebuild the APK and update the sha here |
+| post-submission / freeze | `python scripts/freeze_check.py` (16 rows; account rows stay NOT RUN) |
+| any code change at all | `SIGNSPACE/Build main scene`, then the checks above, then rebuild the APK and update the sha here — **but not after the freeze**: a rebuild trades a verified artifact for an unverified one |
 
 **A row is only done when the evidence file exists.** Marking a row done without it would put this
 repository back in the state this document exists to prevent: a doc that describes an intention.

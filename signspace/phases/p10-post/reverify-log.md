@@ -1,0 +1,117 @@
+# P10 — Re-verification log
+
+**Phase:** P10 · **Gate:** G10 · **Log started:** 18 Nov 2026 · **Rule:** append-only. A past row is never edited; a correction is a new row.
+
+> G10 asks whether the entry is *still* intact three weeks later. That is a question about time, so the
+> answer has to be a dated row rather than a paragraph. `scripts/freeze_check.py` performs the mechanical
+> part — artifact bytes, version constants, git tag, commits after the freeze, archive contents and the
+> submission record — and prints PASS / FAIL / NOT RUN. The account-side checks (clean-account invite URL,
+> channel listing, public video) are **NOT RUN** here because no browser session or headset is available
+> to this check; they are never inferred from a file that happens to exist.
+
+---
+
+## Row 1 — 18 Nov 2026, 16:14 UTC · desk re-verification
+
+**Command:** `python signspace/scripts/freeze_check.py` (exit 1)
+**Result:** **4 PASS · 9 FAIL · 3 NOT RUN — the freeze is intact on the artifact and broken on the paperwork.**
+
+| # | Check | Expected | Actual | Verdict |
+|---|---|---|---|---|
+| 1 | APK present | `Builds/Android/signspace.apk` | 64,617,747 bytes, mtime 17 Nov 22:56 UTC | ✅ PASS |
+| 2 | APK SHA-256 | `81b60582…cdb9d` | `81b60582ed2feff6…be2cdb9d` | ✅ PASS |
+| 3 | Version name | `1.0.0-competition` | `1.0.0-competition` | ✅ PASS |
+| 4 | Bundle version code | 13 | 13 | ✅ PASS |
+| 5 | Tag `v1.0-competition` exists | a tag at the submitted commit | **no such tag** | ❌ FAIL |
+| 6 | Record commit is HEAD | a commit hash in `apk-hash.txt` | the record says `commit: ` (empty) | ❌ FAIL |
+| 7 | No commits after freeze | 0 | **3** — `e232956`, `3f77e69`, `de3c160` | ❌ FAIL |
+| 8 | Working tree clean | 0 files | 1 (this script, new) | ❌ FAIL |
+| 9 | Archive complete | 5 files | missing `BUILD.md`, `shot-list.csv`, `edit-notes.md`, `channel-state.png`, `count-output.txt` | ❌ FAIL |
+| 10 | Submission record: ID | recorded | empty | ❌ FAIL |
+| 11 | Submission record: invite URL | recorded | empty | ❌ FAIL |
+| 12 | Submission record: confirmation email | recorded | empty | ❌ FAIL |
+| 13 | Video master present | the captured entry video | **only a previs exists** | ❌ FAIL |
+| 14 | Invite URL from a clean account | opens, installs, launches | requires a clean browser session and a headset | ⬜ NOT RUN |
+| 15 | Channel lists the frozen version | `1.0.0-competition` | requires a developer-account login | ⬜ NOT RUN |
+| 16 | Video plays publicly | the submitted video URL | requires the video URL and a browser | ⬜ NOT RUN |
+
+### What this row actually establishes
+
+**The artifact is frozen.** The APK on disk is byte-identical to the moment the freeze record was written
+(`81b60582…`), the version name and code match the record, and nothing in the repository can change the
+bytes a judge would install. That is the part G10 cares about most, and it is green.
+
+**The submission is not.** The record has no commit hash, there is no tag, `submitted.md` has no
+submission ID, invite URL or confirmation email, and the only video on disk is a previs. Taken together
+these say the same thing P9's review said: **the desk-side is prepared and the entry has not been
+submitted.** G10 cannot pass on an entry that does not exist, and this log will not pretend otherwise.
+
+**The freeze was violated in the letter, not in the bytes.** Three commits landed after the frozen-at
+timestamp (`17 Nov 17:27 UTC`) — `e232956` at 22:57, `3f77e69` at 22:58, `de3c160` on 18 Nov 08:00. All
+three are paperwork and none touched the build (the APK hash and mtime are unchanged), but the rule in
+`archive/ARCHIVE.md` is "no commits, no edits", and the log records the violation rather than reinterpreting
+it as fine.
+
+### Root cause of the empty commit, found in P9's tool
+
+`P9Checks.ReadCommitHash()` looks for `.git` in `Directory.GetCurrentDirectory()` — which is `unity/`
+when Unity runs with `-projectPath unity`, while the repository root is one level above. So the lookup
+fails, the method returns an empty string, and `apk-hash.txt` was written with `commit: ` and nothing
+after it. The freeze wrote a record that cannot identify the code it froze, and the bug is one path.
+
+It is deliberately **not fixed here.** The freeze is in force, and editing `P9Checks.cs` after the
+artifact was built is exactly the "one small fix" `archive/ARCHIVE.md` forbids — even though it cannot
+change a single byte of the APK. The fix goes on a branch after judging closes (H42), and the record's
+commit is filled by hand from `git log` in the meantime.
+
+### A copy-versus-build discrepancy worth acting on before upload
+
+The build ships **twenty** handshapes — `Assets/StreamingAssets/Probe/index.json` lists `B U V W C O A M
+N T R S D E F G I L X Y`, and every one has a pose file beside it. `SUBMISSION-COPY.md` §3 says *"6
+shapes today"*. A judge can count the shelf and find the description understating the build by fourteen
+shapes, which is the wrong direction for that error to run in but still a factual mismatch in the entry.
+
+If the entry has not been submitted, correct the description to the measured count and re-verify. If it
+has, leave the copy alone — a post-deadline edit is worse than an understated count — and note it in the
+post-mortem. The log does not decide which; it records that the two documents disagree.
+
+### Remediation — owner-only, in this order
+
+| # | Fix | Who | Why it must happen before judging |
+|---|---|---|---|
+| 1 | `git tag v1.0-competition <the commit that built 81b60582…>` and push it | owner | without a tag, "the submitted code" is not specified |
+| 2 | Write the commit hash into `phases/p9-submission/apk-hash.txt` | owner | the record currently cannot identify its own artifact |
+| 3 | Fill `submitted.md`: submission ID, confirmation email, invite URL | owner | rows 10–12 are the entry |
+| 4 | Upload 81b60582… to the `Competition` channel; screenshot into `archive/channel-state.png` | owner | row 15 |
+| 5 | Put the video master in `archive/video-master/` (or its URL in `submitted.md`) | owner | row 13; the capture is the only irreplaceable asset |
+| 6 | Copy `shot-list.csv`, run `scripts/count.py > archive/count-output.txt`, write `archive/BUILD.md` from the freeze record | owner (5 min) | row 9 |
+| 7 | Verify the invite URL from a clean account with no developer login | owner | row 14 — the check G9 exists for |
+| 8 | Stop committing to `main`; any fix goes to a branch | owner | row 7 |
+| 9 | Reconcile "6 shapes" in `SUBMISSION-COPY.md` with the twenty that ship — only if not yet submitted | owner | a countable claim in the entry |
+
+**Do not rebuild.** The APK hash is the one green thing in this row; a rebuild to fix paperwork would
+trade a verified artifact for an unverified one.
+
+---
+
+## Weekly rows — one per week until judging closes
+
+Run the same command on the same weekday, append a row, and do not edit earlier ones. A week with no row
+is indistinguishable from a week nobody checked.
+
+| Week | Date due | Verdict | FAIL count | Notes |
+|---|---|---|---|---|
+| 2 | Wed 25 Nov 2026 | ⬜ NOT RUN | — | |
+| 3 | Wed 2 Dec 2026 | ⬜ NOT RUN | — | |
+| 4 | Wed 9 Dec 2026 | ⬜ NOT RUN | — | judging closes 11 Dec; this is the last row that matters |
+
+**What changes a row from FAIL to PASS:** the eight remediation items above, nothing else. A row that says
+PASS while the submission record is empty would be the one dishonest line in the project.
+
+---
+
+## Change log
+
+| Date | Change | By |
+|---|---|---|
+| 18 Nov 2026 | File created; row 1 written from a real `freeze_check.py` run, including the nine FAILs. | agent |
