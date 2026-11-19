@@ -241,12 +241,32 @@ def main():
         "%d files" % len(required), "missing: " + ", ".join(missing) if missing else "complete")
 
     # 5. the submission record — the only place a judge's path is written down
+    #
+    # A regex over the whole file was not good enough: "| Submission ID | (owner - paste it) |" passed,
+    # because `\s*` could backtrack to zero width and the negative lookahead then saw a space rather than
+    # the bracket. Same for "confirmation ... at | 2026-11-18T17:09:49". A placeholder that passes a check
+    # is worse than no check: it certifies exactly the thing that does not exist. So each field is read as
+    # a table cell, and a cell that starts with '(' is empty BY DEFINITION (the document says so too).
     submitted = open(SUBMITTED, encoding="utf-8").read() if os.path.isfile(SUBMITTED) else ""
+
+    def cell(field):
+        found = re.search(r"^\|\s*" + re.escape(field) + r"\s*\|\s*([^|]*)",
+                          submitted, re.I | re.M)
+        if not found:
+            return ""
+        value = found.group(1).strip()
+        return "" if value.startswith("(") else value
+
+    submission_id = cell("Submission ID")
+    invite_url = cell("Invite URL")
+    email_cell = cell("Confirmation email")
+
     filled = {
-        "submission id": bool(re.search(r"\|\s*Submission ID\s*\|\s*(?!\(|$)[^|]{4,}\|", submitted)),
-        "invite URL": bool(re.search(r"https?://\S*(horizon|meta|store|oculus)\S*", submitted, re.I)),
-        "confirmation email": bool(re.search(r"confirmation", submitted, re.I) and
-                                 re.search(r"\b(from|received|at)\b[^\n]*\d{2}:\d{2}", submitted, re.I)),
+        # a Devpost id is numeric; four characters of prose is not an id
+        "submission id": bool(re.search(r"\d{3,}", submission_id)),
+        "invite URL": bool(re.search(r"https?://\S+", invite_url)),
+        # an email + the time it arrived; both, because either alone can be guessed
+        "confirmation email": bool("@" in email_cell and re.search(r"\d{2}:\d{2}", email_cell)),
     }
     for name, ok in filled.items():
         row(rows, "submission record: " + name, PASS if ok else FAIL, "recorded", "empty" if not ok else "present")
