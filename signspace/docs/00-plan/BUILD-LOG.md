@@ -625,16 +625,18 @@ tree state, archive contents, submission record, video master. `phases/p10-post/
 dated, append-only rows. A 675-word judging note. A one-page launch sketch. A post-mortem that has no hour
 counts and says so first. `P10Checks` (41 assertions).
 
-**What the guard found — 6 PASS, 9 FAIL, 3 NOT RUN.**
+**What the guard found — 9 PASS / 7 FAIL / 3 NOT RUN.**
 
 1. **The artifact is intact.** APK hashes to `81b60582…`, mtime unchanged, never rebuilt.
 2. **Two checks were added after the first run, and they caught a false pass.** The record and
    `version-code.txt` both said 13 because one was generated from the other; `aapt2 dump badging` and
    `BuildScript.BundleVersionCode` both say **14**. The record understated the artifact's own version code.
-3. **The record cannot name its own source.** `commit:` is empty: `P9Checks.ReadCommitHash()` looks for
-   `.git` in `unity/`, one level below the repository root.
-4. **The freeze holds in bytes and not in the letter.** Commits landed after the frozen-at timestamp and
-   there is no tag; none of them touched the APK.
+3. **The record could not name its own source.** `commit:` was empty because `P9Checks.ReadCommitHash()`
+   looked for `.git` in `unity/`, one level below the repository root; it now walks up, reads worktree
+   pointers and packed refs. The record names `3e5333c`, and `v1.0-competition` points there.
+4. **The freeze holds in bytes and not in the letter.** Commits landed after the frozen-at timestamp; none
+   of them authored the frozen bytes, which are `a1587624…` (rebuilt 18 Nov with the landscape/install-location
+   manifest fix and the 32-bit library strip, then re-frozen).
 5. **There is no entry to protect.** No submission ID, invite URL or confirmation email; the archive is a
    template; the only video is a previs.
 

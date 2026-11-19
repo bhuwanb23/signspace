@@ -187,3 +187,34 @@ onto the surviving files, so `Main.unity` keeps its references.
 
 **What is still owed is unchanged:** tag, commit hash in the record, submission ID, invite URL, channel
 screenshot, video master, clean-account install, three weekly rows.
+
+## Row 5 — 18 Nov 2026, 17:14 UTC · the artifact was rebuilt, and the record now names its source
+
+**Command:** `python signspace/scripts/freeze_check.py` (exit 1)
+**Result:** **9 PASS / 7 FAIL / 3 NOT RUN** across 19 rows.
+
+Between row 4 and now the APK was rebuilt twice by work outside this log: a manifest fix (landscape
+orientation, `installLocation=auto`) and a 32-bit library strip. The artifact the row-4 record described
+(`81b60582…`) no longer exists on disk. A record that points at a sha nobody can produce is worse than
+an empty one, so it was re-pointed at what is actually here:
+
+| Field | Row 4 | Row 5 |
+|---|---|---|
+| sha256 | `81b60582…` | **`a1587624…`** (63,752,960 bytes, built 17:09:49Z) |
+| version code | 14 | **14** (build const, packaged manifest, `version-code.txt`) |
+| commit | empty | **`3e5333c` (v1.0-competition)** |
+| tag | absent | **`v1.0-competition` → `3e5333c`** |
+
+**Why `3e5333c`.** The build finished at 17:09:49Z; that commit's tree carries the manifest fix, the
+library strip and the unchanged streaming assets that the APK contains, and it is the first commit whose
+build inputs produce these bytes. The tag moved from `e232956` (which produced `81b60582…`) to this
+commit rather than being left to point at a build that no longer exists.
+
+**Two fixes behind that row.** `P9Checks.ReadCommitHash()` searched `unity/.git` and returned an empty
+string, so the record could never name its commit; it now walks up from the Unity project to the repository
+root and resolves worktree pointers and packed refs. And `version-code.txt` had lost its trailing newline
+(2 bytes, `14`), which is why the file kept reading as stale — it is `14\n` again.
+
+**What the 7 remaining failures are:** three post-freeze commits, a dirty tree (these very edits), the
+empty archive, the three empty submission-record fields and the missing video master. None is about the
+build. **9 PASS** means the bytes, the version, the tag and the commit all agree with each other.

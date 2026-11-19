@@ -1,7 +1,7 @@
 # P10 — Post-submission
 
 **Day Wed 18 Nov → 11 Dec · Budget 4 h · Gate:** G10 — Is the submitted entry still intact, installable and unchanged three weeks later?
-**Status:** 🟡 **Desk-side done; G10 NOT EVALUABLE.** `scripts/freeze_check.py` runs 18 rows: **6 PASS / 9 FAIL / 3 NOT RUN**. The APK is byte-identical to the freeze record and its packaged `versionCode` is now reconciled (14, not the stale 13). Judging note, launch sketch, post-mortem and re-verification log written. **Owed:** a submitted entry, the tag, the video, and three weekly rows.
+**Status:** 🟡 **Desk-side done; G10 NOT EVALUABLE.** `scripts/freeze_check.py` runs 19 rows: **9 PASS / 7 FAIL / 3 NOT RUN**. The APK (`a1587624…`) is byte-identical to the freeze record, its packaged `versionCode` is 14, the record names the commit that built it (`3e5333c`) and `v1.0-competition` points at that commit. Judging note, launch sketch, post-mortem and re-verification log written. **Owed:** a submitted entry, the tag, the video, and three weekly rows.
 
 ## Objective
 Protect the submission for three weeks, prepare the one-page argument judges will re-tell, and capture what the eleven days actually taught.
@@ -50,8 +50,8 @@ Judging runs for three weeks after submission. What happens in those weeks can s
 |---|---|---|
 | Is the artifact unchanged? | **Yes** — byte-identical to the freeze record, and its packaged `versionCode` is 14 | `freeze_check.py` rows 1–6 |
 | Is the entry intact and installable for a judge? | **No** — no submission ID, invite URL, channel screenshot or video master | `reverify-log.md` rows 1–4 |
-| Was the freeze respected? | **No, in the letter** — commits after the frozen-at timestamp; no tag; the record's commit field is empty | `reverify-log.md` |
-| Is the record truthful about the APK? | **Now yes** — the record's code 13 came from a stale `version-code.txt`; `aapt2` says 14 and both were corrected | `reverify-log.md` row 4 |
+| Was the freeze respected? | **Partly** — the tag exists at the producing commit and the record names it, but commits landed after the frozen-at timestamp | `reverify-log.md` rows 4–5 |
+| Is the record truthful about the APK? | **Yes** — sha, code 14 and commit all match the artifact and the tag | `reverify-log.md` rows 4–5 |
 
 The P10 artefacts are recent work on a frozen repository; that is itself the drift row 8 records, and it
 is left visible rather than papered over.

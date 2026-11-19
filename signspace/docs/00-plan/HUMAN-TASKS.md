@@ -97,8 +97,8 @@ retune of `scripts/make_sfx.py` plus a re-run of the check — the wiring does n
 
 | # | Task | Acceptance | Evidence | Status |
 |---|---|---|---|---|
-| H41 | **Tag the frozen build** | `git tag v1.0-competition <commit that produced 81b60582…>` and push | `git tag -l`; `freeze_check.py` tag row | ⬜ |
-| H42 | **Fix the record's commit field** | on a branch: point `P9Checks.ReadCommitHash()` at the repo root, then fill `commit:` from `git log` | record identifies the code | ⬜ |
+| H41 | **Tag the frozen build** | `git tag v1.0-competition <commit that produced the APK>` and push | tag at `3e5333c`, which `freeze_check.py` confirms | ✅ tagged (⚠️ not pushed) |
+| H42 | **Fix the record's commit field** | point `P9Checks.ReadCommitHash()` at the repo root, then fill `commit:` from `git log` | record says `3e5333c (v1.0-competition)` | ✅ |
 | H43 | **Channel listing** | `Competition` lists `1.0.0-competition` **code 14** built from `81b60582…`; screenshot saved | `archive/channel-state.png` | ⬜ |
 | H44 | **Fill the submission record** | submission ID, confirmation email, invite URL in `submitted.md` | `freeze_check.py` submission rows | ⬜ |
 | H45 | **Video master** | the captured entry video in `archive/video-master/` (or its URL in `submitted.md`) | `freeze_check.py` video row | ⬜ |
@@ -106,8 +106,8 @@ retune of `scripts/make_sfx.py` plus a re-run of the check — the wiring does n
 | H47 | **Three weekly rows** | run `freeze_check.py` on 25 Nov, 2 Dec, 9 Dec; append, never edit | `reverify-log.md` | ⬜ |
 | H48 | **Reconcile the copy's shape count** | description now says "20 handshapes today", matching `Probe/index.json` | `count.py`: 499/500 words | ✅ done in repo |
 
-**H41 and H44 are the two that make the entry exist at all.** Until they are done, the guard reports the
-artifact intact and the submission absent — exactly what row 4 of `reverify-log.md` says.
+**H44 is the one that makes the entry exist at all.** The artifact is now identified and frozen; what is
+missing is the submission that points a judge at it — exactly what row 5 of `reverify-log.md` says.
 
 ## 7. How to verify a row before ticking it
 
