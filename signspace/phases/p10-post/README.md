@@ -1,7 +1,7 @@
 # P10 — Post-submission
 
 **Day Wed 18 Nov → 11 Dec · Budget 4 h · Gate:** G10 — Is the submitted entry still intact, installable and unchanged three weeks later?
-**Status:** 🟡 **Desk-side done; G10 NOT EVALUABLE.** `scripts/freeze_check.py` runs 19 rows: **9 PASS / 7 FAIL / 3 NOT RUN**. The APK (`a1587624…`) is byte-identical to the freeze record, its packaged `versionCode` is 14, the record names the commit that built it (`3e5333c`) and `v1.0-competition` points at that commit. Judging note, launch sketch, post-mortem and re-verification log written. **Owed:** a submitted entry, the tag, the video, and three weekly rows.
+**Status:** 🟡 **Desk-side done; G10 NOT EVALUABLE.** `scripts/freeze_check.py` runs 19 rows: **9 PASS / 7 FAIL / 3 NOT RUN**. The APK (`a1587624…`) is byte-identical to the freeze record, its packaged `versionCode` is 14, the record names the commit that built it (`3e5333c`) and `v1.0-competition` points at that commit. Judging note, launch sketch, post-mortem and re-verification log written. **Done since:** `v1.0-competition` is tagged at `3e5333c` (local, not pushed). **Owed:** a submitted entry, the video, and three weekly rows.
 
 ## Objective
 Protect the submission for three weeks, prepare the one-page argument judges will re-tell, and capture what the eleven days actually taught.

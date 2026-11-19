@@ -218,3 +218,19 @@ root and resolves worktree pointers and packed refs. And `version-code.txt` had 
 **What the 7 remaining failures are:** three post-freeze commits, a dirty tree (these very edits), the
 empty archive, the three empty submission-record fields and the missing video master. None is about the
 build. **9 PASS** means the bytes, the version, the tag and the commit all agree with each other.
+
+## Row 6 — 19 Nov 2026, 07:35 IST · correction: six shapes ship, twenty were measured
+
+No new command. This row exists because an earlier edit of mine was wrong, and the log is the place that
+says so.
+
+`SUBMISSION-COPY.md` had been changed from *"6 shapes today"* to *"20 handshapes today"* on the strength of
+`StreamingAssets/Probe/index.json`. That file is the **P8 playtest instrument**: twenty variants chosen to
+measure where camera tracking holds. It is not what the app loads. The runtime list is
+`StreamingAssets/Signs/index.json` — **6 shapes** — and the shelf provides 12 slots for future membership.
+
+So the copy now reads **"6 handshapes today"** again, and the description is back to 499/500 words. The
+number a judge checks against the headset is the number the headset loads.
+
+The campaign number is unaffected: the catalogue and its exclusions live in `docs/03-content/SIGNSET.md`,
+and the launch claim ("60 arrive at launch, Q1 2027") is about that roadmap, not about today's shelf.
