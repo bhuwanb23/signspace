@@ -147,4 +147,45 @@ mis-mapped joint is a shape that never matches and no error appears anywhere.
 | date | device | σ | lockedDeg | closeDeg | nearMissDeg | notes |
 |---|---|---|---|---|---|---|
 | 15 Nov 2026 | **none — simulated** | 2.0° | 12 | 20 | 26 | offline, `scripts/tune_match.py`. **Not yet measured on a device.** |
+| 19 Nov 2026 | **none — simulated** | 1.5–4.0° | 12 | 20 | 26 | per-shape margins, `scripts/noise_margin_sim.py`. Still no device row. |
 | | | | | | | P1.5 probe fills this row |
+
+## 11. Per-shape margins — what can be measured without a headset
+
+`tune_match.py` reports aggregates and `band_sim.py` reports band behaviour; neither says whether a
+*specific* shape has room inside the 12° band. `scripts/noise_margin_sim.py` does, with the same noise
+model and the same shipped v3 metric:
+
+```bash
+python3 scripts/noise_margin_sim.py --csv phases/p2-core-loop/noise-margins.csv
+```
+
+For each shape it perturbs the target pose, then reports the correct-shape distance (p95) against the
+worst-case closeness of any rival (p05). A positive margin means the gap between the two is wider than
+noise; `wrong-lock %` counts frames where another shape is nearer *and* the hand is still inside 12°.
+
+| shape | σ 2°: self p95 | rival p05 | margin | σ 4°: self p95 | rival p05 | margin |
+|---|---|---|---|---|---|---|
+| B | 6.8 | 101.6 | 94.8 | 13.5 | 101.5 | 88.0 |
+| U | 6.9 | 23.3 | 16.4 | 13.4 | 21.1 | 7.7 |
+| V | 6.7 | 23.2 | 16.4 | 13.4 | 21.0 | 7.7 |
+| W | 6.7 | 113.7 | 106.9 | 13.6 | 110.5 | 97.0 |
+| C | 6.7 | 62.3 | 55.6 | 13.5 | 59.8 | 46.3 |
+| O | 6.6 | 62.4 | 55.8 | 13.5 | 59.8 | 46.3 |
+
+Three readings:
+
+- **No shape can be confused with another by noise alone.** Wrong-lock is 0.00% at every level tested, on
+  2,000–4,000 trials per shape: the nearest rival is U/V at ~21–24°, and jitter at these magnitudes does
+  not close a 20° gap.
+- **B, U and V are the tight ones, and only they move.** Their margins halve between σ 2° and σ 4°, while
+  W/C/O lose a few degrees. If the P1.5 probe measures worse than ~3°/joint, those three are where the
+  hold will feel late.
+- **The 12° band is calibrated for σ ≤ 3°.** At σ 4° a correct hand's own p95 is 13.5° — outside the band—
+  so honest locks would drop before wrong ones appeared. That is the correct failure direction, and it is
+  the number to watch on device: if the probe reports ≈4°, widen the band or narrow the shapes, do not
+  blame the learner.
+
+**What this is not.** It is a model of jitter, not a measurement of a Quest. It cannot show frame rate,
+thermal drift, occlusion, or how a real hand's noise is correlated across joints (ours is independent per
+joint, which is optimistic). TRACKABILITY.md requires a device row for any claim, and P1.5 is still owed.
