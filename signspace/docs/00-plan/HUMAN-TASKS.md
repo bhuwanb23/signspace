@@ -9,10 +9,13 @@
 > Work them in any order. Each row names its acceptance test and the evidence file the phase docs
 > already point at, so finishing a row is "do the thing, save the file, tick the box".
 
-**Build under test:** `unity/Builds/Android/signspace.apk`
-· 64,584,347 bytes
-· `sha256 6a62ced4b81a9ab4112b07a9a64d5a66a149d2d52ebc49611dec5df1ae84f41f`
-· built 2026-11-17 from `main`
+**Frozen build:** `unity/Builds/Android/signspace.apk`
+· 63,752,960 bytes
+· `sha256 a1587624f223cbe7ac11ba9d72a16c1f4022e850decb31dfd1f14d43ea82dc7c`
+· version code 14 · tag `v1.0-competition` @ `3e5333c`
+
+> **For the next launch**, work the rows in
+> [`Q1-2027-LAUNCH-CHECKLIST.md`](Q1-2027-LAUNCH-CHECKLIST.md): the same tasks, ordered by dependency.
 
 ---
 
@@ -99,12 +102,12 @@ retune of `scripts/make_sfx.py` plus a re-run of the check — the wiring does n
 |---|---|---|---|---|
 | H41 | **Tag the frozen build** | `git tag v1.0-competition <commit that produced the APK>` and push | tag at `3e5333c`, which `freeze_check.py` confirms | ✅ tagged (⚠️ not pushed) |
 | H42 | **Fix the record's commit field** | point `P9Checks.ReadCommitHash()` at the repo root, then fill `commit:` from `git log` | record says `3e5333c (v1.0-competition)` | ✅ |
-| H43 | **Channel listing** | `Competition` lists `1.0.0-competition` **code 14** built from `81b60582…`; screenshot saved | `archive/channel-state.png` | ⬜ |
+| H43 | **Channel listing** | a release channel lists `1.0.0-competition` **code 14** built from `a1587624…`; screenshot saved | `archive/channel-state.png` | ⬜ |
 | H44 | **Fill the submission record** | submission ID, confirmation email, invite URL in `submitted.md` | `freeze_check.py` submission rows | ⬜ |
 | H45 | **Video master** | the captured entry video in `archive/video-master/` (or its URL in `submitted.md`) | `freeze_check.py` video row | ⬜ |
 | H46 | **Clean-account invite test** | a second Meta account with no developer login installs and launches | screen recording | ⬜ |
 | H47 | **Three weekly rows** | run `freeze_check.py` on 25 Nov, 2 Dec, 9 Dec; append, never edit | `reverify-log.md` | ⬜ |
-| H48 | **Reconcile the copy's shape count** | description now says "20 handshapes today", matching `Probe/index.json` | `count.py`: 499/500 words | ✅ done in repo |
+| H48 | **Reconcile the copy's shape count** | description says **6 handshapes today** — the runtime list `Signs/index.json`, not the 20-variant `Probe` instrument; 20 was measured, not shipped | `count.py`: 499/500 words | ✅ (row 6 of `reverify-log.md` corrected an earlier wrong edit) |
 
 **H44 is the one that makes the entry exist at all.** The artifact is now identified and frozen; what is
 missing is the submission that points a judge at it — exactly what row 5 of `reverify-log.md` says.
